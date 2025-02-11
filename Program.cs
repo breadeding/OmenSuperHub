@@ -111,9 +111,9 @@ namespace OmenSuperHub {
           alreadyRead = alreadyReadCode;
           SaveConfig("AlreadyRead");
         }
-        
+
         SystemEvents.PowerModeChanged += new PowerModeChangedEventHandler(OnPowerChange);
-        
+
         Application.Run();
       }
     }
@@ -162,7 +162,7 @@ namespace OmenSuperHub {
 
     // 判断独显未工作条件
     private static void monitorQuery() {
-      if(Screen.AllScreens.Length != 1)
+      if (Screen.AllScreens.Length != 1)
         return;
       DISPLAY_DEVICE d = new DISPLAY_DEVICE();
       d.cb = Marshal.SizeOf(d);
@@ -744,7 +744,7 @@ namespace OmenSuperHub {
         string modelName = null;
         // 检查是否有至少两行
         if (lines.Length > 1) {
-          modelName =  lines[1]; // 返回第二行
+          modelName = lines[1]; // 返回第二行
         }
 
         // 定义正则表达式以匹配第一个以数字开头的部分
@@ -770,7 +770,7 @@ namespace OmenSuperHub {
 
     // 设置显卡频率限制
     private static bool SetGPUClockLimit(int freq) {
-      if(freq < 210) {
+      if (freq < 210) {
         ExecuteCommand("nvidia-smi --reset-gpu-clocks");
         return false;
       } else {
@@ -1173,15 +1173,17 @@ namespace OmenSuperHub {
           }
         }
       }
-
+      //记录每个核心温度,计算平均温度
+      List<float> tempArray = new List<float>();
       foreach (LibreIHardware hardware in libreComputer.Hardware) {
         if (hardware.HardwareType == LibreHardwareType.Cpu || hardware.HardwareType == LibreHardwareType.GpuNvidia || hardware.HardwareType == LibreHardwareType.GpuAmd) {
           hardware.Update();
 
           foreach (LibreISensor sensor in hardware.Sensors) {
             if (hardware.HardwareType == LibreHardwareType.Cpu) {
-              if (sensor.Name == "CPU Package" && sensor.SensorType == LibreSensorType.Temperature) {
-                libreTempCPU = (int)sensor.Value.GetValueOrDefault();
+
+              if (sensor.Name.IndexOf("CPU Core") == 0 && sensor.Name.Contains("Distance to TjMax") == false && sensor.SensorType == LibreSensorType.Temperature) {
+                tempArray.Add((int)sensor.Value.GetValueOrDefault());
               }
               if (sensor.Name == "CPU Package" && sensor.SensorType == LibreSensorType.Power) {
                 librePowerCPU = sensor.Value.GetValueOrDefault();
@@ -1200,6 +1202,10 @@ namespace OmenSuperHub {
             }
           }
         }
+      }
+
+      if (tempArray.Count > 0) {
+        libreTempCPU = tempArray.Average();
       }
 
       if (openLib && libreTempCPU > -299 && librePowerCPU >= 0) {
@@ -1268,7 +1274,7 @@ namespace OmenSuperHub {
         libreComputer.IsGpuEnabled = false;
         UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
       }
-        
+
       //Console.WriteLine($"openCPU: {openTempCPU}℃, {openPowerCPU}W");
       //Console.WriteLine($"libreCPU: {libreTempCPU}℃, {librePowerCPU}W");
       //Console.WriteLine($"openGPU: {GPUTemp}℃, {GPUPower}W");
@@ -1421,7 +1427,7 @@ namespace OmenSuperHub {
         int gpuFanSpeed = GetFanSpeedForSpecificTemperature(GPUTemp, GPUTempFanMap, fanIndex);
         return Math.Max(cpuFanSpeed, gpuFanSpeed);
       }
-        
+
       return cpuFanSpeed;
     }
 
@@ -1794,7 +1800,7 @@ namespace OmenSuperHub {
             using (var reader = new StreamReader(pipeServer)) {
               string message = reader.ReadToEnd();
               if (message.Contains("OmenKeyTriggered")) {
-                if(!checkFloating)
+                if (!checkFloating)
                   checkFloating = true;
               }
             }
@@ -1841,7 +1847,7 @@ namespace OmenSuperHub {
       string str = $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
       if (monitorGPU)
         str += $"\nGPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
-      if(monitorFan)
+      if (monitorFan)
         str += $"\nFan:  {fanSpeedNow[0] * 100}, {fanSpeedNow[1] * 100}";
       return str;
     }
