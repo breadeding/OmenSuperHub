@@ -189,7 +189,9 @@ namespace OmenSuperHub {
       // 延时等待风扇恢复响应
       if (flagStart < 5) {
         flagStart++;
-        if (fanControl.Contains(" RPM")) {
+        if (fanControl.Contains("max")) {
+          SetMaxFanSpeedOn();
+        } else if (fanControl.Contains(" RPM")) {
           SetMaxFanSpeedOff();
           int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
           SetFanLevel(rpmValue / 100, rpmValue / 100);
