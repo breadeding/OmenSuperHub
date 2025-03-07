@@ -45,7 +45,7 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）修复重启后可能无法恢复最大风扇转速的问题；\n\n" +
+         "（1）修复重启后可能无法恢复最大风扇转速的问题。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +
