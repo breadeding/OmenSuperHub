@@ -16,7 +16,7 @@ namespace OmenSuperHub {
     private DataPoint selectedPoint = null;
 
     public MainForm() {
-      Text = "敬请期待";
+      Text = "Coming Soon";
 
       // 获取屏幕的大小
       Rectangle screenBounds = Screen.PrimaryScreen.Bounds;

@@ -9,12 +9,11 @@ namespace OmenSuperHub {
     private PictureBox displayPictureBox;
 
     public FloatingForm(string text, int textSize, string loc) {
-      this.FormBorderStyle = FormBorderStyle.None; // 去除边框
-      this.BackColor = Color.Black; // 背景设置为一种特殊颜色
-      this.TransparencyKey = this.BackColor; // 将该颜色设为透明
-
-      this.TopMost = true; // 设置始终在最前
-      this.ShowInTaskbar = false; // 不在任务栏中显示
+      this.FormBorderStyle = FormBorderStyle.None; // Remove window border
+      this.BackColor = Color.Black; // Set background to special color
+      this.TransparencyKey = this.BackColor; // Make that color transparent
+      this.TopMost = true; // Always stay on top
+      this.ShowInTaskbar = false; // Hide from taskbar
       this.StartPosition = FormStartPosition.Manual;
 
       // 初始化 PictureBox

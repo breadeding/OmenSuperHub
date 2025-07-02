@@ -43,50 +43,52 @@ namespace OmenSuperHub {
 
       var richTextBox = new RichTextBox() {
         Dock = DockStyle.Fill,
-        Text = "版本号：" + version +
-         "\n更新说明：\n" +
-         "（1）DB解锁失败后将自动重试一次；\n" +
-         "（2）修复重启后可能无法恢复固定风扇转速的问题；\n" +
-         "（3）修复悬浮窗崩溃问题。\n\n" +
+        Text = "Version: " + version +
+        "\nUpdate Notes:\n" +
+        "(1) Automatically retries once if DB unlock fails;\n" +
+        "(2) Fixed issue where fixed fan speed might not restore after reboot;\n" +
+        "(3) Fixed crash in floating window.\n\n" +
 
-         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
-         "一.   “风扇配置”菜单说明：\n" +
-         "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，可以设置较为保守的风扇调度, 降温模式加载\"cool.txt\"，可以设置较为激进的风扇调度，打开silent和cool文件可自行修改风扇配置，注意使用英文逗号，格式为“60,2000,2300,50,2000,2300”，不能有空缺（可以重复设置来占位），第一列和第四列分别为CPU温度和GPU温度，后面两列为两个风扇的转速，行数不限，程序会自动进行线性插值，精度为1℃。例如，如果设置了50,3000,3400和52,3200,3600两个相邻点，程序会在51℃时设置3200和3400的转速。注意，修改后需要重新点击对应的模式才能生效；\n" +
-         "（2）读取到温度变化后程序将立即设置对应的转速，为了转速变化更加平缓，“实时”，“高”，“中”和“低”分别能以从无到高的强度对温度进行平滑处理。\n\n" +
+        "This project is open-sourced at: https://github.com/breadeding/OmenSuperHub\n\n" +
 
-         "二.   “风扇控制”菜单说明：\n" +
-         "（1）选择“自动”则程序会根据风扇配置和当前温度自动设定风扇转速，转速将被设定为cpu package温度和gpu温度对应转速的较大值；\n" +
-         "（2）“最大风扇”为BIOS控制，不一定是最大转速，手动或自动有可能可以设置更高的转速；\n" +
-         "（3）暗9笔记本转速范围0-6400，但是只有BIOS设置中关闭了风扇始终启动，才能低于2000转，请根据自己的机型设置合理的转速。\n\n" +
+        "1.   Fan Configuration:\n" +
+        "(1) The program supports two fan curve profiles. Silent mode loads \"silent.txt\" (for conservative settings), Cool mode loads \"cool.txt\" (for aggressive cooling). The format is: “60,2000,2300,50,2000,2300” — CPU temp, GPU temp, then 2 fan speeds. No missing fields, commas only. You can edit the files directly. Interpolation is performed automatically. For example, 50,3000,3400 and 52,3200,3600 will result in 3200/3400 at 51°C. Changes take effect after re-clicking the mode;\n" +
+        "(2) The program updates fan speed immediately based on temperature. The smoothing level ('Real-time', 'High', 'Medium', 'Low') controls how gradually speed changes with temperature.\n\n" +
 
-         "三.   “性能控制”菜单说明：\n" +
-         "（1）“狂暴模式”和“平衡模式”在不同的机型上作用可能不同。对于暗9，平衡模式会限制CPU PL1为55W（底层PL1，软件无法读取和修改），同时限制GPU（功耗不固定，70-110W均有可能），同时切换狂暴/平衡均会重置CPU功率设定。注意，两种模式仅影响最大性能，对省电几乎没有影响，要省电应开启混合模式避免使用独显，关闭所有监控GPU状态的程序；\n" +
-         "（2）显卡功耗=BTGP（基础功耗）+CTGP（可配置功耗）+DB（动态提升功耗），DB的含义是在CPU功率较低时额外提升GPU功耗，以暗9-i9-4060为例，BTGP=80W，BTGP+CTGP=115W，默认整机功耗为170W，显卡最大功耗140W，因此CPU功耗由60W降至30W时，显卡总功耗将由110W升至140W，即DB功耗由-5W升至25W。在默认状态下，开启CTGP和DB才能获得最大GPU性能；\n" +
-         "（3）DB版本指的是设备管理器-软件设备-NVIDIA Platform Controllers and Framework的驱动版本，解锁版本使用31.0.15.3730（来自537.42显卡驱动），注意旧显卡驱动不支持更新的DB驱动，否则会导致显卡锁定基础功耗，请使用最新显卡驱动；\n" +
-         "（4）点击“解锁版本”，程序会删除解锁版本之外的DB驱动，只使用537.42对应DB驱动，然后自动启用再禁用驱动完成解锁，这会让显卡锁定当前功耗状态，即BTGP、CTGP和DB，利用这一点可以绕开CPU功率较高时DB功率降低的限制。点击“普通版本”会重新启用上述驱动，GPU功耗将取消锁定。注意更新NVIDIA显卡驱动后会更新DB驱动，需要重新解锁；\n" +
-         "（5）由于其锁定功耗的特性，OSH会短暂地设置狂暴+CTGP开+DB开进行自动解锁。同样地，请注意不要在CPU高负载时切换解锁版本，否则也会导致解锁后只有CTGP开+DB关的功耗。系统重启后解锁会失效造成功耗限制为基础功耗，需要由软件自动完成启用再禁用驱动的操作恢复解锁状态，因此使用解锁功能最好打开OSH开机自启；\n" +
-         "（6）如果出现提示GPU功耗异常无法解锁，则是因为当前GPU功耗被异常限制，请尝试重新解锁；\n" +
-         "（7）修改CPU功率会同时修改PL1与PL2，点击一次只设定一次，因此同时使用ThrottleStop控制会导致设置被覆盖；\n" +
-         "（8）修改GPU频率限制能实现限制不同级别的功耗，效果相当于小飞机中拉平曲线，注意该功能不是超频功能。\n\n" +
+        "2.   Fan Control:\n" +
+        "(1) 'Auto' sets speed based on the higher value of CPU or GPU target fan RPM;\n" +
+        "(2) 'Max fan' relies on BIOS and might not be truly maximum — manual or auto might yield higher speeds;\n" +
+        "(3) On the HP Omen 9, fan speed ranges from 0–6400 RPM, but going below 2000 requires disabling 'Fan Always On' in BIOS.\n\n" +
 
-         "四.   “硬件监控”菜单说明：\n" +
-         "（1）可选择开启或关闭对应的监控信息，注意如果使用混合模式，应关闭GPU监控，否则可能会导致因频繁开启/关闭GPU造成CPU占用高。\n\n" +
+        "3.   Performance Control:\n" +
+        "(1) 'Turbo' and 'Balanced' behave differently per model. On Omen 9: Balanced limits CPU PL1 to 55W and restricts GPU power. Switching between them resets CPU power. These modes affect max performance, not power saving. Use hybrid GPU mode and disable GPU-monitoring apps to save power;\n" +
+        "(2) GPU power = BTGP + CTGP + DB. DB boosts GPU power when CPU usage is low. Example: BTGP=80W, total power=170W. If CPU drops from 60W to 30W, GPU can jump from 110W to 140W via DB. Enable CTGP and DB for max performance;\n" +
+        "(3) DB version refers to driver version under Device Manager > Software Components > NVIDIA Platform Controllers and Framework. Use driver 31.0.15.3730 (from 537.42). Using newer DB drivers with old GPU drivers may lock GPU at base power;\n" +
+        "(4) 'Unlock version' removes all other DB drivers, keeps 537.42 DB, and toggles it to lock power state (BTGP + CTGP + DB). This avoids DB throttling when CPU power is high. 'Standard version' reverts the driver state. Updating NVIDIA drivers resets DB, so re-unlock is needed;\n" +
+        "(5) OSH briefly switches to Turbo + CTGP + DB to unlock. Avoid unlocking during high CPU usage or it may fail. Unlock state resets on reboot, so auto-run is recommended;\n" +
+        "(6) If unlocking fails due to abnormal GPU power, try unlocking again;\n" +
+        "(7) Changing CPU power sets both PL1 and PL2. Using ThrottleStop may interfere with this;\n" +
+        "(8) GPU frequency limits allow smoother power control (like flattening the curve in MSI Afterburner), but it’s not an overclock.\n\n" +
 
-         "五.   “浮窗显示”菜单说明：\n" +
-         "（1）开启“浮窗显示”后，屏幕上方将覆盖硬件监控信息，1秒刷新一次。\n\n" +
+        "4.   Hardware Monitor:\n" +
+        "(1) You can enable/disable sensors. If using hybrid mode, disable GPU monitoring to prevent high CPU usage from toggling GPU on/off.\n\n" +
 
-         "六.   “Omen键”菜单说明：\n" +
-         "（1）若选择“默认”，Omen键绑定的事件为任务计划程序的“Omen Key”任务，修改其启动程序可以自定义想要启动的程序；\n" +
-         "（2）若选择“切换浮窗显示”，Omen键绑定的事件为启动OSH，通过传递特定参数使OSH获得指令并切换浮窗显示；\n" +
-         "（3）注意，Omen键功能可能与某些hp服务有关，禁用某些hp服务可能导致无法使用Omen键；\n" +
-         "（4）若选择“取消绑定”，Omen键将无效。\n\n" +
+        "5.   Floating Window:\n" +
+        "(1) When enabled, hardware stats appear as an overlay at the top of the screen, refreshed every second.\n\n" +
 
-         "七.   “其他设置”菜单说明：\n" +
-         "（1）“原版”图标为程序自带图标；\n" +
-         "（2）“自定义图标”需要在程序所在文件夹存放custom.ico图标文件才能使用；\n" +
-         "（3）“动态图标”会以当前CPU温度作为图标，1秒刷新一次；\n" +
-         "（4）设置开机自启后，程序会自动创建任务计划程序实现开机自启，如果有自己设定过则应删除。同时，旧版OSH使用的自启方式也会在这一步被自动清除；\n" +
-         "（5）关闭开机自启后，程序会清除任务计划程序。\n\n",
+        "6.   Omen Key Settings:\n" +
+        "(1) 'Default': bound to the Task Scheduler entry 'Omen Key'. You can edit the launched program;\n" +
+        "(2) 'Toggle Floating Window': uses OSH with a flag to trigger toggle;\n" +
+        "(3) May depend on HP services — disabling them might break the key;\n" +
+        "(4) 'Unbind' disables the key.\n\n" +
+
+        "7.   Other Settings:\n" +
+        "(1) 'Default Icon': built-in program icon;\n" +
+        "(2) 'Custom Icon': requires custom.ico in the program folder;\n" +
+        "(3) 'Dynamic Icon': shows CPU temp as icon, updated every second;\n" +
+        "(4) Enabling autostart creates a scheduled task. If you've set one manually, remove it. Old OSH startup method is also removed here;\n" +
+        "(5) Disabling autostart removes the scheduled task.\n\n",
+
 
 
         BorderStyle = BorderStyle.None,  // 隐藏边框

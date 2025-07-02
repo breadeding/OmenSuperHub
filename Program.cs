@@ -218,10 +218,10 @@ namespace OmenSuperHub {
         // 获取当前电源连接状态
         var powerStatus = SystemInformation.PowerStatus;
         if (powerStatus.PowerLineStatus == PowerLineStatus.Online) {
-          Console.WriteLine("笔记本已连接到电源。");
+          Console.WriteLine("Laptop is connected to power.");
           powerOnline = true;
         } else {
-          Console.WriteLine("笔记本未连接到电源。");
+          Console.WriteLine("Laptop is not connected to power.");
           powerOnline = false;
         }
       }
@@ -248,7 +248,7 @@ namespace OmenSuperHub {
         td.Settings.AllowHardTerminate = false;
 
         ts.RootFolder.RegisterTaskDefinition(@"OmenSuperHub", td);
-        Console.WriteLine("任务已创建。");
+        Console.WriteLine("Task has been created.");
       }
 
       CleanUpAndRemoveTasks();
@@ -262,9 +262,9 @@ namespace OmenSuperHub {
         if (existingTask != null) {
           // 删除任务
           ts.RootFolder.DeleteTask("OmenSuperHub");
-          Console.WriteLine("任务已删除。");
+          Console.WriteLine("Task has been deleted.");
         } else {
-          Console.WriteLine("任务不存在，无需删除。");
+          Console.WriteLine("Task does not exist, no need to delete.");
         }
       }
     }
@@ -283,27 +283,27 @@ namespace OmenSuperHub {
         var result = ExecuteCommand(command);
         Console.WriteLine(result.Output);
       } else {
-        Console.WriteLine("旧文件夹不存在");
+        Console.WriteLine("Old folder does not exist.");
       }
 
       // 删除 file1
       if (File.Exists(file1)) {
         string command = $"del /f /q \"{file1}\"";
         var result = ExecuteCommand(command);
-        Console.WriteLine($"文件已删除: {file1}");
+        Console.WriteLine($"File deleted: {file1}");
         Console.WriteLine(result.Output);
       } else {
-        Console.WriteLine($"文件不存在: {file1}");
+        Console.WriteLine($"File does not exist: {file1}");
       }
 
       // 删除 file2
       if (File.Exists(file2)) {
         string command = $"del /f /q \"{file2}\"";
         var result = ExecuteCommand(command);
-        Console.WriteLine($"文件已删除: {file2}");
+        Console.WriteLine($"File deleted: {file2}");
         Console.WriteLine(result.Output);
       } else {
-        Console.WriteLine($"文件不存在: {file2}");
+        Console.WriteLine($"File does not exist: {file2}");
       }
 
       // 检查并删除计划任务
@@ -312,16 +312,16 @@ namespace OmenSuperHub {
       if (taskQueryResult.ExitCode == 0) {
         string deleteTaskCommand = $"schtasks /delete /tn \"{taskName}\" /f";
         var deleteTaskResult = ExecuteCommand(deleteTaskCommand);
-        Console.WriteLine("已成功删除计划任务 \"Omen Boot\"。");
+        Console.WriteLine("Deleted scheduled task \"Omen Boot\".");
         Console.WriteLine(deleteTaskResult.Output);
       } else {
-        Console.WriteLine($"计划任务 \"{taskName}\" 不存在。");
+        Console.WriteLine($"Scheduled task \"{taskName}\" does not exist.");
       }
 
       // 从注册表中删除开机自启项
       string regDeleteCommand = @"reg delete ""HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run"" /v ""OmenSuperHub"" /f";
       var regDeleteResult = ExecuteCommand(regDeleteCommand);
-      Console.WriteLine("成功取消开机自启");
+      Console.WriteLine("Disabled auto-start on boot.");
       Console.WriteLine(regDeleteResult.Output);
     }
 
@@ -337,7 +337,7 @@ namespace OmenSuperHub {
               customIcon = "original";
               SaveConfig("CustomIcon");
               trayIcon.Icon = Properties.Resources.smallfan;
-              UpdateCheckedState("CustomIcon", "原版");
+              UpdateCheckedState("CustomIcon", "Original");
             }
           }
         }
@@ -366,53 +366,53 @@ namespace OmenSuperHub {
           break;
       }
 
-      trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("关于OSH", null, (s, e) => {
+      trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("About OSH", null, (s, e) => {
         HelpForm.Instance.Show();
       }, false));
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
-      ToolStripMenuItem fanConfigMenu = new ToolStripMenuItem("风扇配置");
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem("安静模式", "fanTableGroup", (s, e) => {
+      ToolStripMenuItem fanConfigMenu = new ToolStripMenuItem("Fan Configuration");
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem("Silent Mode", "fanTableGroup", (s, e) => {
         fanTable = "silent";
         LoadFanConfig("silent.txt");
         SaveConfig("FanTable");
       }, true));
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem("降温模式", "fanTableGroup", (s, e) => {
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem("Cooling Mode", "fanTableGroup", (s, e) => {
         fanTable = "cool";
         LoadFanConfig("cool.txt");
         SaveConfig("FanTable");
       }, false));
       fanConfigMenu.DropDownItems.Add(new ToolStripSeparator());
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem("实时", "tempSensitivityGroup", (s, e) => {
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem("Realtime", "tempSensitivityGroup", (s, e) => {
         tempSensitivity = "realtime";
         respondSpeed = 1;
         SaveConfig("TempSensitivity");
       }, false));
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem("高", "tempSensitivityGroup", (s, e) => {
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem("High", "tempSensitivityGroup", (s, e) => {
         tempSensitivity = "high";
         respondSpeed = 0.4f;
         SaveConfig("TempSensitivity");
       }, true));
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem("中", "tempSensitivityGroup", (s, e) => {
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem("Medium", "tempSensitivityGroup", (s, e) => {
         tempSensitivity = "medium";
         respondSpeed = 0.1f;
         SaveConfig("TempSensitivity");
       }, false));
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem("低", "tempSensitivityGroup", (s, e) => {
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem("Low", "tempSensitivityGroup", (s, e) => {
         tempSensitivity = "low";
         respondSpeed = 0.04f;
         SaveConfig("TempSensitivity");
       }, false));
       trayIcon.ContextMenuStrip.Items.Add(fanConfigMenu);
 
-      ToolStripMenuItem fanControlMenu = new ToolStripMenuItem("风扇控制");
-      fanControlMenu.DropDownItems.Add(CreateMenuItem("自动", "fanControlGroup", (s, e) => {
+      ToolStripMenuItem fanControlMenu = new ToolStripMenuItem("Fan Control");
+      fanControlMenu.DropDownItems.Add(CreateMenuItem("Auto", "fanControlGroup", (s, e) => {
         fanControl = "auto";
         SetMaxFanSpeedOff();
         fanControlTimer.Change(0, 1000);
         SaveConfig("FanControl");
       }, true));
-      fanControlMenu.DropDownItems.Add(CreateMenuItem("最大风扇", "fanControlGroup", (s, e) => {
+      fanControlMenu.DropDownItems.Add(CreateMenuItem("Max", "fanControlGroup", (s, e) => {
         fanControl = "max";
         SetMaxFanSpeedOn();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -430,15 +430,15 @@ namespace OmenSuperHub {
       }
       trayIcon.ContextMenuStrip.Items.Add(fanControlMenu);
 
-      ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem("性能控制");
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("狂暴模式", "fanModeGroup", (s, e) => {
+      ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem("Performance Control");
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("Performance", "fanModeGroup", (s, e) => {
         fanMode = "performance";
         SetFanMode(0x31);
         SaveConfig("FanMode");
         // 恢复CPU功耗设定
         RestoreCPUPower();
       }, true));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("平衡模式", "fanModeGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("Default", "fanModeGroup", (s, e) => {
         fanMode = "default";
         SetFanMode(0x30);
         SaveConfig("FanMode");
@@ -446,24 +446,24 @@ namespace OmenSuperHub {
         RestoreCPUPower();
       }, false));
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP开+DB开", "gpuPowerGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP On + DB On", "gpuPowerGroup", (s, e) => {
         gpuPower = "max";
         SetMaxGpuPower();
         SaveConfig("GpuPower");
       }, true));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP开+DB关", "gpuPowerGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP On + DB Off", "gpuPowerGroup", (s, e) => {
         gpuPower = "med";
         SetMedGpuPower();
         SaveConfig("GpuPower");
       }, false));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP关+DB关", "gpuPowerGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP Off + DB Off", "gpuPowerGroup", (s, e) => {
         gpuPower = "min";
         SetMinGpuPower();
         SaveConfig("GpuPower");
       }, false));
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
-      DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
+      ToolStripMenuItem DBMenu = new ToolStripMenuItem("Switch DB Mode");
+      DBMenu.DropDownItems.Add(CreateMenuItem("Unlocked", "DBGroup", (s, e) => {
         SetFanMode(0x31);
         SetMaxGpuPower();
         SetCpuPowerLimit((byte)CPULimitDB);
@@ -472,7 +472,7 @@ namespace OmenSuperHub {
         countDB = countDBInit;
         SaveConfig("DBVersion");
       }, false));
-      DBMenu.DropDownItems.Add(CreateMenuItem("普通版本", "DBGroup", (s, e) => {
+      DBMenu.DropDownItems.Add(CreateMenuItem("Normal", "DBGroup", (s, e) => {
         DBVersion = 2;
         countDB = 0;
         //ChangeDBVersion(DBVersion);
@@ -483,8 +483,8 @@ namespace OmenSuperHub {
         SaveConfig("DBVersion");
       }, true));
       performanceControlMenu.DropDownItems.Add(DBMenu);
-      ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
-      cpuPowerMenu.DropDownItems.Add(CreateMenuItem("最大", "cpuPowerGroup", (s, e) => {
+      ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU Power");
+      cpuPowerMenu.DropDownItems.Add(CreateMenuItem("Max", "cpuPowerGroup", (s, e) => {
         cpuPower = "max";
         SetCpuPowerLimit(254);
         SaveConfig("CpuPower");
@@ -498,8 +498,8 @@ namespace OmenSuperHub {
         }, false));
       }
       performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
-      ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem("GPU频率限制");
-      gpuClockMenu.DropDownItems.Add(CreateMenuItem("还原", "gpuClockGroup", (s, e) => {
+      ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem("GPU Frequency Limit");
+      gpuClockMenu.DropDownItems.Add(CreateMenuItem("Reset", "gpuClockGroup", (s, e) => {
         gpuClock = 0;
         SetGPUClockLimit(gpuClock);
         SaveConfig("GpuClock");
@@ -532,9 +532,9 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(performanceControlMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
-      ToolStripMenuItem hardwareMonitorMenu = new ToolStripMenuItem("硬件监控");
+      ToolStripMenuItem hardwareMonitorMenu = new ToolStripMenuItem("Hardware Monitoring");
       ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem("GPU");
-      monitorGPUMenu.DropDownItems.Add(CreateMenuItem("开启GPU监控", "monitorGPUGroup", (s, e) => {
+      monitorGPUMenu.DropDownItems.Add(CreateMenuItem("Enable GPU Monitoring", "monitorGPUGroup", (s, e) => {
         monitorGPU = true;
         if (hasStopAuto)
           autoStopMonitorGPU = false;
@@ -544,7 +544,7 @@ namespace OmenSuperHub {
         libreComputer.IsGpuEnabled = true;
         SaveConfig("MonitorGPU");
       }, true));
-      monitorGPUMenu.DropDownItems.Add(CreateMenuItem("关闭GPU监控", "monitorGPUGroup", (s, e) => {
+      monitorGPUMenu.DropDownItems.Add(CreateMenuItem("Disable GPU Monitoring", "monitorGPUGroup", (s, e) => {
         monitorGPU = false;
         if (hasStartAuto)
           autoStartMonitorGPU = false;
@@ -555,103 +555,103 @@ namespace OmenSuperHub {
         SaveConfig("MonitorGPU");
       }, false));
       hardwareMonitorMenu.DropDownItems.Add(monitorGPUMenu);
-      ToolStripMenuItem monitorFanMenu = new ToolStripMenuItem("风扇");
-      monitorFanMenu.DropDownItems.Add(CreateMenuItem("开启风扇监控", "monitorFanGroup", (s, e) => {
+      ToolStripMenuItem monitorFanMenu = new ToolStripMenuItem("Fan");
+      monitorFanMenu.DropDownItems.Add(CreateMenuItem("Enable Fan Monitoring", "monitorFanGroup", (s, e) => {
         monitorFan = true;
         SaveConfig("MonitorFan");
       }, true));
-      monitorFanMenu.DropDownItems.Add(CreateMenuItem("关闭风扇监控", "monitorFanGroup", (s, e) => {
+      monitorFanMenu.DropDownItems.Add(CreateMenuItem("Disable Fan Monitoring", "monitorFanGroup", (s, e) => {
         monitorFan = false;
         SaveConfig("MonitorFan");
       }, false));
       hardwareMonitorMenu.DropDownItems.Add(monitorFanMenu);
       trayIcon.ContextMenuStrip.Items.Add(hardwareMonitorMenu);
-      ToolStripMenuItem floatingBarMenu = new ToolStripMenuItem("浮窗显示");
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("关闭浮窗", "floatingBarGroup", (s, e) => {
+      ToolStripMenuItem floatingBarMenu = new ToolStripMenuItem("Floating Window");
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Hide Floating Window", "floatingBarGroup", (s, e) => {
         floatingBar = "off";
         CloseFloatingForm();
         SaveConfig("FloatingBar");
       }, true));
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("显示浮窗", "floatingBarGroup", (s, e) => {
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Show Floating Window", "floatingBarGroup", (s, e) => {
         floatingBar = "on";
         ShowFloatingForm();
         SaveConfig("FloatingBar");
       }, false));
       floatingBarMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("24号", "floatingBarSizeGroup", (s, e) => {
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Font Size 24", "floatingBarSizeGroup", (s, e) => {
         textSize = 24;
         UpdateFloatingText();
         SaveConfig("FloatingBarSize");
       }, false));
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("36号", "floatingBarSizeGroup", (s, e) => {
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Font Size 36", "floatingBarSizeGroup", (s, e) => {
         textSize = 36;
         UpdateFloatingText();
         SaveConfig("FloatingBarSize");
       }, false));
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("48号", "floatingBarSizeGroup", (s, e) => {
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Font Size 48", "floatingBarSizeGroup", (s, e) => {
         textSize = 48;
         UpdateFloatingText();
         SaveConfig("FloatingBarSize");
       }, true));
       floatingBarMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("左上角", "floatingBarLocGroup", (s, e) => {
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Top Left", "floatingBarLocGroup", (s, e) => {
         floatingBarLoc = "left";
         UpdateFloatingText();
         SaveConfig("FloatingBarLoc");
       }, true));
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem("右上角", "floatingBarLocGroup", (s, e) => {
+      floatingBarMenu.DropDownItems.Add(CreateMenuItem("Top Right", "floatingBarLocGroup", (s, e) => {
         floatingBarLoc = "right";
         UpdateFloatingText();
         SaveConfig("FloatingBarLoc");
       }, false));
       trayIcon.ContextMenuStrip.Items.Add(floatingBarMenu);
-      ToolStripMenuItem omenKeyMenu = new ToolStripMenuItem("Omen键");
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem("默认", "omenKeyGroup", (s, e) => {
+      ToolStripMenuItem omenKeyMenu = new ToolStripMenuItem("Omen Button");
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem("Default", "omenKeyGroup", (s, e) => {
         omenKey = "default";
         tooltipUpdateTimer.Enabled = false;
         OmenKeyOff();
         OmenKeyOn(omenKey);
         SaveConfig("OmenKey");
       }, true));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem("切换浮窗显示", "omenKeyGroup", (s, e) => {
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem("Toggle Floating Window", "omenKeyGroup", (s, e) => {
         omenKey = "custom";
         checkFloatingTimer.Enabled = true;
         OmenKeyOff();
         OmenKeyOn(omenKey);
         SaveConfig("OmenKey");
       }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem("取消绑定", "omenKeyGroup", (s, e) => {
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem("Unbind", "omenKeyGroup", (s, e) => {
         omenKey = "none";
         checkFloatingTimer.Enabled = false;
         OmenKeyOff();
         SaveConfig("OmenKey");
       }, false));
       trayIcon.ContextMenuStrip.Items.Add(omenKeyMenu);
-      ToolStripMenuItem settingMenu = new ToolStripMenuItem("其他设置");
-      ToolStripMenuItem customIconMenu = new ToolStripMenuItem("图标");
-      customIconMenu.DropDownItems.Add(CreateMenuItem("原版", "customIconGroup", (s, e) => {
+      ToolStripMenuItem settingMenu = new ToolStripMenuItem("Other Settings");
+      ToolStripMenuItem customIconMenu = new ToolStripMenuItem("Icon");
+      customIconMenu.DropDownItems.Add(CreateMenuItem("Original", "customIconGroup", (s, e) => {
         customIcon = "original";
         trayIcon.Icon = Properties.Resources.smallfan;
         SaveConfig("CustomIcon");
       }, true));
-      customIconMenu.DropDownItems.Add(CreateMenuItem("自定义图标", "customIconGroup", (s, e) => {
+      customIconMenu.DropDownItems.Add(CreateMenuItem("Custom", "customIconGroup", (s, e) => {
         customIcon = "custom";
         SetCustomIcon();
         SaveConfig("CustomIcon");
       }, false));
-      customIconMenu.DropDownItems.Add(CreateMenuItem("动态图标", "customIconGroup", (s, e) => {
+      customIconMenu.DropDownItems.Add(CreateMenuItem("Dynamic", "customIconGroup", (s, e) => {
         customIcon = "dynamic";
         GenerateDynamicIcon((int)CPUTemp);
         SaveConfig("CustomIcon");
       }, false));
       settingMenu.DropDownItems.Add(customIconMenu);
-      ToolStripMenuItem autoStartMenu = new ToolStripMenuItem("开机自启");
-      autoStartMenu.DropDownItems.Add(CreateMenuItem("开启", "autoStartGroup", (s, e) => {
+      ToolStripMenuItem autoStartMenu = new ToolStripMenuItem("Auto Start");
+      autoStartMenu.DropDownItems.Add(CreateMenuItem("Enable", "autoStartGroup", (s, e) => {
         autoStart = "on";
         AutoStartEnable();
         SaveConfig("AutoStart");
       }, false));
-      autoStartMenu.DropDownItems.Add(CreateMenuItem("关闭", "autoStartGroup", (s, e) => {
+      autoStartMenu.DropDownItems.Add(CreateMenuItem("Disable", "autoStartGroup", (s, e) => {
         autoStart = "off";
         AutoStartDisable();
         SaveConfig("AutoStart");
@@ -660,7 +660,7 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(settingMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
-      trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("退出", null, (s, e) => Exit(), false));
+      trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("Exit App", null, (s, e) => Exit(), false));
 
       // Initialize tooltip update timer
       tooltipUpdateTimer = new System.Timers.Timer(1000); // Set interval to 1 second
@@ -696,7 +696,7 @@ namespace OmenSuperHub {
       if (File.Exists(iconPath)) {
         return true;
       } else {
-        MessageBox.Show("不存在自定义图标custom.ico", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show("Custom icon file 'custom.ico' does not exist.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
       }
     }
@@ -708,7 +708,7 @@ namespace OmenSuperHub {
       if (File.Exists(iconPath)) {
         trayIcon.Icon = new Icon(iconPath);
       } else {
-        MessageBox.Show("不存在自定义图标custom.ico", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show("Custom icon file 'custom.ico' does not exist.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
       }
     }
 
@@ -769,7 +769,7 @@ namespace OmenSuperHub {
         if (match.Success) {
           gpuModel = match.Groups[1].Value; // 返回匹配到的代号部分
           //if(modelName != null)
-          //  MessageBox.Show($"显卡型号为：{gpuModel}", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          //  MessageBox.Show($"显卡型号为：{gpuModel}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           Console.WriteLine($"First GPU Model Code: {gpuModel}");
           return gpuModel;
         } else {
@@ -840,18 +840,18 @@ namespace OmenSuperHub {
           //if(kind == 2)
           //  v2 = new Version("555.99");
           if (v1.CompareTo(v2) >= 0) {
-            //MessageBox.Show("当前显卡驱动：" + version, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //MessageBox.Show("当前显卡驱动：" + version, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return true;
           } else {
-            MessageBox.Show("请安装新版显卡驱动", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Please install the latest graphics driver.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
           }
         } else {
-          MessageBox.Show($"无法找到 NVIDIA 显卡驱动版本", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show($"Unable to find NVIDIA graphics driver version.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           return false;
         }
       } else {
-        MessageBox.Show($"查询显卡驱动失败", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show($"Failed to query graphics driver.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
       }
     }
@@ -910,11 +910,11 @@ namespace OmenSuperHub {
               string driverVersion = lines[i + 4].Split(':')[1].Trim();
 
               if (driverVersion != targetVersion) {
-                Console.WriteLine("发现其他版本: " + driverVersion);
+                Console.WriteLine("Found other version: " + driverVersion);
                 namesToDelete.Add(publishedName);
               } else {
                 hasVersion = true;
-                Console.WriteLine("已经存在所需版本!");
+                Console.WriteLine("Required version already exists!");
               }
             }
           }
@@ -923,17 +923,17 @@ namespace OmenSuperHub {
 
       if (!hasVersion) {
         ExecuteCommand($"pnputil /add-driver \"{driverFile}\" /install /force");
-        Console.WriteLine("成功更改DB版本!");
+        Console.WriteLine("Successfully changed DB version!");
       }
 
       if (namesToDelete.Count > 0) {
-        Console.WriteLine("找到需要删除的驱动程序包:");
+        Console.WriteLine("Found driver packages to delete:");
         foreach (var name in namesToDelete) {
-          Console.WriteLine($"删除驱动程序包: {name}");
+          Console.WriteLine($"Deleting driver package: {name}");
           ExecuteCommand($"pnputil /delete-driver \"{name}\" /uninstall /force");
         }
       } else {
-        Console.WriteLine("没有需要删除的驱动程序包.");
+        Console.WriteLine("No driver packages need to be deleted.");
       }
 
       // 清理临时文件
@@ -944,7 +944,7 @@ namespace OmenSuperHub {
       DeleteExtractedFiles(extractedSysFilePath);
       DeleteExtractedFiles(extractedCatFilePath);
 
-      Console.WriteLine("操作完成.");
+      Console.WriteLine("Task completed.");
       Console.ReadLine();
     }
 
@@ -954,9 +954,9 @@ namespace OmenSuperHub {
           using (FileStream fileStream = new FileStream(outputFilePath, FileMode.Create)) {
             resourceStream.CopyTo(fileStream);
           }
-          Console.WriteLine($"资源文件已提取到: {outputFilePath}");
+          Console.WriteLine($"Resource file extracted to: {outputFilePath}");
         } else {
-          Console.WriteLine($"无法找到资源: {resourceName}");
+          Console.WriteLine($"Unable to find resource: {resourceName}");
         }
       }
     }
@@ -965,7 +965,7 @@ namespace OmenSuperHub {
       // 删除提取的文件
       if (File.Exists(filePath)) {
         File.Delete(filePath);
-        Console.WriteLine($"删除临时文件:{filePath}");
+        Console.WriteLine($"Deleted temporary file: {filePath}");
       }
     }
 
@@ -1006,24 +1006,24 @@ namespace OmenSuperHub {
         Checked = isChecked // Set initial checked state
       };
       item.Click += (s, e) => {
-        if (item.Text == "解锁版本") {
+        if (item.Text == "Unlocked Mode") {
           if (!powerOnline) {
-            MessageBox.Show($"请连接交流电源", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show($"Please connect to AC power.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DBVersion = 2;
             countDB = 0;
             SaveConfig("DBVersion");
-            UpdateCheckedState("DBGroup", "普通版本");
+            UpdateCheckedState("DBGroup", "Normal");
             return;
           }
           if (!CheckDBVersion(1)) {
             DBVersion = 2;
             countDB = 0;
             SaveConfig("DBVersion");
-            UpdateCheckedState("DBGroup", "普通版本");
+            UpdateCheckedState("DBGroup", "Normal");
             return;
           }
           //if(CPUPower > CPULimitDB + 1) {
-          //  MessageBox.Show($"请在CPU低负载下解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          //  MessageBox.Show($"请在CPU低负载下解锁", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           //  DBVersion = 2;
           //  countDB = 0;
           //  SaveConfig("DBVersion");
@@ -1031,9 +1031,9 @@ namespace OmenSuperHub {
           //  return;
           //}
         }
-        if (item.Text == "普通版本" && !CheckDBVersion(2))
+        if (item.Text == "Normal" && !CheckDBVersion(2))
           return;
-        if (item.Text == "自定义图标" && !CheckCustomIcon())
+        if (item.Text == "Custom Icon" && !CheckCustomIcon())
           return;
 
         action(s, e); // Perform the original action
@@ -1119,15 +1119,15 @@ namespace OmenSuperHub {
             if (tryTimes == 2) {
               tryTimes = 0;
               if (CPUPower > CPULimitDB + 10)
-                MessageBox.Show($"请在CPU低负载下解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Please unlock under low CPU load.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
               else
-                MessageBox.Show($"功耗异常，解锁失败，请重新尝试！\n当前显卡功耗限制为：{powerLimits:F2} W ！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Abnormal power detected. Unlock failed. Please try again!\nCurrent GPU power limit: {powerLimits:F2} W!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
               command = $"pnputil /enable-device {deviceId}";
               ExecuteCommand(command);
               DBVersion = 2;
               countDB = 0;
               SaveConfig("DBVersion");
-              UpdateCheckedState("DBGroup", "普通版本");
+              UpdateCheckedState("DBGroup", "Normal");
             } else {
               SetFanMode(0x31);
               SetMaxGpuPower();
@@ -1137,9 +1137,9 @@ namespace OmenSuperHub {
           } else {
             tryTimes = 0;
             if (autoStart == "off") {
-              MessageBox.Show($"解锁成功！但当前未设置开机自启，解锁后若重启电脑会导致功耗异常，需要重新解锁！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+              MessageBox.Show($"Unlock successful! However, auto-start is not enabled. After restarting the computer, power limits may become abnormal and unlocking will need to be redone.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            //MessageBox.Show($"解锁成功！\n当前最大显卡功耗锁定为：{-powerLimits:F2} W ！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //MessageBox.Show($"解锁成功！\n当前最大显卡功耗锁定为：{-powerLimits:F2} W ！", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Information);
           }
           if (tryTimes == 0) {
             // 恢复模式设定
@@ -1255,12 +1255,12 @@ namespace OmenSuperHub {
         hasStartAuto = false;
         autoStartMonitorGPU = true;
         libreComputer.IsGpuEnabled = false;
-        UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
+        UpdateCheckedState("monitorGPUGroup", "Disable GPU Monitoring");
         SaveConfig("MonitorGPU");
 
         // 设置通知的文本和标题
-        trayIcon.BalloonTipTitle = "状态更改提示";
-        trayIcon.BalloonTipText = "检测到显卡进入低功耗状态，OSH已停止监控GPU以节约能源。\n手动打开GPU监控后，本次将不再自动停止监控GPU。";
+        trayIcon.BalloonTipTitle = "Status Change Warning";
+        trayIcon.BalloonTipText = "GPU has entered low-power mode. OSH has stopped monitoring the GPU to conserve energy.\nIf you manually enable GPU monitoring, it will not be auto-disabled again during this session.";
         trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
         trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
       }
@@ -1274,12 +1274,12 @@ namespace OmenSuperHub {
         hasStopAuto = false;
         autoStopMonitorGPU = true;
         libreComputer.IsGpuEnabled = true;
-        UpdateCheckedState("monitorGPUGroup", "开启GPU监控");
+        UpdateCheckedState("monitorGPUGroup", "Enable GPU Monitoring");
         SaveConfig("MonitorGPU");
 
         // 设置通知的文本和标题
-        trayIcon.BalloonTipTitle = "状态更改提示";
-        trayIcon.BalloonTipText = "检测到显卡连接到显示器，OSH已开始监控GPU。\n手动关闭GPU监控后，本次将不再自动开始监控GPU。";
+        trayIcon.BalloonTipTitle = "Status Change Warning";
+        trayIcon.BalloonTipText = "GPU has been detected as connected to a display. OSH has started monitoring the GPU.\nIf you manually disable GPU monitoring, it will not be auto-enabled again during this session.";
         trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
         trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
       }
@@ -1287,7 +1287,7 @@ namespace OmenSuperHub {
       // 似乎无法一次性关闭GPU监控及选项
       if (!monitorGPU && libreComputer.IsGpuEnabled) {
         libreComputer.IsGpuEnabled = false;
-        UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
+        UpdateCheckedState("monitorGPUGroup", "Disable GPU Monitoring");
       }
 
       //Console.WriteLine($"openCPU: {openTempCPU}℃, {openPowerCPU}W");
@@ -1303,7 +1303,7 @@ namespace OmenSuperHub {
 
       int numberOfFans = fanTableBytes[0];
       if (numberOfFans != 2) {
-        MessageBox.Show($"本机型不受支持！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show($"This device model is not supported!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         GenerateDefaultMapping(filePath);
         return;
       }
@@ -1564,30 +1564,30 @@ namespace OmenSuperHub {
             fanTable = (string)key.GetValue("FanTable", "silent");
             if (fanTable.Contains("cool")) {
               LoadFanConfig("cool.txt");
-              UpdateCheckedState("fanTableGroup", "降温模式");
+              UpdateCheckedState("fanTableGroup", "Cooling Mode");
             } else if (fanTable.Contains("silent")) {
               LoadFanConfig("silent.txt");
-              UpdateCheckedState("fanTableGroup", "安静模式");
+              UpdateCheckedState("fanTableGroup", "Silent Mode");
             }
 
             fanMode = (string)key.GetValue("FanMode", "performance");
             if (fanMode.Contains("performance")) {
               SetFanMode(0x31);
-              UpdateCheckedState("fanModeGroup", "狂暴模式");
+              UpdateCheckedState("fanModeGroup", "Turbo Mode");
             } else if (fanMode.Contains("default")) {
               SetFanMode(0x30);
-              UpdateCheckedState("fanModeGroup", "平衡模式");
+              UpdateCheckedState("fanModeGroup", "Balanced Mode");
             }
 
             fanControl = (string)key.GetValue("FanControl", "auto");
             if (fanControl == "auto") {
               SetMaxFanSpeedOff();
               fanControlTimer.Change(0, 1000);
-              UpdateCheckedState("fanControlGroup", "自动");
+              UpdateCheckedState("fanControlGroup", "Auto");
             } else if (fanControl.Contains("max")) {
               SetMaxFanSpeedOn();
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-              UpdateCheckedState("fanControlGroup", "最大风扇");
+              UpdateCheckedState("fanControlGroup", "Max Fan");
             } else if (fanControl.Contains(" RPM")) {
               SetMaxFanSpeedOff();
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -1600,26 +1600,26 @@ namespace OmenSuperHub {
             switch (tempSensitivity) {
               case "realtime":
                 respondSpeed = 1;
-                UpdateCheckedState("tempSensitivityGroup", "实时");
+                UpdateCheckedState("tempSensitivityGroup", "Realtime");
                 break;
               case "high":
                 respondSpeed = 0.4f;
-                UpdateCheckedState("tempSensitivityGroup", "高");
+                UpdateCheckedState("tempSensitivityGroup", "High");
                 break;
               case "medium":
                 respondSpeed = 0.1f;
-                UpdateCheckedState("tempSensitivityGroup", "中");
+                UpdateCheckedState("tempSensitivityGroup", "Medium");
                 break;
               case "low":
                 respondSpeed = 0.04f;
-                UpdateCheckedState("tempSensitivityGroup", "低");
+                UpdateCheckedState("tempSensitivityGroup", "Low");
                 break;
             }
 
             cpuPower = (string)key.GetValue("CpuPower", "max");
             if (cpuPower == "max") {
               SetCpuPowerLimit(254);
-              UpdateCheckedState("cpuPowerGroup", "最大");
+              UpdateCheckedState("cpuPowerGroup", "Max");
             } else if (cpuPower.Contains(" W")) {
               int value = int.Parse(cpuPower.Replace(" W", "").Trim());
               if (value > 10 && value <= 254) {
@@ -1632,15 +1632,15 @@ namespace OmenSuperHub {
             switch (gpuPower) {
               case "max":
                 SetMaxGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "CTGP开+DB开");
+                UpdateCheckedState("gpuPowerGroup", "CTGP On + DB On");
                 break;
               case "med":
                 SetMedGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "CTGP开+DB关");
+                UpdateCheckedState("gpuPowerGroup", "CTGP On + DB Off");
                 break;
               case "min":
                 SetMinGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "CTGP关+DB关");
+                UpdateCheckedState("gpuPowerGroup", "CTGP Off + DB Off");
                 break;
             }
 
@@ -1648,7 +1648,7 @@ namespace OmenSuperHub {
             if (SetGPUClockLimit(gpuClock)) {
               UpdateCheckedState("gpuClockGroup", gpuClock + " MHz");
             } else {
-              UpdateCheckedState("gpuClockGroup", "还原");
+              UpdateCheckedState("gpuClockGroup", "Reset");
             }
 
             DBVersion = (int)key.GetValue("DBVersion", 2);
@@ -1659,14 +1659,14 @@ namespace OmenSuperHub {
                 SetMaxGpuPower();
                 SetCpuPowerLimit((byte)CPULimitDB);
                 countDB = countDBInit;
-                UpdateCheckedState("DBGroup", "解锁版本");
+                UpdateCheckedState("DBGroup", "Unlocked Mode");
                 break;
               case 2:
                 string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
                 string command = $"pnputil /enable-device {deviceId}";
                 ExecuteCommand(command);
                 DBVersion = 2;
-                UpdateCheckedState("DBGroup", "普通版本");
+                UpdateCheckedState("DBGroup", "Normal");
                 break;
             }
 
@@ -1674,10 +1674,10 @@ namespace OmenSuperHub {
             switch (autoStart) {
               case "on":
                 AutoStartEnable();
-                UpdateCheckedState("autoStartGroup", "开启");
+                UpdateCheckedState("autoStartGroup", "Enable");
                 break;
               case "off":
-                UpdateCheckedState("autoStartGroup", "关闭");
+                UpdateCheckedState("autoStartGroup", "Disable");
                 break;
             }
 
@@ -1687,15 +1687,15 @@ namespace OmenSuperHub {
             switch (customIcon) {
               case "original":
                 trayIcon.Icon = Properties.Resources.smallfan;
-                UpdateCheckedState("customIconGroup", "原版");
+                UpdateCheckedState("customIconGroup", "Original");
                 break;
               case "custom":
                 SetCustomIcon();
-                UpdateCheckedState("customIconGroup", "自定义图标");
+                UpdateCheckedState("customIconGroup", "Custom");
                 break;
               case "dynamic":
                 GenerateDynamicIcon((int)CPUTemp);
-                UpdateCheckedState("customIconGroup", "动态图标");
+                UpdateCheckedState("customIconGroup", "Dynamic");
                 break;
             }
 
@@ -1705,18 +1705,18 @@ namespace OmenSuperHub {
                 checkFloatingTimer.Enabled = false;
                 OmenKeyOff();
                 OmenKeyOn(omenKey);
-                UpdateCheckedState("omenKeyGroup", "默认");
+                UpdateCheckedState("omenKeyGroup", "Default ");
                 break;
               case "custom":
                 checkFloatingTimer.Enabled = true;
                 OmenKeyOff();
                 OmenKeyOn(omenKey);
-                UpdateCheckedState("omenKeyGroup", "切换浮窗显示");
+                UpdateCheckedState("omenKeyGroup", "Toggle Floating Window");
                 break;
               case "none":
                 checkFloatingTimer.Enabled = false;
                 OmenKeyOff();
-                UpdateCheckedState("omenKeyGroup", "取消绑定");
+                UpdateCheckedState("omenKeyGroup", "Unbind");
                 break;
             }
 
@@ -1724,51 +1724,51 @@ namespace OmenSuperHub {
             if (monitorGPUCache == true) {
               libreComputer.IsGpuEnabled = true;
               monitorGPU = true;
-              UpdateCheckedState("monitorGPUGroup", "开启GPU监控");
+              UpdateCheckedState("monitorGPUGroup", "Enable GPU Monitoring");
             } else {
               libreComputer.IsGpuEnabled = false;
               monitorGPU = false;
-              UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
+              UpdateCheckedState("monitorGPUGroup", "Disable GPU Monitoring");
             }
 
             bool monitorFanCache = Convert.ToBoolean(key.GetValue("MonitorFan", true));
             if (monitorFanCache == true) {
               monitorFan = true;
-              UpdateCheckedState("monitorFanGroup", "开启风扇监控");
+              UpdateCheckedState("monitorFanGroup", "Enable Fan Monitoring");
             } else {
               monitorFan = false;
-              UpdateCheckedState("monitorFanGroup", "关闭风扇监控");
+              UpdateCheckedState("monitorFanGroup", "Disable Fan Monitoring");
             }
 
             textSize = (int)key.GetValue("FloatingBarSize", 48);
             UpdateFloatingText();
             switch (textSize) {
               case 24:
-                UpdateCheckedState("floatingBarSizeGroup", "24号");
+                UpdateCheckedState("floatingBarSizeGroup", "Font Size 24");
                 break;
               case 36:
-                UpdateCheckedState("floatingBarSizeGroup", "36号");
+                UpdateCheckedState("floatingBarSizeGroup", "Font Size 36");
                 break;
               case 48:
-                UpdateCheckedState("floatingBarSizeGroup", "48号");
+                UpdateCheckedState("floatingBarSizeGroup", "Font Size 48");
                 break;
             }
 
             floatingBarLoc = (string)key.GetValue("FloatingBarLoc", "left");
             UpdateFloatingText();
             if (floatingBarLoc == "left") {
-              UpdateCheckedState("floatingBarLocGroup", "左上角");
+              UpdateCheckedState("floatingBarLocGroup", "Top Left");
             } else {
-              UpdateCheckedState("floatingBarLocGroup", "右上角");
+              UpdateCheckedState("floatingBarLocGroup", "Top Right");
             }
 
             floatingBar = (string)key.GetValue("FloatingBar", "off");
             if (floatingBar == "on") {
               ShowFloatingForm();
-              UpdateCheckedState("floatingBarGroup", "显示浮窗");
+              UpdateCheckedState("floatingBarGroup", "Show Floating Window");
             } else {
               CloseFloatingForm();
-              UpdateCheckedState("floatingBarGroup", "关闭浮窗");
+              UpdateCheckedState("floatingBarGroup", "Hide Floating Window");
             }
           } else {
             // 如果注册表键不存在，可以使用默认值
@@ -1792,11 +1792,11 @@ namespace OmenSuperHub {
               if ((string)key.GetValue("FloatingBar", "off") == "on") {
                 floatingBar = "off";
                 CloseFloatingForm();
-                UpdateCheckedState("floatingBarGroup", "关闭浮窗");
+                UpdateCheckedState("floatingBarGroup", "Hide Floating Window");
               } else {
                 floatingBar = "on";
                 ShowFloatingForm();
-                UpdateCheckedState("floatingBarGroup", "显示浮窗");
+                UpdateCheckedState("floatingBarGroup", "Show Floating Window");
               }
               SaveConfig("FloatingBar");
             }
@@ -1824,7 +1824,7 @@ namespace OmenSuperHub {
       });
     }
 
-    // 显示浮窗
+    // Show Floating Window
     static void ShowFloatingForm() {
       if (floatingForm == null || floatingForm.IsDisposed) {
         floatingForm = new FloatingForm(monitorText(), textSize, floatingBarLoc);
@@ -1836,7 +1836,7 @@ namespace OmenSuperHub {
       }
     }
 
-    // 关闭浮窗
+    // Hide Floating Window
     static void CloseFloatingForm() {
       if (floatingForm != null && !floatingForm.IsDisposed) {
         lock (floatingForm) {
