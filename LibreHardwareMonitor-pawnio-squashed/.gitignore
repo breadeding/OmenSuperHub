@@ -1,0 +1,8 @@
+*.user
+*.suo
+[Bb]in/
+[Oo]bj/
+.idea/
+.vs/
+.vscode/
+packages/

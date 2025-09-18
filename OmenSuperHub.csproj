@@ -107,9 +107,6 @@
     <Reference Include="HidSharp, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\HidSharp.2.1.0\lib\net35\HidSharp.dll</HintPath>
     </Reference>
-    <Reference Include="LibreHardwareMonitorLib, Version=0.9.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\LibreHardwareMonitorLib.0.9.4\lib\net472\LibreHardwareMonitorLib.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Win32.Primitives, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Win32.Primitives.4.3.0\lib\net46\Microsoft.Win32.Primitives.dll</HintPath>
@@ -307,9 +304,9 @@
     <None Include="Resources\smallfan.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="OpenHardwareMonitorLib.csproj">
-      <Project>{b0397530-545a-471d-bb74-027ae456df1a}</Project>
-      <Name>OpenHardwareMonitorLib</Name>
+    <ProjectReference Include="LibreHardwareMonitor-pawnio-squashed\LibreHardwareMonitorLib\LibreHMLib_PawnIo.csproj">
+      <Project>{3d996b14-d8d9-d7f6-b39b-46324df820f1}</Project>
+      <Name>LibreHMLib_PawnIo</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

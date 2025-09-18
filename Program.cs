@@ -11,11 +11,11 @@ using System.Reflection;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Drawing;
-using OpenComputer = OpenHardwareMonitor.Hardware.Computer;
-using OpenIHardware = OpenHardwareMonitor.Hardware.IHardware;
-using OpenHardwareType = OpenHardwareMonitor.Hardware.HardwareType;
-using OpenISensor = OpenHardwareMonitor.Hardware.ISensor;
-using OpenSensorType = OpenHardwareMonitor.Hardware.SensorType;
+//using OpenComputer = OpenHardwareMonitor.Hardware.Computer;
+//using OpenIHardware = OpenHardwareMonitor.Hardware.IHardware;
+//using OpenHardwareType = OpenHardwareMonitor.Hardware.HardwareType;
+//using OpenISensor = OpenHardwareMonitor.Hardware.ISensor;
+//using OpenSensorType = OpenHardwareMonitor.Hardware.SensorType;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
 using LibreIHardware = LibreHardwareMonitor.Hardware.IHardware;
 using LibreHardwareType = LibreHardwareMonitor.Hardware.HardwareType;
@@ -38,7 +38,7 @@ namespace OmenSuperHub {
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default";
-    static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
+    //static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
     static LibreComputer libreComputer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
     static bool openLib = true, monitorGPU = true, monitorFan = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
@@ -80,7 +80,7 @@ namespace OmenSuperHub {
         InitTrayIcon();
 
         // Initialize HardwareMonitorLib
-        openComputer.Open();
+        //openComputer.Open();
         libreComputer.Open();
 
         optimiseTimer = new System.Windows.Forms.Timer();
@@ -1179,23 +1179,23 @@ namespace OmenSuperHub {
       float openPowerCPU = -1, librePowerCPU = -1;
       bool getGPU = false;//是否获取到GPU温度
 
-      if (openLib) {
-        foreach (OpenIHardware hardware in openComputer.Hardware) {
-          hardware.Update();
+      //if (openLib) {
+      //  foreach (OpenIHardware hardware in openComputer.Hardware) {
+      //    hardware.Update();
 
-          if (hardware.HardwareType == OpenHardwareType.CPU) {
-            // Get CPU temperature sensor
-            OpenISensor sensor = hardware.Sensors.FirstOrDefault(d => d.SensorType == OpenSensorType.Temperature && d.Name.Contains("Package"));
-            OpenISensor powerSensor = hardware.Sensors.FirstOrDefault(d => d.SensorType == OpenSensorType.Power && d.Name.Contains("CPU Package"));
-            if (sensor != null) {
-              openTempCPU = (int)sensor.Value;
-            }
-            if (powerSensor != null) {
-              openPowerCPU = (float)powerSensor.Value.GetValueOrDefault();
-            }
-          }
-        }
-      }
+      //    if (hardware.HardwareType == OpenHardwareType.CPU) {
+      //      // Get CPU temperature sensor
+      //      OpenISensor sensor = hardware.Sensors.FirstOrDefault(d => d.SensorType == OpenSensorType.Temperature && d.Name.Contains("Package"));
+      //      OpenISensor powerSensor = hardware.Sensors.FirstOrDefault(d => d.SensorType == OpenSensorType.Power && d.Name.Contains("CPU Package"));
+      //      if (sensor != null) {
+      //        openTempCPU = (int)sensor.Value;
+      //      }
+      //      if (powerSensor != null) {
+      //        openPowerCPU = (float)powerSensor.Value.GetValueOrDefault();
+      //      }
+      //    }
+      //  }
+      //}
 
       foreach (LibreIHardware hardware in libreComputer.Hardware) {
         if (hardware.HardwareType == LibreHardwareType.Cpu || hardware.HardwareType == LibreHardwareType.GpuNvidia || hardware.HardwareType == LibreHardwareType.GpuAmd) {
@@ -1227,7 +1227,7 @@ namespace OmenSuperHub {
 
       if (openLib && libreTempCPU > -299 && librePowerCPU >= 0) {
         openLib = false;
-        openComputer.Close();
+        //openComputer.Close();
       }
 
       if (openTempCPU < -299) {
@@ -1875,7 +1875,7 @@ namespace OmenSuperHub {
       }
       tooltipUpdateTimer.Stop(); // 停止定时器
 
-      openComputer.Close();
+      //openComputer.Close();
       libreComputer.Close();
       Application.Exit();
     }
