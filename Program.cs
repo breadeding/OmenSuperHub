@@ -491,7 +491,7 @@ namespace OmenSuperHub {
         SetCpuPowerLimit(254);
         SaveConfig("CpuPower");
       }, true));
-      for (int power = 20; power <= 120; power += 10) {
+      for (int power = 10; power <= 120; power += 10) {
         int currentPower = power;  // 创建一个局部变量，保存当前的 power 值
         cpuPowerMenu.DropDownItems.Add(CreateMenuItem(power + " W", "cpuPowerGroup", (s, e) => {
           cpuPower = currentPower + " W";
@@ -1624,7 +1624,7 @@ namespace OmenSuperHub {
               UpdateCheckedState("cpuPowerGroup", "最大");
             } else if (cpuPower.Contains(" W")) {
               int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-              if (value > 10 && value <= 254) {
+              if (value >= 5 && value <= 254) {
                 SetCpuPowerLimit((byte)value);
                 UpdateCheckedState("cpuPowerGroup", cpuPower);
               }
