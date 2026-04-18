@@ -43,6 +43,10 @@ namespace OmenSuperHub {
     static bool openLib = true, monitorGPU = true, monitorFan = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
+    // Cache last written values to avoid unnecessary disk reads/writes
+    static string lastCpuText = null;
+    static string lastGpuText = null;
+    static string lastFanText = null;
     static Dictionary<float, List<int>> CPUTempFanMap = new Dictionary<float, List<int>>();
     static Dictionary<float, List<int>> GPUTempFanMap = new Dictionary<float, List<int>>();
     static System.Threading.Timer fanControlTimer;
@@ -1100,6 +1104,9 @@ namespace OmenSuperHub {
       trayIcon.Text = monitorText();
       // Console.WriteLine("UpdateTooltip");
 
+      // 同步数据到本地txt
+      SyncDataToTxt();
+
       UpdateFloatingText();
 
       if (customIcon == "dynamic")
@@ -1169,6 +1176,56 @@ namespace OmenSuperHub {
           RestoreConfig();
         }
       }
+    }
+
+    static void SyncDataToTxt() {
+      System.Threading.Tasks.Task.Run(() => {
+        try {
+          // 获取程序根目录
+          string basePath = AppDomain.CurrentDomain.BaseDirectory;
+
+          // 将浮点数转换为整数并转换为文本
+          string cpuText = ((int)Math.Round(CPUTemp)).ToString();
+          string gpuText = ((int)Math.Round(GPUTemp)).ToString();
+          string fanText;
+          // brief lock to avoid potential race on the list
+          lock (fanSpeedNow) {
+            fanText = (fanSpeedNow[0] * 100).ToString();
+          }
+
+          // 仅当与上次内存中保存的值不同时才写入磁盘，避免不必要的 I/O
+          try {
+            if (lastCpuText == null || lastCpuText != cpuText) {
+              File.WriteAllText(Path.Combine(basePath, "cpu_temp.txt"), cpuText);
+              lastCpuText = cpuText;
+            }
+          } catch (Exception ex) {
+            Console.WriteLine($"Sync error when writing cpu_temp.txt: {ex.Message}");
+          }
+
+          try {
+            if (lastGpuText == null || lastGpuText != gpuText) {
+              File.WriteAllText(Path.Combine(basePath, "gpu_temp.txt"), gpuText);
+              lastGpuText = gpuText;
+            }
+          } catch (Exception ex) {
+            Console.WriteLine($"Sync error when writing gpu_temp.txt: {ex.Message}");
+          }
+
+          try {
+            if (lastFanText == null || lastFanText != fanText) {
+              File.WriteAllText(Path.Combine(basePath, "fan_rpm.txt"), fanText);
+              lastFanText = fanText;
+            }
+          } catch (Exception ex) {
+            Console.WriteLine($"Sync error when writing fan_rpm.txt: {ex.Message}");
+          }
+
+        } catch (Exception ex) {
+          // 忽略文件被占用的偶发错误，或者在这里记录日志
+          Console.WriteLine("Sync error: " + ex.Message);
+        }
+      });
     }
 
     static int countQuery = 0;
@@ -1675,7 +1732,7 @@ namespace OmenSuperHub {
             autoStart = (string)key.GetValue("AutoStart", "off");
             switch (autoStart) {
               case "on":
-                AutoStartEnable();
+                //AutoStartEnable();
                 UpdateCheckedState("autoStartGroup", "开启");
                 break;
               case "off":
