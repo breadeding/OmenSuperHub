@@ -1300,6 +1300,19 @@ namespace OmenSuperHub {
       } else
         CPUPower = openPowerCPU;
 
+      if (CPUTemp > 90 && fanControl.Contains(" RPM")) {
+        fanControl = "auto";
+        SetMaxFanSpeedOff();
+        fanControlTimer.Change(0, 1000);
+        UpdateCheckedState("fanControlGroup", "自动");
+        SaveConfig("FanControl");
+
+        trayIcon.BalloonTipTitle = "温度过高警告";
+        trayIcon.BalloonTipText = $"检测到CPU温度高于90℃ ({CPUTemp:F1}℃)，且风扇处于固定转速状态，OSH已自动将风扇控制切换为自动模式。";
+        trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
+        trayIcon.ShowBalloonTip(3000);
+      }
+
       //通过countQuery延时来确保温度正常读取
       if (countQuery <= 5 && monitorGPU)
         countQuery++;
