@@ -32,7 +32,7 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default";
+    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     //static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
     static LibreComputer libreComputer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
     static bool monitorGPU = true, monitorFan = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
@@ -658,6 +658,18 @@ namespace OmenSuperHub {
         SaveConfig("AutoStart");
       }, true));
       settingMenu.DropDownItems.Add(autoStartMenu);
+      
+      ToolStripMenuItem dataLocalizeMenu = new ToolStripMenuItem("数据本地化");
+      dataLocalizeMenu.DropDownItems.Add(CreateMenuItem("开启", "dataLocalizeGroup", (s, e) => {
+        dataLocalize = "on";
+        SaveConfig("DataLocalize");
+      }, false));
+      dataLocalizeMenu.DropDownItems.Add(CreateMenuItem("关闭", "dataLocalizeGroup", (s, e) => {
+        dataLocalize = "off";
+        SaveConfig("DataLocalize");
+      }, true));
+      settingMenu.DropDownItems.Add(dataLocalizeMenu);
+      
       trayIcon.ContextMenuStrip.Items.Add(settingMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
@@ -1047,7 +1059,19 @@ namespace OmenSuperHub {
 
     static void UpdateCheckedState(string group, string itemText = null, ToolStripMenuItem menuItemToCheck = null) {
       if (menuItemToCheck == null) {
-        menuItemToCheck = FindMenuItem(trayIcon.ContextMenuStrip.Items, itemText);
+        // 先尝试匹配相同 group 和名称的选项，防止不同菜单组出现同名冲突（如都有“开启”/“关闭”）
+        ToolStripMenuItem FindExact(ToolStripItemCollection items) {
+          foreach (ToolStripMenuItem item in items.OfType<ToolStripMenuItem>()) {
+            if (item.Text == itemText && string.Equals(item.Tag as string, group)) return item;
+            if (item.HasDropDownItems) {
+              var found = FindExact(item.DropDownItems);
+              if (found != null) return found;
+            }
+          }
+          return null;
+        }
+
+        menuItemToCheck = FindExact(trayIcon.ContextMenuStrip.Items) ?? FindMenuItem(trayIcon.ContextMenuStrip.Items, itemText);
 
         if (menuItemToCheck == null)
           return;
@@ -1174,6 +1198,7 @@ namespace OmenSuperHub {
     }
 
     static void SyncDataToTxt() {
+      if (dataLocalize != "on") return;
       System.Threading.Tasks.Task.Run(() => {
         try {
           // 获取程序根目录
@@ -1528,6 +1553,7 @@ namespace OmenSuperHub {
               key.SetValue("FloatingBarSize", textSize);
               key.SetValue("FloatingBarLoc", floatingBarLoc);
               key.SetValue("FloatingBar", floatingBar);
+              key.SetValue("DataLocalize", dataLocalize);
             } else {
               switch (configName) {
                 case "FanTable":
@@ -1580,6 +1606,9 @@ namespace OmenSuperHub {
                   break;
                 case "FloatingBar":
                   key.SetValue("FloatingBar", floatingBar);
+                  break;
+                case "DataLocalize":
+                  key.SetValue("DataLocalize", dataLocalize);
                   break;
               }
             }
@@ -1803,6 +1832,13 @@ namespace OmenSuperHub {
               CloseFloatingForm();
               UpdateCheckedState("floatingBarGroup", "关闭浮窗");
             }
+            
+            dataLocalize = (string)key.GetValue("DataLocalize", "off");
+            if (dataLocalize == "on") {
+              UpdateCheckedState("dataLocalizeGroup", "开启");
+            } else {
+              UpdateCheckedState("dataLocalizeGroup", "关闭");
+            }
           } else {
             // 如果注册表键不存在，可以使用默认值
             LoadFanConfig("silent.txt");
@@ -1813,6 +1849,13 @@ namespace OmenSuperHub {
         }
       } catch (Exception ex) {
         Console.WriteLine($"Error restoring configuration: {ex.Message}");
+      }
+
+      // 保证应用启动时如果不包含 DataLocalize 键（第一次运行或旧版升级），菜单项UI依然能被初始化选中
+      if (dataLocalize == "on") {
+        UpdateCheckedState("dataLocalizeGroup", "开启");
+      } else {
+        UpdateCheckedState("dataLocalizeGroup", "关闭");
       }
     }
 
