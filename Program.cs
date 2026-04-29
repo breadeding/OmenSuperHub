@@ -11,11 +11,6 @@ using System.Reflection;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Drawing;
-//using OpenComputer = OpenHardwareMonitor.Hardware.Computer;
-//using OpenIHardware = OpenHardwareMonitor.Hardware.IHardware;
-//using OpenHardwareType = OpenHardwareMonitor.Hardware.HardwareType;
-//using OpenISensor = OpenHardwareMonitor.Hardware.ISensor;
-//using OpenSensorType = OpenHardwareMonitor.Hardware.SensorType;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
 using LibreIHardware = LibreHardwareMonitor.Hardware.IHardware;
 using LibreHardwareType = LibreHardwareMonitor.Hardware.HardwareType;
@@ -40,7 +35,7 @@ namespace OmenSuperHub {
     static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default";
     //static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
     static LibreComputer libreComputer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
-    static bool openLib = true, monitorGPU = true, monitorFan = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
+    static bool monitorGPU = true, monitorFan = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
     // Cache last written values to avoid unnecessary disk reads/writes
@@ -1232,27 +1227,8 @@ namespace OmenSuperHub {
     static bool autoStartMonitorGPU = true, autoStopMonitorGPU = true;//是否自动根据情况开/关GPU温度监测以节约能源
     static bool hasStartAuto = false, hasStopAuto = false;//是否已经自动开/关过GPU温度监测，在手动开/关时重置
     static void QueryHarware() {
-      float openTempCPU = -300, libreTempCPU = -300, tempCPU = 50;
-      float openPowerCPU = -1, librePowerCPU = -1;
+      float tempCPU = 50;
       bool getGPU = false;//是否获取到GPU温度
-
-      //if (openLib) {
-      //  foreach (OpenIHardware hardware in openComputer.Hardware) {
-      //    hardware.Update();
-
-      //    if (hardware.HardwareType == OpenHardwareType.CPU) {
-      //      // Get CPU temperature sensor
-      //      OpenISensor sensor = hardware.Sensors.FirstOrDefault(d => d.SensorType == OpenSensorType.Temperature && d.Name.Contains("Package"));
-      //      OpenISensor powerSensor = hardware.Sensors.FirstOrDefault(d => d.SensorType == OpenSensorType.Power && d.Name.Contains("CPU Package"));
-      //      if (sensor != null) {
-      //        openTempCPU = (int)sensor.Value;
-      //      }
-      //      if (powerSensor != null) {
-      //        openPowerCPU = (float)powerSensor.Value.GetValueOrDefault();
-      //      }
-      //    }
-      //  }
-      //}
 
       foreach (LibreIHardware hardware in libreComputer.Hardware) {
         if (hardware.HardwareType == LibreHardwareType.Cpu || hardware.HardwareType == LibreHardwareType.GpuNvidia || hardware.HardwareType == LibreHardwareType.GpuAmd) {
@@ -1260,11 +1236,13 @@ namespace OmenSuperHub {
 
           foreach (LibreISensor sensor in hardware.Sensors) {
             if (hardware.HardwareType == LibreHardwareType.Cpu) {
-              if (sensor.Name == "CPU Package" && sensor.SensorType == LibreSensorType.Temperature) {
-                libreTempCPU = (int)sensor.Value.GetValueOrDefault();
+              if (sensor.SensorType == LibreSensorType.Temperature) {
+                if (sensor.Name.Contains("Package") || sensor.Name.Contains("Tctl/Tdie")) {
+                  tempCPU = (int)sensor.Value.GetValueOrDefault();
+                }
               }
-              if (sensor.Name == "CPU Package" && sensor.SensorType == LibreSensorType.Power) {
-                librePowerCPU = sensor.Value.GetValueOrDefault();
+              if (sensor.Name.Contains("Package") && sensor.SensorType == LibreSensorType.Power) {
+                CPUPower = sensor.Value.GetValueOrDefault();
               }
             } else if (monitorGPU && hardware.HardwareType == LibreHardwareType.GpuNvidia) {
               if (sensor.Name == "GPU Core" && sensor.SensorType == LibreSensorType.Temperature) {
@@ -1282,23 +1260,7 @@ namespace OmenSuperHub {
         }
       }
 
-      if (openLib && libreTempCPU > -299 && librePowerCPU >= 0) {
-        openLib = false;
-        //openComputer.Close();
-      }
-
-      if (openTempCPU < -299) {
-        if (libreTempCPU > -299)
-          tempCPU = libreTempCPU;
-      } else
-        tempCPU = openTempCPU;
       CPUTemp = tempCPU * respondSpeed + CPUTemp * (1.0f - respondSpeed);
-
-      if (openPowerCPU < 0) {
-        if (librePowerCPU >= 0)
-          CPUPower = librePowerCPU;
-      } else
-        CPUPower = openPowerCPU;
 
       if (CPUTemp > 90 && fanControl.Contains(" RPM")) {
         fanControl = "auto";
@@ -1362,9 +1324,8 @@ namespace OmenSuperHub {
         UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
       }
 
-      //Console.WriteLine($"openCPU: {openTempCPU}℃, {openPowerCPU}W");
       //Console.WriteLine($"libreCPU: {libreTempCPU}℃, {librePowerCPU}W");
-      //Console.WriteLine($"openGPU: {GPUTemp}℃, {GPUPower}W");
+      //Console.WriteLine($"libreGPU: {GPUTemp}℃, {GPUPower}W");
 
       //string tempUnit = "°C";
       //Console.WriteLine($"CPU: {CPU}{tempUnit}, GPU: {GPU}{tempUnit}, Max: {Math.Max(CPU, GPU + 10)}{tempUnit}");

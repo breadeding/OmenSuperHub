@@ -1,0 +1,766 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DiskInfoToolkit</name>
+    </assembly>
+    <members>
+        <member name="T:DiskInfoToolkit.Enums.StorageControllerType">
+            <summary>
+            Type of storage controller.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Interop.Structures.ATA_IDENTIFY_DEVICE">
+            <summary>
+            512 bytes.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Interop.Structures.BIN_IDENTIFY_DEVICE">
+            <summary>
+            4096 bytes.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE">
+            <summary>
+            4096 bytes.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.VendorID">
+            <summary>
+            byte 0:1 M - PCI Vendor ID (VID)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.SubsystemVendorID">
+            <summary>
+            byte 2:3 M - PCI Subsystem Vendor ID (SSVID)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.SerialNumber">
+            <summary>
+            byte 4: 23 M - Serial Number (SN)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Model">
+            <summary>
+            byte 24:63 M - Model Number (MN)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.FirmwareRev">
+            <summary>
+            byte 64:71 M - Firmware Revision (FR)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.RAB">
+            <summary>
+            byte 72 M - Recommended Arbitration Burst (RAB)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.IEEE">
+            <summary>
+            byte 73:75 M - IEEE OUI Identifier (IEEE). Controller Vendor code.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.CMIC">
+            <summary>
+            byte 76 O - Controller Multi-Path I/O and Namespace Sharing Capabilities (CMIC)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.MDTS">
+            <summary>
+            byte 77 M - Maximum Data Transfer Size (MDTS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.CNTLID">
+            <summary>
+            byte 78:79 M - Controller ID (CNTLID)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.VER">
+            <summary>
+            byte 80:83 M - Version (VER)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.RTD3R">
+            <summary>
+            byte 84:87 M - RTD3 Resume Latency (RTD3R)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.RTD3E">
+            <summary>
+            byte 88:91 M - RTD3 Entry Latency (RTD3E)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.OAES">
+            <summary>
+            byte 92:95 M - Optional Asynchronous Events Supported (OAES)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved0">
+            <summary>
+            byte 96:239.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.ReservedForManagement">
+            <summary>
+            byte 240:255.  Refer to the NVMe Management Interface Specification for definition.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.OACS">
+            <summary>
+            byte 256:257 M - Optional Admin Command Support (OACS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.ACL">
+            <summary>
+            byte 258 M - Abort Command Limit (ACL)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.AERL">
+            <summary>
+            byte 259 M - Asynchronous Event Request Limit (AERL)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.FRMW">
+            <summary>
+            byte 260 M - Firmware Updates (FRMW)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.LPA">
+            <summary>
+            byte 261 M - Log Page Attributes (LPA)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.ELPE">
+            <summary>
+            byte 262 M - Error Log Page Entries (ELPE)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.NPSS">
+            <summary>
+            byte 263 M - Number of Power States Support (NPSS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.AVSCC">
+            <summary>
+            byte 264 M - Admin Vendor Specific Command Configuration (AVSCC)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.APSTA">
+            <summary>
+            byte 265 O - Autonomous Power State Transition Attributes (APSTA)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.WarningCompositeTemperature">
+            <summary>
+            byte 266:267 M - Warning Composite Temperature Threshold (WCTEMP)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.CriticalCompositeTemperature">
+            <summary>
+            byte 268:269 M - Critical Composite Temperature Threshold (CCTEMP)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.MTFA">
+            <summary>
+            byte 270:271 O - Maximum Time for Firmware Activation (MTFA)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.HMPRE">
+            <summary>
+            byte 272:275 O - Host Memory Buffer Preferred Size (HMPRE)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.HMMIN">
+            <summary>
+            byte 276:279 O - Host Memory Buffer Minimum Size (HMMIN)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.TNVMCAP">
+            <summary>
+            byte 280:295 O - Total NVM Capacity (TNVMCAP)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.UNVMCAP">
+            <summary>
+            byte 296:311 O - Unallocated NVM Capacity (UNVMCAP)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.RPMBS">
+            <summary>
+            byte 312:315 O - Replay Protected Memory Block Support (RPMBS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved1">
+            <summary>
+            byte 316:511
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.SQES">
+            <summary>
+            byte 512 M - Submission Queue Entry Size (SQES)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.CQES">
+            <summary>
+            byte 513 M - Completion Queue Entry Size (CQES)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved2">
+            <summary>
+            byte 514:515
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.NN">
+            <summary>
+            byte 516:519 M - Number of Namespaces (NN)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.ONCS">
+            <summary>
+            byte 520:521 M - Optional NVM Command Support (ONCS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.FUSES">
+            <summary>
+            byte 522:523 M - Fused Operation Support (FUSES)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.FNA">
+            <summary>
+            byte 524 M - Format NVM Attributes (FNA)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.VWC">
+            <summary>
+            byte 525 M - Volatile Write Cache (VWC)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.AWUN">
+            <summary>
+            byte 526:527 M - Atomic Write Unit Normal (AWUN)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.AWUPF">
+            <summary>
+            byte 528:529 M - Atomic Write Unit Power Fail (AWUPF)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.NVSCC">
+            <summary>
+            byte 530 M - NVM Vendor Specific Command Configuration (NVSCC)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved3">
+            <summary>
+            byte 531
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.ACWU">
+            <summary>
+            byte 532:533 O - Atomic Compare and Write Unit (ACWU)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved4">
+            <summary>
+            byte 534:535
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.SGLS">
+            <summary>
+            byte 536:539 O - SGL Support (SGLS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved5">
+            <summary>
+            byte 540:703
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.Reserved6">
+            <summary>
+            byte 704:2047
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.PDS">
+            <summary>
+            byte 2048:3071 Power State Descriptors
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_IDENTIFY_DEVICE.VS">
+            <summary>
+            byte 3072:4095 Vendor Specific
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.MP">
+            <summary>
+            bit 0:15 Maximum  Power (MP) in centiwatts
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.Reserved0">
+            <summary>
+            bit 16:23
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.MPS_NOPS">
+            <summary>
+            bit 24 Max Power Scale (MPS), bit 25 Non-Operational State (NOPS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.ENLAT">
+            <summary>
+            bit 32:63 Entry Latency (ENLAT) in microseconds
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.EXLAT">
+            <summary>
+            bit 64:95 Exit Latency (EXLAT) in microseconds
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.RRT">
+            <summary>
+            bit 96:100 Relative Read Throughput (RRT)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.RRL">
+            <summary>
+            bit 104:108 Relative Read Latency (RRL)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.RWT">
+            <summary>
+            bit 112:116 Relative Write Throughput (RWT)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.RWL">
+            <summary>
+            bit 120:124 Relative Write Latency (RWL)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.IDLP">
+            <summary>
+            bit 128:143 Idle Power (IDLP)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.IPS">
+            <summary>
+            bit 150:151 Idle Power Scale (IPS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.Reserved7">
+            <summary>
+            bit 152:159
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.ACTP">
+            <summary>
+            bit 160:175 Active Power (ACTP)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.APW_APS">
+            <summary>
+            bit 176:178 Active Power Workload (APW), bit 182:183  Active Power Scale (APS)
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.NVME_POWER_STATE_DESC.Reserved9">
+            <summary>
+            bit 184:255.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Interop.Structures.SmartAttributeStructure.Threshold">
+            <summary>
+            Original: Reserved
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Events.StorageChangeIdentifier">
+            <summary>
+            Identifies how a device has changed.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Events.StorageChangeIdentifier.Added">
+            <summary>
+            A device has been added.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Events.StorageChangeIdentifier.Removed">
+            <summary>
+            A device has been removed.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Events.StoragesChangedEventArgs">
+            <summary>
+            Used for when devices changed.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Events.StoragesChangedEventArgs.StorageChangeIdentifier">
+            <summary>
+            Identifies what kind of change has happened.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Events.StoragesChangedEventArgs.Storage">
+            <summary>
+            Identifies the device which has changed.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.HardDrive.ATAInfo">
+            <summary>
+            ATA information.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.HardDrive.ATAInfo.TransferMode">
+            <summary>
+            Transfer mode of device.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Internal.StorageController">
+            <summary>
+            Identifies a "raw" storage controller and its child devices.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Internal.StorageDevice">
+            <summary>
+            Identifies a "raw" storage device.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.NVMe.NVMeInterpreter">
+            <summary>
+            NVMe disks have a standard for SMART data, so we need to "translate" these values here.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Partition">
+            <summary>
+            This represents a partition on a disk.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.PartitionStyle">
+            <summary>
+            Style of partition.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.PartitionInformation">
+            <summary>
+            Partition information.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.StartingOffset">
+            <summary>
+            Starting offset of this partition.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.PartitionLength">
+            <summary>
+            Length of this partition.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.PartitionNumber">
+            <summary>
+            Number of this partition.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.DriveLetter">
+            <summary>
+            Drive letter of this partition, if set.
+            </summary>
+            <remarks>Example: 'C' or <see langword="null"/> if not mapped to drive letter.</remarks>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.AvailableFreeSpace">
+            <summary>
+            Available free space on partition.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.IsDynamicDiskPartition">
+            <summary>
+            Identifies if this partition is on a dynamic disk (Windows).
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.IsOtherOperatingSystemPartition">
+            <summary>
+            Gets a value indicating whether the partition contains an operating system other than the current one.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Partition.VolumePath">
+            <summary>
+            Volume path which is being used for <see cref="M:DiskInfoToolkit.Interop.Kernel32.GetDiskFreeSpaceEx(System.String,System.UInt64@,System.UInt64@,System.UInt64@)"/>.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.SmartAttribute">
+            <summary>
+            Represents a SMART attribute.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartAttribute.Info">
+            <summary>
+            Information regarding the attribute.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartAttribute.Attribute">
+            <summary>
+            The attribute as it has been read.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.SmartInfo">
+            <summary>
+            Contains basic SMART information and attributes.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.DiskStatus">
+            <summary>
+            Current status of disk, available after first update.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.Temperature">
+            <summary>
+            Temperature of disk in celsius.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.TemperatureWarning">
+            <summary>
+            Minimum temperature warning threshold in celsius.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.TemperatureCritical">
+            <summary>
+            Minimum temperature critical threshold in celsius.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.Life">
+            <summary>
+            Current life of disk where 100 is best and 0 worst value.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.HostReads">
+            <summary>
+            Lifetime host reads in gigabyte.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.HostWrites">
+            <summary>
+            Lifetime host writes in gigabyte.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.PowerOnCount">
+            <summary>
+            Counter of how many times the device was powered on.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.MeasuredPowerOnHours">
+            <summary>
+            Measured power on hours.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.DetectedPowerOnHours">
+            <summary>
+            Detected power on hours.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.NandWrites">
+            <summary>
+            Total NAND writes.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.GBytesErased">
+            <summary>
+            Total gigabytes erased.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.WearLevelingCount">
+            <summary>
+            Wear leveling count.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.SmartInfo.SmartAttributes">
+            <summary>
+            A collection of read <see cref="T:DiskInfoToolkit.SmartAttribute"/>s for current device.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Smart.SmartAttributeInfo">
+            <summary>
+            Represents SMART attribute information.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Smart.SmartAttributeInfo.ID">
+            <summary>
+            ID of attribute.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Smart.SmartAttributeInfo.Type">
+            <summary>
+            Attribute type.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Smart.SmartAttributeInfo.Name">
+            <summary>
+            Name of attribute.
+            </summary>
+        </member>
+        <member name="F:DiskInfoToolkit.Smart.SmartAttributeInfoMapping.Mapping">
+            <summary>
+            Mapping for all SMART attributes.
+            </summary>
+        </member>
+        <member name="T:DiskInfoToolkit.Storage">
+            <summary>
+            Represents a storage medium.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.SmartKey">
+            <summary>
+            Smart key which identifies storage medium.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.IsNVMe">
+            <summary>
+            Indicates if this is a NVMe disk.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.IsSSD">
+            <summary>
+            Indicates if this is a SSD disk.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.StorageController">
+            <summary>
+            Name of storage controller of <see cref="T:DiskInfoToolkit.Storage"/>.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.StorageControllerType">
+            <summary>
+            Type of storage controller.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.VendorID">
+            <summary>
+            Vendor ID of disk.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.Vendor">
+            <summary>
+            Vendor as string, if available.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.ProductID">
+            <summary>
+            Product ID of disk.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.DriveNumber">
+            <summary>
+            Number of drive.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.PhysicalPath">
+            <summary>
+            Device path with which a handle can be opened.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.DeviceID">
+            <summary>
+            ID of device.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.BusType">
+            <summary>
+            Bus type of this instance.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.IsRemoveableMedia">
+            <summary>
+            Indicates if this storage medium is removable.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.TotalSize">
+            <summary>
+            Gets the total size of storage space on a drive, in bytes.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.Model">
+            <summary>
+            Model name of device.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.Firmware">
+            <summary>
+            Firmware of device.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.FirmwareRev">
+            <summary>
+            Firmware revision of device.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.SerialNumber">
+            <summary>
+            Serial number of device.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.DetectedTimeUnitType">
+            <summary>
+            Detected time unit type.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.MeasuredTimeUnitType">
+            <summary>
+            Measured time unit type.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.ATAInfo">
+            <summary>
+            Contains ATA information.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.IsDynamicDisk">
+            <summary>
+            Identifies if this device is a dynamic disk (Windows).
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.TotalFreeSize">
+            <summary>
+            Gets the total free size of storage space on a drive, in bytes.
+            </summary>
+            <remarks>Calculation (all <see cref="P:DiskInfoToolkit.Storage.Partitions"/>): <see cref="P:DiskInfoToolkit.Storage.TotalSize"/> - <see cref="P:DiskInfoToolkit.Partition.PartitionLength"/> + <see cref="P:DiskInfoToolkit.Partition.AvailableFreeSpace"/>.<br/>
+            This may return null if free size is not supported for this disk.<br/>
+            Data may not be fully reliable if this disk contains another operating system partition (check <see cref="P:DiskInfoToolkit.Partition.IsOtherOperatingSystemPartition"/>).</remarks>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.Smart">
+            <summary>
+            Smart information of drive.
+            </summary>
+        </member>
+        <member name="P:DiskInfoToolkit.Storage.Partitions">
+            <summary>
+            List of all partitions on drive.
+            </summary>
+            <remarks>Partitions do not reflect partitions on a dynamic disk (Windows) - check <see cref="P:DiskInfoToolkit.Storage.IsDynamicDisk"/>.</remarks>
+        </member>
+        <member name="M:DiskInfoToolkit.Storage.Update">
+            <summary>
+            Updates all volatile data.
+            </summary>
+        </member>
+        <member name="M:DiskInfoToolkit.StorageDetector.GetStorageDevices">
+            <summary>
+            Detects and returns all available storage devices via SetupAPI.
+            </summary>
+            <returns>Returns all available storage devices via SetupAPI.</returns>
+        </member>
+        <member name="T:DiskInfoToolkit.StorageManager">
+            <summary>
+            Manager for <see cref="T:DiskInfoToolkit.Storage"/>s.
+            </summary>
+            <remarks>You can subscribe to changes via <see cref="E:DiskInfoToolkit.StorageManager.StoragesChanged"/> <see langword="event"/>.</remarks>
+        </member>
+        <member name="P:DiskInfoToolkit.StorageManager.Storages">
+            <summary>
+            A collection of all detected <see cref="T:DiskInfoToolkit.Storage"/>s.
+            </summary>
+            <remarks>This returns a copy of the internal list.</remarks>
+        </member>
+        <member name="M:DiskInfoToolkit.StorageManager.ReloadStorages">
+            <summary>
+            Triggers a manual re-detection of all disks.
+            </summary>
+        </member>
+        <member name="E:DiskInfoToolkit.StorageManager.StoragesChanged">
+            <summary>
+            Notifies if a <see cref="T:DiskInfoToolkit.Storage"/> has been added or removed.
+            </summary>
+        </member>
+    </members>
+</doc>

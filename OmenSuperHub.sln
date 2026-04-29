@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.5.33530.505
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11716.220 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OmenSuperHub", "OmenSuperHub.csproj", "{F5E0C1F7-9E9B-46F2-AC88-8C9C1C923880}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibreHMLib_PawnIo", "LibreHardwareMonitor-pawnio-squashed\LibreHardwareMonitorLib\LibreHMLib_PawnIo.csproj", "{3D996B14-D8D9-D7F6-B39B-46324DF820F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +21,6 @@ Global
 		{F5E0C1F7-9E9B-46F2-AC88-8C9C1C923880}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F5E0C1F7-9E9B-46F2-AC88-8C9C1C923880}.Release|x64.ActiveCfg = Release|x64
 		{F5E0C1F7-9E9B-46F2-AC88-8C9C1C923880}.Release|x64.Build.0 = Release|x64
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Debug|x64.Build.0 = Debug|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Release|x64.ActiveCfg = Release|Any CPU
-		{3D996B14-D8D9-D7F6-B39B-46324DF820F1}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,1272 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>BlackSharp.Core</name>
+    </assembly>
+    <members>
+        <member name="T:BlackSharp.Core.Asynchronous.Executor">
+            <summary>
+            Asynchronous executor class.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Asynchronous.Executor.Run(System.Func{System.Action},System.Action{System.ComponentModel.AsyncCompletedEventArgs})">
+            <summary>
+            Executes a specified action via <see cref="T:System.ComponentModel.BackgroundWorker"/>.
+            </summary>
+            <param name="task">Task to execute.</param>
+            <param name="onError">Action to execute if an error occurs.</param>
+        </member>
+        <member name="T:BlackSharp.Core.Asynchronous.LockGuard">
+            <summary>
+            Mutex guard for automatic lock and unlock via <see cref="T:System.IDisposable"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Asynchronous.LockGuard.#ctor(System.Object)">
+            <summary>
+            Constructs a new object of this class and locks given parameter object.
+            </summary>
+            <param name="lockObject">Object to lock and unlock automatically.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Asynchronous.LockGuard.Dispose">
+            <summary>
+            Unlocks object which was passed in constructor.
+            </summary>
+        </member>
+        <member name="T:BlackSharp.Core.BitOperations.BitHandler">
+            <summary>
+            Helper class for bitwise operations.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.IsBitSet(System.Byte,System.Int32)">
+            <summary>
+            Check if bit is set in given value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="bitPos">Position of bit to check.</param>
+            <returns>Returns whether specified bit is set in byte.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.IsBitSet(System.UInt16,System.Int32)">
+            <summary>
+            Check if bit is set in given value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="bitPos">Position of bit to check.</param>
+            <returns>Returns whether specified bit is set in byte.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.SwapBits(System.Byte)">
+            <summary>
+            Manually swap bits in given byte.
+            </summary>
+            <param name="b">Byte to swap bits in.</param>
+            <returns>Byte with swapped bits.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.UnsetBit(System.Byte,System.Byte)">
+            <summary>
+            Unset bit at given index.
+            </summary>
+            <param name="value">Value to unset bit on.</param>
+            <param name="bitIndexToUnset">Index of bit to unset.</param>
+            <returns>Byte value with bit unset.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.GetBits``1(``0,System.Int32,System.Int32)">
+            <summary>
+            Get specified bit range as value.
+            </summary>
+            <typeparam name="T">Integer type.</typeparam>
+            <param name="value">Value to get specific bits from.</param>
+            <param name="fromBit">First bit in range to get value for.</param>
+            <param name="toBit">Last bit in range to get value for.</param>
+            <returns>Returns extracted value.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.SetBits``1(``0,``0,System.Int32,System.Int32)">
+            <summary>
+            Sets specified bit range on given value.
+            </summary>
+            <typeparam name="T">Integer type parameter.</typeparam>
+            <param name="value">Value to set bits of.</param>
+            <param name="bits">Representation of target value bits.</param>
+            <param name="fromBit">Specifies start of bits to set (index).</param>
+            <param name="toBit">Specifies end of bits to set (index).</param>
+            <returns>Returns new value which bits have been changed.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">Throws if from and/or to is/are out of range.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.SetBits``1(``0,System.Int32,System.Int32,System.Boolean)">
+            <summary>
+            Sets specified bit range on given value.
+            </summary>
+            <typeparam name="T">Integer type parameter.</typeparam>
+            <param name="value">Value to set bits of.</param>
+            <param name="fromBit">Specifies start of bits to set (index).</param>
+            <param name="toBit">Specifies end of bits to set (index).</param>
+            <param name="set">Whether bits in specified range shall be set or unset.</param>
+            <returns>Returns new value which bits have been changed.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">Throws if from and/or to is/are out of range.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.BitOperations.BitHandler.ExtractBits``1(``0,System.Int32[])">
+            <summary>
+            Extracts bits at given positions and constructs a single value out of them.
+            </summary>
+            <typeparam name="T">Integer type parameter.</typeparam>
+            <param name="value">Value to extract bits of.</param>
+            <param name="bitPositions">Positions of bits to extract.</param>
+            <returns>Constructed new value.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.ByteOperations.BinaryHandler">
+            <summary>
+            Helper class for binary operations.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.ByteOperations.BinaryHandler.NormalizeBcd(System.Byte)">
+            <summary>
+            Converts a given byte, which is encoded in binary coded decimal (BCD), to a standard byte value.
+            </summary>
+            <param name="bcd">Binary encoded decimal (BCD) value.</param>
+            <returns>Decoded byte value.</returns>
+            <example>Input is 0x14 (0001 0100); Output will be 14.</example>
+        </member>
+        <member name="T:BlackSharp.Core.Collections.ObservableCollectionEx`1">
+            <summary>
+            A <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> based on the Microsoft implementation of <see cref="T:System.Collections.ObjectModel.ObservableCollection`1"/>.
+            <para/>
+            This class also provides functionality which the normal <see cref="T:System.Collections.ObjectModel.ObservableCollection`1"/> does not (Find, Sort, ...).
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.#ctor">
+            <summary>
+            Initializes the collection.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.#ctor(System.Int32)">
+            <summary>
+            Initializes the collection with a specified initial capacity.
+            </summary>
+            <param name="capacity">The number of elements the collection can initially store.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.#ctor(System.Collections.Generic.List{`0})">
+            <summary>
+            Initializes the collection with the items of given <see cref="T:System.Collections.Generic.List`1"/>.
+            The elements are copied from the <see cref="T:System.Collections.Generic.List`1"/> by enumerating it.
+            </summary>
+            <param name="list"><see cref="T:System.Collections.Generic.List`1"/> whose elements should be copied.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.#ctor(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Initializes the collection with the items of given <see cref="T:System.Collections.Generic.IEnumerable`1"/>.
+            The elements are copied from the <see cref="T:System.Collections.Generic.IEnumerable`1"/> by enumerating it.
+            </summary>
+            <param name="collection"><see cref="T:System.Collections.Generic.IEnumerable`1"/> whose elements should be copied.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.#ctor(`0[])">
+            <summary>
+            Initializes the collection with the items of given parameter objects.
+            </summary>
+            <param name="param">Elements for initialization.</param>
+        </member>
+        <member name="F:BlackSharp.Core.Collections.ObservableCollectionEx`1.InvalidIndex">
+            <summary>
+            Specifies invalid index. This is used by e.g. <see cref="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.FindIndex(System.Predicate{`0})"/>.
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Collections.ObservableCollectionEx`1.AreNotifyEventsEnabled">
+            <summary>
+            Gets or sets the value if the <see cref="E:BlackSharp.Core.Collections.ObservableCollectionEx`1.CollectionChanged"/> and
+            <see cref="E:BlackSharp.Core.Collections.ObservableCollectionEx`1.PropertyChanged"/> events are fired on changes.
+            Default is true.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.IsEmpty">
+            <summary>
+            Checks if the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> is empty.
+            </summary>
+            <returns>Whether the collection is empty or not.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Contains(System.Predicate{`0})">
+            <summary>
+            Determines whether an element is in the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> by specified <see cref="T:System.Predicate`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the element.</param>
+            <returns>Whether an element in the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> matches the specified conditions.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.ForEach(System.Action{`0})">
+            <summary>
+            Performs the specified <see cref="T:System.Action`1"/> on each element of <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="action">The <see cref="T:System.Action`1"/> to perform on each element.</param>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.TrueForAll(System.Predicate{`0})">
+            <summary>
+            Determines whether all elements in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>
+            match the conditions of the specified <see cref="T:System.Predicate`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the element.</param>
+            <returns>True if all elements in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> match the conditions
+            of the specified <see cref="T:System.Predicate`1"/> or if the collection has no elements.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Move(System.Int32,System.Int32)">
+            <summary>
+            Move item at oldIndex to newIndex.
+            </summary>
+            <param name="oldIndex">The old index of the item.</param>
+            <param name="newIndex">The new index of the item.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.AddRange(`0[])">
+            <summary>
+            Adds a range of elements to <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="items">Elements to add.</param>
+            <exception cref="T:System.ArgumentNullException">Parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.AddRange(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Adds a range of elements to <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="items">Range of elements to add.</param>
+            <exception cref="T:System.ArgumentNullException">Parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.AddRange(System.Collections.Generic.IEnumerable{`0},System.Predicate{`0})">
+            <summary>
+            Adds a range of elements to <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            Each given item will be checked for given <see cref="T:System.Predicate`1"/>,
+            and will only be added if it matches the condition.
+            </summary>
+            <param name="items">Range of elements to add.</param>
+            <param name="condition">Condition an item must satisfy to be added.</param>
+            <exception cref="T:System.ArgumentNullException">Parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.RemoveRange(System.Int32,System.Int32)">
+            <summary>
+            Removes a range of elements from <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="index">The zero-based starting index of the range of elements to remove.</param>
+            <param name="count">The number of elements to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">Index is invalid or count is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">Index and count do not denote a valid
+            range of elements in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Remove(System.Predicate{`0})">
+            <summary>
+            Searches through all items if the item matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            and removes it if so.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the elements to remove.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Find(System.Predicate{`0})">
+            <summary>
+            Searches for an element that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            and returns the first match within the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the element to search for.</param>
+            <returns>The first item that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            or the default value for type T if nothing was found.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.FindLast(System.Predicate{`0})">
+            <summary>
+            Searches for an element that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            and returns the last match within the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the element to search for.</param>
+            <returns>The last item that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            or the default value for type T if nothing was found.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.FindAll(System.Predicate{`0})">
+            <summary>
+            Searches for an element that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            and returns all matches within the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the elements to search for.</param>
+            <returns>All items that match the conditions of the specified <see cref="T:System.Predicate`1"/>
+            or an empty <see cref="T:System.Collections.Generic.List`1"/> if nothing was found.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.FindIndex(System.Predicate{`0})">
+            <summary>
+            Searches for an element that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            and returns the first matches' index within the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the elements to search for.</param>
+            <returns>The first matches' index or <see cref="F:BlackSharp.Core.Collections.ObservableCollectionEx`1.InvalidIndex"/> if nothing was found.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.FindLastIndex(System.Predicate{`0})">
+            <summary>
+            Searches for an element that matches the conditions of the specified <see cref="T:System.Predicate`1"/>
+            and returns the last matches' index within the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <param name="match">The <see cref="T:System.Predicate`1"/> that defines the conditions of the elements to search for.</param>
+            <returns>The last matches' index or <see cref="F:BlackSharp.Core.Collections.ObservableCollectionEx`1.InvalidIndex"/> if nothing was found.</returns>
+            <exception cref="T:System.ArgumentNullException">If the parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.First">
+            <summary>
+            Returns the first element of <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <returns>The first element in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Last">
+            <summary>
+            Returns the last element of <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+            <returns>The last element in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Sort">
+            <summary>
+            Sorts the elements in the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> using the default comparer.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Sort(System.Comparison{`0})">
+            <summary>
+            Sorts the elements in the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>
+            using the specified <see cref="T:System.Comparison`1"/>.
+            </summary>
+            <param name="comparisation">The <see cref="T:System.Comparison`1"/> to use when sorting the elements.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Sort(System.Collections.Generic.IComparer{`0})">
+            <summary>
+            Sorts the elements in the <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>
+            using the specified <see cref="T:System.Collections.Generic.IComparer`1"/>.
+            </summary>
+            <param name="comparer">The <see cref="T:System.Collections.Generic.IComparer`1"/> to use when sorting the elements.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Sort(System.Int32,System.Int32,System.Collections.Generic.IComparer{`0})">
+            <summary>
+            Sorts the elements in a range of elements in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>
+            using the specified <see cref="T:System.Collections.Generic.IComparer`1"/>.
+            </summary>
+            <param name="index">The zero-based starting index of the range to sort.</param>
+            <param name="count">The length of the range to sort.</param>
+            <param name="comparer">The <see cref="T:System.Collections.Generic.IComparer`1"/> to use when comparing the elements or
+            null to use the default comparer.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">Index is invalid or count is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">Index and count do not denote a valid
+            range of elements in <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.Reverse">
+            <summary>
+            Reverses the order of the elements in the entire <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.TryInsert(System.Int32,`0)">
+            <summary>
+            Attempts to insert an item at the specified index in the collection.
+            </summary>
+            <param name="index">The zero-based index at which the item should be inserted.<br/>
+            Must be greater than or equal to 0 and less than or equal to the current number of items.</param>
+            <param name="item">The item to insert into the collection.</param>
+            <returns>true if the item was successfully inserted; otherwise, false.</returns>
+            <remarks>This will fail if given index is not in a valid range.</remarks>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.BlockReentrancy">
+            <summary>
+            Disallow reentrant attempts to change this collection. E.g. a event handler
+            of the CollectionChanged event is not allowed to make changes to this collection.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.CheckReentrancy">
+            <summary>
+            Check and assert for reentrant attempts to change this collection.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">Raised when changing the collection
+            while another collection change is still being notified to other listeners.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.ClearItems">
+            <summary>
+            Clears all items from the collection.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.RemoveItem(System.Int32)">
+            <summary>
+            Removes an item by index from the collection.
+            </summary>
+            <param name="index">Index of item to remove.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.InsertItem(System.Int32,`0)">
+            <summary>
+            Inserts an item by index into the collection.
+            </summary>
+            <param name="index">Index where to add the new item.</param>
+            <param name="item">Item to add.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.SetItem(System.Int32,`0)">
+            <summary>
+            Called by base class <see cref="T:System.Collections.ObjectModel.Collection`1"/> when an item is set in list.
+            Raises a <see cref="E:BlackSharp.Core.Collections.ObservableCollectionEx`1.CollectionChanged"/> event to any listeners.
+            </summary>
+            <param name="index">Index of changing item.</param>
+            <param name="item">Changing item.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.MoveItem(System.Int32,System.Int32)">
+            <summary>
+            Called by <see cref="T:BlackSharp.Core.Collections.ObservableCollectionEx`1"/> when an item is to be moved within the list.
+            Raises a <see cref="E:BlackSharp.Core.Collections.ObservableCollectionEx`1.CollectionChanged"/> event to any listeners.
+            </summary>
+            <param name="oldIndex">Old index of moving item.</param>
+            <param name="newIndex">New index of moving item.</param>
+        </member>
+        <member name="T:BlackSharp.Core.Collections.ObservableCollectionEx`1.SimpleMonitor">
+            <summary>
+            Monitor class.
+            </summary>
+        </member>
+        <member name="E:BlackSharp.Core.Collections.ObservableCollectionEx`1.CollectionChanged">
+            <summary>
+            Occurs when the collection changes, either by adding or removing an item.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.OnCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Raise CollectionChanged event to any listeners.<br/>
+            Properties/methods modifying this ObservableCollection will raise
+            a collection changed event through this virtual method.
+            </summary>
+            <param name="e">The event.</param>
+            <remarks>When overriding this method, either call its base implementation
+            or call to guard against reentrant collection changes.</remarks>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.OnCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedAction,System.Collections.IList)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> class.
+            </summary>
+            <param name="action">The action that caused the event. This can be set to
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Reset"/>,
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Add"/>,
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Remove"/>.</param>
+            <param name="changedItems">The items that are affected by the change.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.OnCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedAction,System.Object,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> class.
+            </summary>
+            <param name="action">The action that caused the event. This can be set to
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Reset"/>,
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Add"/>,
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Remove"/>.</param>
+            <param name="item">The item that is affected by the change.</param>
+            <param name="index">The index where the change occurred.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.OnCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedAction,System.Object,System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> class.
+            </summary>
+            <param name="action">The action that caused the event. This can only be set to
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Move"/>.</param>
+            <param name="item">The item affected by the change.</param>
+            <param name="index">The new index for the changed item.</param>
+            <param name="oldIndex">The old index for the changed item.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.OnCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedAction,System.Object,System.Object,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> class.
+            </summary>
+            <param name="action">The action that caused the event. This can be set to
+            <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Replace"/>.</param>
+            <param name="oldItem">The original item that is replaced.</param>
+            <param name="newItem">The new item that is replacing the original item.</param>
+            <param name="index">The index of the item being replaced.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.OnCollectionReset">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> class
+            that describes a <see cref="F:System.Collections.Specialized.NotifyCollectionChangedAction.Reset"/> change.
+            </summary>
+        </member>
+        <member name="E:BlackSharp.Core.Collections.ObservableCollectionEx`1.PropertyChanged">
+            <summary>
+            Property changed event.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.ObservableCollectionEx`1.NotifyPropertyChanged(System.String)">
+            <summary>
+            Notifies that a property has changed.
+            </summary>
+            <param name="propertyName">Name of property which has changed.</param>
+        </member>
+        <member name="T:BlackSharp.Core.Collections.FunctorComparer`1">
+            <summary>
+            Comparisation helper class.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.FunctorComparer`1.#ctor(System.Comparison{`0})">
+            <summary>
+            Constructs a new object.
+            </summary>
+            <param name="comparisation">Comparison parameter.</param>
+            <exception cref="T:System.ArgumentNullException">Throws if parameter is null.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.FunctorComparer`1.Compare(`0,`0)">
+            <summary>
+            Compare two objects of given type.
+            </summary>
+            <param name="x">First object to compare.</param>
+            <param name="y">Second object to compare.</param>
+            <returns>Whether objects are equal or not.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Collections.FunctorComparer`1.Compare(System.Object,System.Object)">
+            <summary>
+            Compare two objects.
+            </summary>
+            <param name="x">First object to compare.</param>
+            <param name="y">Second object to compare.</param>
+            <returns>Whether objects are equal or not.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Converters.DataStorageSizeConverter">
+            <summary>
+            This class provides methods for data size conversions.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Converters.DataStorageSizeConverter.ByteToMegabyte(System.UInt64)">
+            <summary>
+            Converts given byte value into megabytes.
+            </summary>
+            <param name="bytes">Bytes to convert.</param>
+            <returns>Returns converted value.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Converters.DataStorageSizeConverter.ByteToGigabyte(System.UInt64)">
+            <summary>
+            Converts given byte value into gigabytes.
+            </summary>
+            <param name="bytes">Bytes to convert.</param>
+            <returns>Returns converted value.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Converters.TemperatureConverter">
+            <summary>
+            Helper class for temperature conversions.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Converters.TemperatureConverter.CelsiusToFahrenheit(System.Single)">
+            <summary>
+            Converts given celsius temperature to fahrenheit.
+            </summary>
+            <param name="temperature">Temperature in celsius.</param>
+            <returns>Returns temperature in fahrenheit.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Converters.TemperatureConverter.FahrenheitToCelsius(System.Single)">
+            <summary>
+            Converts given fahrenheit temperature to celsius.
+            </summary>
+            <param name="temperature">Temperature in fahrenheit.</param>
+            <returns>Returns temperature in celsius.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Converters.TemperatureConverter.CelsiusToKelvin(System.Single)">
+            <summary>
+            Converts given celsius temperature to kelvin.
+            </summary>
+            <param name="temperature">Temperature in celsius.</param>
+            <returns>Returns temperature in kelvin.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Converters.TemperatureConverter.KelvinToCelsius(System.Single)">
+            <summary>
+            Converts given kelvin temperature to celsius.
+            </summary>
+            <param name="temperature">Temperature in kelvin.</param>
+            <returns>Returns temperature in celsius.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.BasicTypeExtensions">
+            <summary>
+            Extension class for basic types.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Byte,System.Byte,System.Byte)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Int16,System.Int16,System.Int16)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Int64,System.Int64,System.Int64)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Single,System.Single,System.Single)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Double,System.Double,System.Double)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.Decimal,System.Decimal,System.Decimal)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.BasicTypeExtensions.Between(System.DateTime,System.DateTime,System.DateTime)">
+            <summary>
+            Checks if value is between or equal to minimum and maximum provided value.
+            </summary>
+            <param name="value">Value to check.</param>
+            <param name="min">Minimum value.</param>
+            <param name="max">Maximum value.</param>
+            <returns>Whether value is between or equal.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.ExceptionExtensions">
+            <summary>
+            Extension class for <see cref="T:System.Exception"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ExceptionExtensions.FullExceptionString(System.Exception)">
+            <summary>
+            Creates a full exception string, containing <see cref="P:System.Exception.Message"/> and <see cref="P:System.Exception.StackTrace"/> of itself and recursively all InnerExceptions.
+            </summary>
+            <param name="e">This Exception.</param>
+            <returns>Constructed exception string.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.Helper.Default`1">
+            <summary>
+            Provides a default value for the specified type parameter, including special handling for arrays and enumerable
+            types.
+            </summary>
+            <remarks>For array types, the default value is an empty array instance. For enumerable types, the
+            default value is an empty array if compatible; otherwise, a NotImplementedException is thrown. For strings and
+            other types, the default value is the result of the default(T) expression. This class is intended for internal
+            use and may throw exceptions for certain enumerable types that do not have a well-defined default
+            value.</remarks>
+            <typeparam name="T">The type for which to provide a default value.</typeparam>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.ListExtensions">
+            <summary>
+            Extension class for <see cref="T:System.Collections.Generic.List`1"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ListExtensions.RemoveIf``1(System.Collections.Generic.List{``0},System.Predicate{``0})">
+            <summary>
+            Removes all elements which match specified predicate.
+            </summary>
+            <param name="list">This object.</param>
+            <param name="match">Predicate to check if element should be removed.</param>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.MarshalExtensions">
+            <summary>
+            Extension methods for <see cref="T:System.Runtime.InteropServices.Marshal"/>.<br/>
+            </summary>
+            <remarks>Implementations are based on Microsoft source code (referencesource).</remarks>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.ReadUInt16(System.IntPtr)">
+            <summary>
+            Reads a 16-bit signed integer from unmanaged memory.
+            </summary>
+            <param name="ptr">The address in unmanaged memory from which to read.</param>
+            <returns>The 16-bit signed integer read from unmanaged memory.</returns>
+            <exception cref="T:System.AccessViolationException">ptr is not a recognized format. -or- ptr is null. -or- ptr is invalid.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.ReadUInt16(System.IntPtr,System.Int32)">
+            <summary>
+            Reads a 16-bit signed integer at a given offset from unmanaged memory.
+            </summary>
+            <param name="ptr">The base address in unmanaged memory from which to read.</param>
+            <param name="ofs">An additional byte offset, which is added to the ptr parameter before reading.</param>
+            <returns>The 16-bit signed integer read from unmanaged memory at the given offset.</returns>
+            <exception cref="T:System.AccessViolationException">Base address (ptr) plus offset byte (ofs) produces a null or invalid address.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.WriteUInt16(System.IntPtr,System.UInt16)">
+            <summary>
+            Writes a 16-bit integer value to unmanaged memory.
+            </summary>
+            <param name="ptr">The address in unmanaged memory to write to.</param>
+            <param name="val">The value to write.</param>
+            <exception cref="T:System.AccessViolationException">ptr is not a recognized format. -or- ptr is null. -or- ptr is invalid.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.WriteUInt16(System.IntPtr,System.Int32,System.UInt16)">
+            <summary>
+            Writes a 16-bit signed integer value to unmanaged memory at a specified offset.
+            </summary>
+            <param name="ptr">The base address in the native heap to write to.</param>
+            <param name="ofs">An additional byte offset, which is added to the ptr parameter before writing.</param>
+            <param name="val">The value to write.</param>
+            <exception cref="T:System.AccessViolationException">Base address (ptr) plus offset byte (ofs) produces a null or invalid address.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.ReadUInt64(System.IntPtr)">
+            <summary>
+            Reads a 64-bit signed integer from unmanaged memory.
+            </summary>
+            <param name="ptr">The address in unmanaged memory from which to read.</param>
+            <returns>The 64-bit signed integer read from unmanaged memory.</returns>
+            <exception cref="T:System.AccessViolationException">ptr is not a recognized format. -or- ptr is null. -or- ptr is invalid.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.ReadUInt64(System.IntPtr,System.Int32)">
+            <summary>
+            Reads a 64-bit signed integer at a given offset from unmanaged memory.
+            </summary>
+            <param name="ptr">The base address in unmanaged memory from which to read.</param>
+            <param name="ofs">An additional byte offset, which is added to the ptr parameter before reading.</param>
+            <returns>The 64-bit signed integer read from unmanaged memory at the given offset.</returns>
+            <exception cref="T:System.AccessViolationException">Base address (ptr) plus offset byte (ofs) produces a null or invalid address.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.WriteUInt64(System.IntPtr,System.UInt64)">
+            <summary>
+            Writes a 64-bit integer value to unmanaged memory.
+            </summary>
+            <param name="ptr">The address in unmanaged memory to write to.</param>
+            <param name="val">The value to write.</param>
+            <exception cref="T:System.AccessViolationException">ptr is not a recognized format. -or- ptr is null. -or- ptr is invalid.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.MarshalExtensions.WriteUInt64(System.IntPtr,System.Int32,System.UInt64)">
+            <summary>
+            Writes a 64-bit signed integer value to unmanaged memory at a specified offset.
+            </summary>
+            <param name="ptr">The base address in the native heap to write to.</param>
+            <param name="ofs">An additional byte offset, which is added to the ptr parameter before writing.</param>
+            <param name="val">The value to write.</param>
+            <exception cref="T:System.AccessViolationException">Base address (ptr) plus offset byte (ofs) produces a null or invalid address.</exception>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.ObjectExtensions">
+            <summary>
+            Extension class for <see cref="T:System.Object"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.Any``1(``0,``0,``0)">
+            <summary>
+            Checks if the current object matches (Equals) any of the specified objects.
+            </summary>
+            <param name="obj">The current object.</param>
+            <param name="value1">An object to check for equality.</param>
+            <param name="value2">An object to check for equality.</param>
+            <returns>If any specified object is equal to the current object.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.Any``1(``0,``0,``0,``0[])">
+            <summary>
+            Checks if the current object matches (Equals) any of the specified objects.
+            </summary>
+            <param name="obj">The current object.</param>
+            <param name="value1">An object to check for equality.</param>
+            <param name="value2">An object to check for equality.</param>
+            <param name="values">A variable list of objects to check for equality.</param>
+            <returns>If any specified object is equal to the current object.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.Any``1(``0,System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            Checks if the current object matches (Equals) any of the objects in specified <see cref="T:System.Collections.IEnumerable"/>.
+            </summary>
+            <param name="obj">The current object.</param>
+            <param name="collection">A collection of objects to check for equality.</param>
+            <returns>If any object in <see cref="T:System.Collections.IEnumerable"/> is equal to the current object.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.AnyOf(System.Object,System.Object,System.Object)">
+            <summary>
+            Checks if the current object matches (Equals) any of the specified objects.
+            </summary>
+            <param name="obj">The current object.</param>
+            <param name="value1">An object to check for equality.</param>
+            <param name="value2">An object to check for equality.</param>
+            <returns>If any specified object is equal to the current object.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.AnyOf(System.Object,System.Object,System.Object,System.Object[])">
+            <summary>
+            Checks if the current object matches (Equals) any of the specified objects.
+            </summary>
+            <param name="obj">The current object.</param>
+            <param name="value1">An object to check for equality.</param>
+            <param name="value2">An object to check for equality.</param>
+            <param name="values">A variable list of objects to check for equality.</param>
+            <returns>If any specified object is equal to the current object.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.AnyOf(System.Object,System.Collections.IEnumerable)">
+            <summary>
+            Checks if the current object matches (Equals) any of the objects in specified <see cref="T:System.Collections.IEnumerable"/>.
+            </summary>
+            <param name="obj">The current object.</param>
+            <param name="collection">A collection of objects to check for equality.</param>
+            <returns>If any object in <see cref="T:System.Collections.IEnumerable"/> is equal to the current object.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.ObjectExtensions.IsNumber(System.Object)">
+            <summary>
+            Checks if object is of a number-type.
+            </summary>
+            <param name="obj">The current object.</param>
+            <returns>If the object is of a number type.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.StringExtensions">
+            <summary>
+            Extension class for <see cref="T:System.String"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.StringExtensions.Contains(System.String,System.String,System.StringComparison)">
+            <summary>
+            Returns a value indicating whether a specified string occurs within this string, using the specified comparison rules.
+            </summary>
+            <param name="str">This string.</param>
+            <param name="value">The string to seek.</param>
+            <param name="comparison">One of the enumeration values that specifies the rules to use in this comparison.</param>
+            <returns><see langword="true"/> if the value parameter occurs within this string, or if value is the empty string; otherwise <see langword="false"/>.</returns>
+            <exception cref="T:System.ArgumentNullException"></exception>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.StringExtensions.Join``1(System.String,System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            Concatenates all given elements, using the specified separator for each element, but removing the last one.
+            </summary>
+            <param name="separator">Separator to use to separate elements.</param>
+            <param name="values">Values to concatenate.</param>
+            <returns>Concatenated string.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.StringExtensions.Join(System.String,System.Object[])">
+            <inheritdoc cref="M:BlackSharp.Core.Extensions.StringExtensions.Join``1(System.String,System.Collections.Generic.IEnumerable{``0})"/>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.StringExtensions.ReplaceAtIndex(System.String,System.Int32,System.Int32,System.String)">
+            <summary>
+            Replaces a substring (range) in current string with specified string.
+            </summary>
+            <param name="str">This object.</param>
+            <param name="startIndex">The zero-based starting character position of the substring in this instance.</param>
+            <param name="length">The number of characters in the substring.</param>
+            <param name="instead">The string to replace the specified substring (range).</param>
+            <returns>The new string.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Extensions.TypeExtensions">
+            <summary>
+            Extension class for <see cref="T:System.Type"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.TypeExtensions.IsTypeOrSubclassOf(System.Type,System.Type)">
+            <summary>
+            Checks if <see cref="T:System.Type"/> is subclass or same <see cref="T:System.Type"/> of given <see cref="T:System.Type"/>.
+            </summary>
+            <param name="t">This object.</param>
+            <param name="c">Expected type.</param>
+            <returns>If <see cref="T:System.Type"/> is subclass or same <see cref="T:System.Type"/>.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.TypeExtensions.IsFloatingType(System.Type)">
+            <summary>
+            Determines whether the specified type represents a floating-point numeric type.
+            </summary>
+            <param name="t">The type to evaluate for floating-point numeric representation. Cannot be null.</param>
+            <returns>true if the type is float, double, or decimal; otherwise, false.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Extensions.TypeExtensions.GetDefault(System.Type)">
+            <summary>
+            Gets default value for current type.
+            </summary>
+            <param name="t">This type.</param>
+            <returns>Default value for type.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Globalization.ISOWeek">
+            <summary>
+            Represents ISOWeek functionality.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Globalization.ISOWeek.ToDateTime(System.Int32,System.Int32)">
+            <summary>
+            Get a <see cref="T:System.DateTime"/> from specified year and week based on ISO 8601.
+            </summary>
+            <param name="year">Year.</param>
+            <param name="week">Week of year.</param>
+            <returns>New <see cref="T:System.DateTime"/> by using year and week parameters.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Interfaces.ICloneable`1">
+            <inheritdoc cref="T:System.ICloneable"/>
+        </member>
+        <member name="M:BlackSharp.Core.Interfaces.ICloneable`1.Clone">
+            <inheritdoc cref="M:System.ICloneable.Clone"/>
+        </member>
+        <member name="T:BlackSharp.Core.Interfaces.ICopyable`1">
+            <summary>
+            Defines a method to copy the state from another instance of the same type.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interfaces.ICopyable`1.Copy(`0)">
+            <summary>
+            Copies the values from the specified object to the current instance.
+            </summary>
+            <remarks>This shall copy value types only, not copying reference types at all.</remarks>
+        </member>
+        <member name="T:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex">
+            <summary>
+            Create / Open a mutex with appropiate protection.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex.#ctor(System.String)">
+            <summary>
+            Constructs a new global mutex with specified name.
+            </summary>
+            <param name="mutexName">Name of mutex.</param>
+            <exception cref="T:System.PlatformNotSupportedException">Throws if not on Windows.</exception>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex.Finalize">
+            <summary>
+            Destructs the object.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex._WorldMutex">
+            <summary>
+            Mutex Handle.
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex.MutexName">
+            <summary>
+            Name of internal mutex.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex.Lock">
+            <summary>
+            Lock the mutex.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex.Unlock">
+            <summary>
+            Unlock the mutex.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex.CreateWorldMutex(System.String)">
+            <summary>
+            Create / Open a mutex with appropiate protection.
+            </summary>
+            <param name="name">Name of mutex to create.</param>
+        </member>
+        <member name="T:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutexGuard">
+            <summary>
+            Mutex guard for automatic lock and unlock of a <see cref="T:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex"/> via <see cref="T:System.IDisposable"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutexGuard.#ctor(BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex)">
+            <summary>
+            Constructs a new object and locks given mutex.
+            </summary>
+            <param name="worldMutex">Mutex to automatically lock and unlock.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutexGuard.Dispose">
+            <summary>
+            Unlocks mutex which has been passed in constructor.
+            </summary>
+        </member>
+        <member name="T:BlackSharp.Core.Interop.Windows.Utilities.DynamicLoader">
+            <summary>
+            Helper class for dynamic loading of native functions via <see cref="M:BlackSharp.Core.Interop.Windows.Native.Kernel32.GetProcAddress(System.IntPtr,System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.DynamicLoader.GetDelegate``1(System.IntPtr,System.String)">
+            <inheritdoc cref="M:BlackSharp.Core.Interop.Windows.Utilities.DynamicLoader.GetDelegate(System.IntPtr,System.String,System.Type)"/>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.DynamicLoader.GetDelegate(System.IntPtr,System.String,System.Type)">
+            <summary>
+            Loads function from given module and casts it to specified delegate.
+            </summary>
+            <param name="module">Module to load function from.</param>
+            <param name="procName">Name of function to load.</param>
+            <param name="delegateType">Type of delegate to cast to.</param>
+            <returns>Returns loaded and casted delegate, ready for use.<br/>
+            May return null if signature of delegate did not match function to load.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase">
+            <summary>
+            Base class to allow dynamic loading of a "module" which represents a native library.<br/>
+            This is done via <see cref="M:BlackSharp.Core.Interop.Windows.Native.Kernel32.LoadLibrary(System.String)"/>, <see cref="M:BlackSharp.Core.Interop.Windows.Native.Kernel32.GetProcAddress(System.IntPtr,System.String)"/> and <see cref="M:BlackSharp.Core.Interop.Windows.Native.Kernel32.FreeLibrary(System.IntPtr)"/>.
+            </summary>
+            <seealso cref="M:BlackSharp.Core.Interop.Windows.Native.Kernel32.LoadLibrary(System.String)"/>.
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.#ctor">
+            <summary>
+            Constructs a new object, loads module based on <see cref="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.GetModuleFilename"/> and loads functions via <see cref="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.LoadLibraryFunctions"/>.
+            </summary>
+            <remarks>If successful, <see cref="P:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.IsModuleLoaded"/> is set to true.</remarks>
+        </member>
+        <member name="P:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.IsModuleLoaded">
+            <summary>
+            Identifies whether the module was loaded properly.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.Dispose">
+            <summary>
+            Unloads the module.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.GetModuleFilename">
+            <summary>
+            Gets filename of module to load via <see cref="M:BlackSharp.Core.Interop.Windows.Native.Kernel32.LoadLibrary(System.String)"/>.
+            </summary>
+            <returns>Filename of module</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.LoadLibraryFunctions">
+            <summary>
+            Loads functions of loaded module.
+            </summary>
+            <returns>Returns boolean value to determine whether all necessary functions were loaded correctly.</returns>
+            <remarks>Use <see cref="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.GetDelegate``1(System.String)"/> for simple loading.</remarks>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.ModuleBase.GetDelegate``1(System.String)">
+            <summary>
+            Load function via <see cref="T:BlackSharp.Core.Interop.Windows.Utilities.DynamicLoader"/> and return delegate type, ready for use.
+            </summary>
+            <typeparam name="T">Delegate type for given function.</typeparam>
+            <param name="procName">Function to load.</param>
+            <returns><inheritdoc cref="M:BlackSharp.Core.Interop.Windows.Utilities.DynamicLoader.GetDelegate(System.IntPtr,System.String,System.Type)"/></returns>
+        </member>
+        <member name="T:BlackSharp.Core.Interop.Windows.Utilities.SafeFileHandler">
+            <summary>
+            Abstracted low level file operations via <see cref="T:BlackSharp.Core.Interop.Windows.Native.Kernel32"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.SafeFileHandler.OpenHandle(System.String)">
+            <summary>
+            Opens a handle with given physical path.
+            </summary>
+            <param name="physicalPath">Physical path to open handle for.</param>
+            <returns>Returns opened handle.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.SafeFileHandler.CloseHandle(System.IntPtr)">
+            <summary>
+            Closes given handle.
+            </summary>
+            <param name="handle">Handle to close.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Interop.Windows.Utilities.SafeFileHandler.IsHandleValid(System.IntPtr)">
+            <summary>
+            Checks if given handle is valid.
+            </summary>
+            <param name="handle">Handle to verify.</param>
+            <returns>Returns boolean value to determine if handle is valid.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Logging.LogLevel">
+            <summary>
+            A level of logging.
+            If <see cref="P:BlackSharp.Core.Logging.Logger.LogLevel"/> is set, for example,
+            to <see cref="F:BlackSharp.Core.Logging.LogLevel.Error"/> then <see cref="F:BlackSharp.Core.Logging.LogLevel.Fatal"/> will be logged also,
+            but not the way around.
+            Higher <see cref="T:BlackSharp.Core.Logging.LogLevel"/> than <see cref="P:BlackSharp.Core.Logging.Logger.LogLevel"/>
+            will be logged, lower will completely be ignored.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Disabled">
+            <summary>
+            No logging at all.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Trace">
+            <summary>
+            Trace logging, the lowest level.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Debug">
+            <summary>
+            Debug logging, for debug purposes.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Info">
+            <summary>
+            Info logging, to get more information of something.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Warn">
+            <summary>
+            Warn logging, if something warns before an error occurs.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Error">
+            <summary>
+            Error logging, when something goes wrong.
+            </summary>
+        </member>
+        <member name="F:BlackSharp.Core.Logging.LogLevel.Fatal">
+            <summary>
+            Fatal logging, when something goes horribly wrong and the application (might) need a shutdown.
+            </summary>
+        </member>
+        <member name="T:BlackSharp.Core.Logging.LogItem">
+            <summary>
+            An item for <see cref="T:BlackSharp.Core.Logging.Logger"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.LogItem.#ctor(BlackSharp.Core.Logging.LogLevel,System.String,System.Nullable{System.DateTime})">
+            <summary>
+            Constructs new object.
+            </summary>
+            <param name="level">Log level.</param>
+            <param name="message">Message to log.</param>
+            <param name="time">Time to log.</param>
+        </member>
+        <member name="P:BlackSharp.Core.Logging.LogItem.Level">
+            <summary>
+            Log level of this object.
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Logging.LogItem.Time">
+            <summary>
+            Time of this item.
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Logging.LogItem.Message">
+            <summary>
+            Message to log.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.LogItem.ToString">
+            <inheritdoc cref="M:System.Object.ToString"/>
+        </member>
+        <member name="T:BlackSharp.Core.Logging.Logger">
+            <summary>
+            A class to enable logging for different configurations.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.#ctor">
+            <summary>
+            Do not allow creating instance of class (only singleton).
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Logging.Logger.Instance">
+            <summary>
+            Gets singleton instance of this logger.
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Logging.Logger.IsEnabled">
+            <summary>
+            Specifies if logging is enabled.
+            </summary>
+        </member>
+        <member name="P:BlackSharp.Core.Logging.Logger.LogLevel">
+            <summary>
+            Describes the current <see cref="T:BlackSharp.Core.Logging.LogLevel"/>. Default is <see cref="F:BlackSharp.Core.Logging.LogLevel.Error"/>.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.Add(BlackSharp.Core.Logging.LogLevel,System.String,System.Nullable{System.DateTime})">
+            <summary>
+            Adds an element to the log if specified level is higher
+            or equal to current <see cref="P:BlackSharp.Core.Logging.Logger.LogLevel"/> and not
+            <see cref="F:BlackSharp.Core.Logging.LogLevel.Disabled"/>.
+            </summary>
+            <param name="level">Log level.</param>
+            <param name="message">Log message.</param>
+            <param name="time">Time of event.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.Add(BlackSharp.Core.Logging.LogLevel,System.String)">
+            <summary>
+            Adds an element to the log if specified level is higher
+            or equal to current <see cref="P:BlackSharp.Core.Logging.Logger.LogLevel"/> and not
+            <see cref="F:BlackSharp.Core.Logging.LogLevel.Disabled"/>.
+            </summary>
+            <param name="level">Log level.</param>
+            <param name="message">Log message.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.Add(BlackSharp.Core.Logging.LogItem)">
+            <summary>
+            Adds an element to the log if specified level is higher
+            or equal to current <see cref="P:BlackSharp.Core.Logging.Logger.LogLevel"/> and not
+            <see cref="F:BlackSharp.Core.Logging.LogLevel.Disabled"/>.
+            </summary>
+            <param name="item">Item to add.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.Remove(BlackSharp.Core.Logging.LogLevel)">
+            <summary>
+            Removes all elements with specified <see cref="T:BlackSharp.Core.Logging.LogLevel"/>.
+            </summary>
+            <param name="level">Level to remove from <see cref="T:BlackSharp.Core.Logging.Logger"/>.</param>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.GetStringForLogLevel(BlackSharp.Core.Logging.LogLevel)">
+            <summary>
+            Gets a log-string for specified <see cref="T:BlackSharp.Core.Logging.LogLevel"/>.
+            </summary>
+            <param name="level">Level to get string for.</param>
+            <returns>Log-String for specified level.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.SaveToFile(System.String,System.Boolean)">
+            <summary>
+            Saves content of current <see cref="T:BlackSharp.Core.Logging.Logger"/> to a file.<para/>
+            Note: To save current content to a string, use <see cref="M:BlackSharp.Core.Logging.Logger.ToString"/>.
+            </summary>
+            <param name="path">File path.</param>
+            <param name="append">Specifies if content should be
+            appended to the file if it already exists.</param>
+            <returns>If file could be written.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.ToString">
+            <inheritdoc cref="M:System.Object.ToString"/>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.GetEnumerator">
+            <summary>
+            Enumerator implementation.
+            </summary>
+            <returns>An enumerator.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Logging.Logger.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Enumerator implementation.
+            </summary>
+            <returns>An enumerator.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Platform.OperatingSystem">
+            <summary>
+            Represents information about an operating system.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Platform.OperatingSystem.IsWindows">
+            <summary>
+            Indicates whether the current application is running on Windows.
+            </summary>
+            <returns>True if current application is running on Windows, false otherwise.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Platform.OperatingSystem.IsLinux">
+            <summary>
+            Indicates whether the current application is running on Linux.
+            </summary>
+            <returns>True if current application is running on Linux, false otherwise.</returns>
+        </member>
+        <member name="M:BlackSharp.Core.Platform.OperatingSystem.GetOSVersion(System.Int32@,System.Int32@)">
+            <summary>
+            Retrieves the major and minor version numbers of the operating system.
+            </summary>
+            <param name="major">When this method returns, contains the major version number of the operating system if successful; otherwise, zero.</param>
+            <param name="minor">When this method returns, contains the minor version number of the operating system if successful; otherwise, zero.</param>
+            <returns>true if the operating system version was successfully retrieved; otherwise, false.</returns>
+        </member>
+        <member name="T:BlackSharp.Core.Reflection.ShallowCopy">
+            <summary>
+            Provides static methods for performing shallow copies of value type properties between objects of the same type.
+            </summary>
+        </member>
+        <member name="M:BlackSharp.Core.Reflection.ShallowCopy.CopyValueTypeProperties``1(``0,``0,System.Reflection.BindingFlags)">
+            <summary>
+            Copies all writable value type and string properties from the source object to the target object of
+            the same type.
+            </summary>
+            <remarks>Only properties that are value types, strings or objects (where the assigned value
+            is a value type) and are writable, are copied.<br/>
+            Reference type properties other than string and object are not copied.<br/>
+            Both source and target must be non-null and of the same type.</remarks>
+            <typeparam name="T">The reference type whose properties will be copied.</typeparam>
+            <param name="source">The object from which property values are copied. Cannot be null.</param>
+            <param name="target">The object to which property values are assigned. Cannot be null.</param>
+            <param name="bindingFlags">A bitwise combination of <see cref="T:System.Reflection.BindingFlags"/> values that specifies which properties to include.</param>
+        </member>
+    </members>
+</doc>

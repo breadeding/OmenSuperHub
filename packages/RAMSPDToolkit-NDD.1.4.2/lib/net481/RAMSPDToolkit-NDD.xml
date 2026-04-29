@@ -1,0 +1,1342 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RAMSPDToolkit-NDD</name>
+    </assembly>
+    <members>
+        <member name="T:RAMSPDToolkit.I2CSMBusTools.I2CSMBusDetect">
+            <summary>
+            Detection methods for SMBus.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2">
+            <summary>
+            Structure containing information about the graphics adapter with extended caps.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.Size">
+            <summary>
+            Size of the structure.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.AdapterIndex">
+            <summary>
+            The ADL index handle. One GPU may be associated with one or two index handles.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.StrUDID">
+            <summary>
+            The unique device ID associated with this adapter.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.BusNumber">
+            <summary>
+            The BUS number associated with this adapter.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.DeviceNumber">
+            <summary>
+            The driver number associated with this adapter.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.FunctionNumber">
+            <summary>
+            The function number.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.VendorID">
+            <summary>
+            The vendor ID associated with this adapter.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.StrAdapterName">
+            <summary>
+            Adapter name.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.StrDisplayName">
+            <summary>
+            Display name. For example, "\\\\Display0"
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.Present">
+            <summary>
+            Present or not; 1 if present and 0 if not present. If the logical adapter is present, the display name such as \\\\.\\Display1 can be found from OS.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.Exist">
+            <summary>
+            Exist or not; 1 is exist and 0 is not present.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.StrDriverPath">
+            <summary>
+            Driver registry path.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.StrDriverPathExt">
+            <summary>
+            Driver registry path Ext for.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.StrPNPString">
+            <summary>
+            PNP string from Windows.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.OSDisplayIndex">
+            <summary>
+            It is generated from EnumDisplayDevices.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.InfoMask">
+            <summary>
+            The bit mask identifies the adapter info.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2.InfoValue">
+            <summary>
+            The bit identifies the adapter info define_adapter_info.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure">
+            <summary>
+            Structure containing information about I2C.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.Size">
+            <summary>
+            Size of the structure.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.Line">
+            <summary>
+            Numerical value representing hardware I2C.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.Address">
+            <summary>
+            The 7-bit I2C slave device address, shifted one bit to the left.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.Offset">
+            <summary>
+            The offset of the data from the address.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.Action">
+            <summary>
+            Read from or write to slave device. ADL_DL_I2C_ACTIONREAD or ADL_DL_I2C_ACTIONWRITE or ADL_DL_I2C_ACTIONREAD_REPEATEDSTART.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.Speed">
+            <summary>
+            I2C clock speed in KHz.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.DataSize">
+            <summary>
+            A numerical value representing the number of bytes to be sent or received on the I2C bus.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2CStructure.PcData">
+            <summary>
+            Address of the characters which are to be sent or received on the I2C bus.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants">
+            <summary>
+            Constant values for AMD.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_OK">
+            <summary>
+            ADL function completed successfully.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_ERR">
+            <summary>
+            Generic Error. Most likely one or more of the Escape calls to the driver failed!
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_MAX_PATH">
+            <summary>
+            Defines the maximum string length.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl">
+            <summary>
+            Contains delegates for AMD Display Library.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Create">
+            <summary>
+            Function to initialize the ADL2 interface and to obtain client's context handle.<br/>
+            Clients can use ADL2 versions of ADL APIs to assure that there is no interference with other
+            ADL clients that are running in the same process.
+            Such clients have to call ADL2_Main_Control_Create first to obtain ADL_CONTEXT_HANDLE instance
+            that has to be passed to each subsequent ADL2 call and finally destroyed using <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Destroy"/>.
+            ADL initialized using ADL2_Main_Control_Create will not enforce serialization of ADL API executions by multiple threads.
+            Multiple threads will be allowed to enter to ADL at the same time. Note that ADL library is not guaranteed to be thread-safe.
+            Client that calls ADL2_Main_Control_Create have to provide its own mechanism for ADL calls serialization.
+            </summary>
+            <param name="callback">The memory allocation function for memory buffer allocation. This must be provided by the user.
+            ADL internally uses this callback to allocate memory for the output parameters returned to the user and user is responsible
+            to free the memory once used for these parameters. ADL internal takes care of allocating and de allocating the memory
+            for its local variables.</param>
+            <param name="iEnumConnectedAdapters">Specify a value of 0 to retrieve adapter information for all adapters that have
+            ever been present in the system. Specify a value of 1 to retrieve adapter information only for adapters that are
+            physically present and enabled in the system.</param>
+            <param name="context">ADL_CONTEXT_HANDLE instance that has to be passed to each subsequent ADL2 call and
+            finally destroyed using ADL2_Main_Control_Destroy.</param>
+            <returns>If the function succeeds, the return value is <see cref="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_OK"/>.
+            Otherwise the return value is an ADL error code.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Destroy">
+            <summary>
+            Destroy client's ADL context.<br/>
+            Clients can use ADL2 versions of ADL APIs to assure that there is no interference with other ADL clients that
+            are running in the same process and to assure that ADL APIs are thread-safe.
+            Such clients have to call <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Create"/> first to obtain ADL_CONTEXT_HANDLE instance
+            that has to be passed to each subsequent ADL2 call and finally destroyed using ADL2_Main_Control_Destroy.
+            </summary>
+            <param name="context">ADL_CONTEXT_HANDLE instance to destroy.</param>
+            <returns>If the function succeeds, the return value is <see cref="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_OK"/>.
+            Otherwise the return value is an ADL error code.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Adapter_Primary_Get">
+            <summary>
+            Function to retrieve the primary display adapter index.<br/>
+            This function retrieves the adapter index for the primary display adapter.
+            </summary>
+            <param name="context">Client's ADL context handle ADL_CONTEXT_HANDLE obtained from <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Create"/>.</param>
+            <param name="lpPrimaryAdapterIndex">The pointer to the ADL index handle of the primary adapter.</param>
+            <returns>If the function succeeds, the return value is <see cref="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_OK"/>.
+            Otherwise the return value is an ADL error code.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Display_WriteAndReadI2C">
+            <summary>
+            Function to write and read I2C.<br/>
+            This function writes and reads I2C.
+            </summary>
+            <param name="context">Client's ADL context handle ADL_CONTEXT_HANDLE obtained from <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Create"/>.</param>
+            <param name="iAdapterIndex">The ADL index handle of the desired adapter.</param>
+            <param name="pI2C">A pointer to the <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.ADLI2C"/> structure.</param>
+            <returns>If the function succeeds, the return value is <see cref="F:RAMSPDToolkit.I2CSMBus.Interop.AMD.AMDConstants.ADL_OK"/>.
+            Otherwise the return value is an ADL error code.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Adapter_AdapterInfoX4_Get">
+            <summary>
+            ADL local interface. Retrieves extended adapter information for given adapter or all OS-known adapters.<br/>
+            This function retrieves information for passed adapter or if pass -1, information of all OS-known adapters
+            in the system. OS-known adapters can include adapters that are physically present in the
+            system (logical adapters) as well as ones that are no longer present in the system but are still recognized by the OS.
+            </summary>
+            <param name="context">Client's ADL context handle ADL_CONTEXT_HANDLE obtained from <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AtiAdl._ADL2_Main_Control_Create"/>.</param>
+            <param name="iAdapterIndex">The ADL index handle of the desired adapter or -1 if all adapters are desired.</param>
+            <param name="numAdapters">Number of items in the lppAdapterInfo array.
+            Can pass NULL pointer if passing an adapter index (in which case only one AdapterInfo is returned).</param>
+            <param name="lppAdapterInfoX2">A pointer to the pointer of <see cref="T:RAMSPDToolkit.I2CSMBus.Interop.AMD.AdapterInfoX2"/> array.
+            Initialize to NULL before calling this API.
+            ADL will allocate the necessary memory, using the user provided callback function.</param>
+            <returns>If the function valid, the return value is 1. Otherwise it is 0.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.Shared.PCICMDIOGuardLinux">
+            <summary>
+            Automatically enables and disables I/O for I801 and Piix4 SMBus controller via modifying PCICMD - PCI Command Register by using <see cref="T:System.IDisposable"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.Shared.PCICMDIOGuard">
+            <summary>
+            Automatically enables and disables I/O for I801 and Piix4 SMBus controller via modifying PCICMD - PCI Command Register by using <see cref="T:System.IDisposable"/>.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.Interop.Shared.SharedConstants.PCI_CMD_IO_BIT">
+            <summary>
+            Enables access to the SM Bus I/O space registers as defined by the Base Address Register.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.Shared.WMI">
+            <summary>
+            Provides access to Windows Management Instrumentation (WMI).
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.NVIDIA.NVAPI">
+            <summary>
+            Delegates for Nvidia API.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.PawnIO.PawnIOSMBusIdentifier">
+            <summary>
+            Identifies PawnIO SMBus type.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.Interop.SMBusData">
+            <summary>
+            Data object for SMBus transactions.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.Interop.SMBusData.ByteData">
+            <summary>
+            Byte data.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.Interop.SMBusData.Word">
+            <summary>
+            Word data.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.Interop.SMBusData.Block">
+            <summary>
+            Gets or sets <see cref="P:RAMSPDToolkit.I2CSMBus.Interop.SMBusData.Block"/> property. Please note that get produces a copy.<br/>
+            When modifying contents of this array, please use indexer <see cref="P:RAMSPDToolkit.I2CSMBus.Interop.SMBusData.Item(System.Int32)"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusAmdAdl">
+            <summary>
+            SMBus for AMD Display Library.
+            </summary>
+            <remarks>This class is not finalized yet, due to missing testers.</remarks>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusAmdAdl.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusI801">
+            <summary>
+            SMBus class for Intel CPUs (I801).
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.SMBusI801._PCIAddress">
+            <summary>
+            PCI address of the SMBus controller. Used for PCICMD modifications.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusI801.I801_SMBA">
+            <summary>
+            Base address for SMBus.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusI801.WaitIntrTimeout">
+            <summary>
+            Timeout for WaitIntr in milliseconds. Default is 0.25 and maximum 1000.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusI801.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusInterface">
+            <summary>
+            Base class for SMBus implementations.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.DeviceName">
+            <summary>
+            Name of SMBus device.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.PortID">
+            <summary>
+            Port ID of SMBus.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.PCIDevice">
+            <summary>
+            Device ID of SMBus.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.PCIVendor">
+            <summary>
+            Vendor ID of SMBus.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.PCISubsystemDevice">
+            <summary>
+            Subsystem device ID of SMBus.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.PCISubsystemVendor">
+            <summary>
+            Subsystem vendor ID of SMBus.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.HasSPDWriteProtection">
+            <summary>
+            This property is to determine if SPD Write Protection is enabled.<br/>
+            If it is enabled, writing to SPD is not possible.<br/>
+            Currently it is known to be enabled on newer Intel CPU systems.<br/>
+            Allowing SPD writes can usually be changed in BIOS settings by the PCs user.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_write_quick(System.Byte,System.Byte)">
+            <summary>
+            Does a quick write with given value at provided address.
+            </summary>
+            <param name="addr">Address to do a quick write on.</param>
+            <param name="value">Value to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_read_byte(System.Byte)">
+            <summary>
+            Reads one byte at given address.
+            </summary>
+            <param name="addr">Address to read from.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_write_byte(System.Byte,System.Byte)">
+            <summary>
+            Does a write with given value at provided address.
+            </summary>
+            <param name="addr">Address to do a write on.</param>
+            <param name="value">Value to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_read_byte_data(System.Byte,System.Byte)">
+            <summary>
+            Reads one byte at given address with specified command.
+            </summary>
+            <param name="addr">Address to read from.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_write_byte_data(System.Byte,System.Byte,System.Byte)">
+            <summary>
+            Write one byte at given address with specified command.
+            </summary>
+            <param name="addr">Address to write to.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="value">Value to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_read_word_data(System.Byte,System.Byte)">
+            <summary>
+            Reads a word (<see cref="T:System.UInt16"/>) at given address with specified command.
+            </summary>
+            <param name="addr">Address to read from.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_read_word_data_swapped(System.Byte,System.Byte)">
+            <summary>
+            Reads a word (<see cref="T:System.UInt16"/>) at given address with specified command and swaps its byte order.
+            </summary>
+            <param name="addr">Address to read from.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_write_word_data(System.Byte,System.Byte,System.UInt16)">
+            <summary>
+            Writes a word (<see cref="T:System.UInt16"/>) at given address with specified command.
+            </summary>
+            <param name="addr">Address to write to.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="value">Value to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_proc_call(System.Byte,System.Byte,System.Byte,System.UInt16)">
+            <summary>
+            Writes a word (<see cref="T:System.UInt16"/>) at given address with specified command and reads a word from same address.
+            </summary>
+            <param name="addr">Address to write to and read from.</param>
+            <param name="read_write">Specifies if read or write is executed.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="value">Value to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_read_block_data(System.Byte,System.Byte,System.Byte[])">
+            <summary>
+            Reads block data at given address with specified command.
+            </summary>
+            <param name="addr">Address to read from.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="values">Input buffer in which the read data will be copied into.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_write_block_data(System.Byte,System.Byte,System.Byte,System.Byte[])">
+            <summary>
+            Writes block data at given address with specified command.
+            </summary>
+            <param name="addr">Address to write to.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="length">Length of data to be written.</param>
+            <param name="values">Data to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_read_i2c_block_data(System.Byte,System.Byte,System.Byte,System.Byte[])">
+            <summary>
+            Reads block data at given address with specified command.
+            </summary>
+            <param name="addr">Address to read from.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="length">Length of data to be read.</param>
+            <param name="values">Input buffer in which the read data will be copied into.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusInterface.i2c_smbus_write_i2c_block_data(System.Byte,System.Byte,System.Byte,System.Byte[])">
+            <summary>
+            Writes block data at given address with specified command.
+            </summary>
+            <param name="addr">Address to write to.</param>
+            <param name="command">Command for operation. This is usually an offset value.</param>
+            <param name="length">Length of data to be written.</param>
+            <param name="values">Data to write.</param>
+            <returns>When the return value is negative, it is an error code. If positive, the value returned by SMBus call.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusLinux">
+            <summary>
+            SMBus class for systems with Linux.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.SMBusLinux._PCIConfigPath">
+            <summary>
+            PCI config path of the SMBus controller. Used for PCICMD modifications.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.SMBusLinux._PCICMDOriginal">
+            <summary>
+            Initial value of the PCI Command Register (PCICMD) for this SMBus controller.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusLinux.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusManager">
+            <summary>
+            Manager class for SMBuses.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusManager.UseWMI">
+            <summary>
+            Determine whether to use WMI for SMBus dectection or not (will use SetupAPI instead).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses">
+            <summary>
+            Holds all registered SMBus instances.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusManager.AddSMBus(RAMSPDToolkit.I2CSMBus.SMBusInterface)">
+            <summary>
+            Adds your own implementation of an instance of <see cref="T:RAMSPDToolkit.I2CSMBus.SMBusInterface"/> to <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <param name="smbus">SMBus instance to add.</param>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusManager.RemoveSMBus(RAMSPDToolkit.I2CSMBus.SMBusInterface)">
+            <summary>
+            Removes specified instance of <see cref="T:RAMSPDToolkit.I2CSMBus.SMBusInterface"/> from <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <param name="smbus">SMBus instance to remove.</param>
+            <returns>True if SMBus is successfully removed; otherwise false.<br/>
+            This method also returns false if SMBus was not found in <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusManager.GetSMBus``1">
+            <summary>
+            Gets first SMBus in <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/> with specified type.
+            </summary>
+            <typeparam name="TSMBus">Type of SMBus to get.</typeparam>
+            <returns>Found SMBus of given type or null.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusManager.DetectSMBuses">
+            <summary>
+            Uses available detection methods to detect all currently available SMBuses.<br/>
+            This also clears current <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusNCT6775">
+            <summary>
+            SMBus class for NCT6775.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusNCT6775.NCT6775_SMBA">
+            <summary>
+            Base address for SMBus.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusNCT6775.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusNVAPI">
+            <summary>
+            SMBus class for NVAPI (NVIDIA GPUs).
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusNVAPI.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusPawnIO">
+            <summary>
+            SMBus class for <see cref="T:RAMSPDToolkit.Windows.Driver.Interfaces.IPawnIODriver"/> driver.<br/>
+            Supports I801, Piix4 and NCT6793.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusPawnIO.PawnIOSMBusIdentifier">
+            <summary>
+            Identifies SMBus type.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusPawnIO.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.SMBusPiix4">
+            <summary>
+            SMBus class for AMD CPUs (Piix4).
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.I2CSMBus.SMBusPiix4._PCIAddress">
+            <summary>
+            PCI address of the SMBus controller. Used for PCICMD modifications.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.I2CSMBus.SMBusPiix4.Piix4_SMBA">
+            <summary>
+            SMBus base address.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.SMBusPiix4.SMBusDetect">
+            <summary>
+            Detects if this SMBus is available for usage.<br/>
+            If it is, an instance of this SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>True if SMBus is available and false if not.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.I2CSMBus.WindowsSMBusDetector">
+            <summary>
+            Detects SMBuses for Windows using the SetupAPI and <see cref="P:RAMSPDToolkit.Windows.Driver.DriverManager.Driver"/>.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.I2CSMBus.WindowsSMBusDetector.DetectSMBuses">
+            <summary>
+            Detects available SMBuses on Windows for usage.<br/>
+            If detected, an instance of the detected SMBus will be created and added into <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusManager.RegisteredSMBuses"/>.
+            </summary>
+            <returns>Boolean value to indicate whether detection was successful.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.Mutexes.WorldMutexManager">
+            <summary>
+            Holds instances to all <see cref="T:BlackSharp.Core.Interop.Windows.Mutexes.WorldMutex"/>es.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.DDR4Accessor">
+            <summary>
+            Accessor for DDR4 SPD.<br/>
+            This works for Windows and Linux.
+            </summary>
+            <remarks>Please refer to JEDEC Standard for EE1004 and TSE2004av for property definitions.</remarks>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR4Accessor.ThermalSensorCapabilitiesRegister">
+            <summary>
+            The TS Capabilities Register indicates the supported features
+            of the temperature sensor portion of the TSE2004av.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR4Accessor.ThermalSensorConfigurationRegister">
+            <summary>
+            The TS Configuration Register holds the control and status bits
+            of the EVENT_n pin as well as general hysteresis on all limits.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR4Accessor.ThermalSensorCriticalLimit">
+            <summary>
+            Thermal sensor critical limit.<br/>
+            The standard does not specify if this is a critical low or high limit,
+            so we should assume it is both.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR4Accessor.ThermalSensorManufacturerID">
+            <summary>
+            The Manufacturer ID Register holds the PCI SIG number assigned to the specific manufacturer.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR4Accessor.ThermalSensorDeviceID">
+            <summary>
+            The upper byte of the Device ID / Revision Register must be 0x22 for the TSE2004av.<br/>
+            The lower byte holds the revision value which is vendor-specific.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR4Accessor.SDRAMTimings">
+            <inheritdoc cref="T:RAMSPDToolkit.SPD.Timings.DDR4Timings"/>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.DDR4Accessor.IsAvailable(RAMSPDToolkit.I2CSMBus.SMBusInterface,System.Byte)">
+            <summary>
+            Detects if a DDR4 RAM is available at specified address.
+            </summary>
+            <param name="bus">SMBus to check for RAM.</param>
+            <param name="address">Address to check.</param>
+            <returns>True if DDR4 is available at specified address; false otherwise.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.DDR4AccessorBase">
+            <summary>
+            Base class for DDR4 SPD accessors.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.DDR5Accessor">
+            <summary>
+            Accessor for DDR5 SPD.<br/>
+            This works for Windows and Linux.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR5Accessor.ThermalSensorEnabled">
+            <summary>
+            Determines if thermal sensor is currently enabled.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR5Accessor.ThermalSensorCriticalHighLimit">
+            <summary>
+            Thermal sensor critical high limit temperature.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR5Accessor.ThermalSensorCriticalLowLimit">
+            <summary>
+            Thermal sensor critical low limit temperature.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR5Accessor.ThermalSensorStatus">
+            <summary>
+            Thermal sensor temperature status.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR5Accessor.SDRAMTimings">
+            <inheritdoc cref="T:RAMSPDToolkit.SPD.Timings.DDR5Timings"/>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.DDR5Accessor.IsAvailable(RAMSPDToolkit.I2CSMBus.SMBusInterface,System.Byte)">
+            <summary>
+            Detects if a DDR5 RAM is available at specified address.
+            </summary>
+            <param name="bus">SMBus to check for RAM.</param>
+            <param name="address">Address to check.</param>
+            <returns>True if DDR5 is available at specified address; false otherwise.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.DDR5AccessorBase">
+            <summary>
+            Base class for DDR5 SPD accessors.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.DDR5AccessorBase.WriteRecoveryTime">
+            <summary>
+            Device write recovery time in milliseconds.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Enums.PageData.Nothing">
+            <summary>
+            Nothing is available.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Enums.PageData.ThermalData">
+            <summary>
+            Thermal data includes temperature and thermal configuration registers.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Interfaces.IThermalSensor">
+            <summary>
+            Thermal sensor interface. All temperatures stored are in °C.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.HasThermalSensor">
+            <summary>
+            Determines if a thermal sensor is present.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.Temperature">
+            <summary>
+            Current measured temperature.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.TemperatureResolution">
+            <summary>
+            Temperature resolution (e.g. 0.0625; 0.125; 0.25; 0.5).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.ThermalSensorLowLimit">
+            <summary>
+            Thermal sensor low limit temperature.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.ThermalSensorHighLimit">
+            <summary>
+            Thermal sensor high limit temperature.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.UpdateTemperature">
+            <summary>
+            Update <see cref="P:RAMSPDToolkit.SPD.Interfaces.IThermalSensor.Temperature"/>.
+            </summary>
+            <returns>Returns boolean value whether update of temperature was successful.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants">
+            <summary>
+            SPD constants.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants.SPD_IO_DELAY">
+            <summary>
+            I/O delay in milliseconds.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants.SPD_BEGIN">
+            <summary>
+            Address of first RAM stick.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants.SPD_END">
+            <summary>
+            Address of last possible RAM stick.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants.SPD_TS_RETRIES">
+            <summary>
+            Default value for amount of retries to read from thermal sensor, if SMBus is busy on read.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants.SPD_DATA_RETRIES">
+            <summary>
+            Default value for amount of retries to read SPD data.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Interop.Shared.SPDConstants.SPD_CFG_RETRIES">
+            <summary>
+            Default value for amount of retries to read configuration data, if SMBus is busy on read.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Interop.Shared.SPDMemoryType">
+            <summary>
+            Memory type based on SPD read.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Interop.Shared.ThermalSensorStatus">
+            <summary>
+            Status of thermal sensor.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Mappings.ManufacturerMapping">
+            <summary>
+            Mapping for manufacturers according to JEDEC standard.<br/>
+            Please note that this starts at Bank 1, not Bank 0.
+            </summary>
+            <remarks>Biggest part of this class is autogenerated via a python script.</remarks>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Mappings.ManufacturerMapping.ManufacturerBanks">
+            <summary>
+            Stores manufacturer banks beginning at Bank 1.<br/>
+            Note: if you have, for example, number of continuation codes zero (0) you need to access Bank 1.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Mappings.PageMappingDDR4">
+            <summary>
+            SPD Page mapping.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Mappings.PageMappingDDR4.PageDataMapping">
+            <summary>
+            Page mapping. Key is page number, starting with 0, and value is <see cref="T:RAMSPDToolkit.SPD.Enums.PageData"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Mappings.PageMappingDDR5">
+            <summary>
+            SPD Page mapping.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.SPD.Mappings.PageMappingDDR5.PageDataMapping">
+            <summary>
+            Page mapping. Key is page number, starting with 0, and value is <see cref="T:RAMSPDToolkit.SPD.Enums.PageData"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.SPDAccessor">
+            <summary>
+            Base class for SPD accessors.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDAccessor.Index">
+            <summary>
+            Index / slot of RAM stick, starting at zero (0).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDAccessor.HasSPDWriteProtection">
+            <summary>
+            <inheritdoc cref="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.HasSPDWriteProtection"/>
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDAccessor.PageData">
+            <summary>
+            Gets page data (flag enumeration) which identifies which memory page is set and what data can be retrieved from it.<br/>
+            This becomes a great functionality if having a DDR5 system with <see cref="P:RAMSPDToolkit.I2CSMBus.SMBusInterface.HasSPDWriteProtection"/> enabled.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.SPDRevision">
+            <summary>
+            Get SPD revision.
+            </summary>
+            <returns>Read SPD revision.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.MemoryType">
+            <summary>
+            Get <see cref="T:RAMSPDToolkit.SPD.Interop.Shared.SPDMemoryType"/>.
+            </summary>
+            <returns>Read memory type.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.GetCapacity">
+            <summary>
+            Gets capacity of module in gigabytes.
+            </summary>
+            <returns>Capacity of module in gigabytes.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleManufacturerContinuationCode">
+            <summary>
+            Get module manufacturer continuation code.
+            </summary>
+            <returns>Read module manufacturer continuation code.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleManufacturerIDCode">
+            <summary>
+            Get module manufacturer ID code.
+            </summary>
+            <returns>Read module manufacturer ID code.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleManufacturingLocation">
+            <summary>
+            Get module manufacturing location.
+            </summary>
+            <returns>Read module manufacturing location.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleManufacturingDate">
+            <summary>
+            Get module manufacturing date.
+            </summary>
+            <returns>Read module manufacturing date.</returns>
+            <remarks>The returned date marks beginning (<see cref="F:System.DayOfWeek.Monday"/>) of the week this module has been manufactured.</remarks>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleSerialNumber">
+            <summary>
+            Get module serial number.
+            </summary>
+            <returns>Read module serial number.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModulePartNumber">
+            <summary>
+            Get module part number.
+            </summary>
+            <returns>Read module part number.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleRevisionCode">
+            <summary>
+            Get module revision code.
+            </summary>
+            <returns>Read module revision code.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.DRAMManufacturerContinuationCode">
+            <summary>
+            Get DRAM manufacturer continuation code.
+            </summary>
+            <returns>Read DRAM manufacturer continuation code.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.DRAMManufacturerIDCode">
+            <summary>
+            Get DRAM manufacturer ID code.
+            </summary>
+            <returns>Read DRAM manufacturer ID code.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ManufacturerSpecificData(System.UInt16)">
+            <summary>
+            Get manufacturer specific data from specified index.
+            </summary>
+            <param name="index">Index to read manufacturer specific data from.</param>
+            <returns>Read manufacturer specific data.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.At(System.UInt16)">
+            <summary>
+            Get one byte from specified address.
+            </summary>
+            <param name="address">Address to read from.</param>
+            <returns>Read byte.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.ChangePage(RAMSPDToolkit.SPD.Enums.PageData)">
+            <summary>
+            Changes current page to page containing given <see cref="P:RAMSPDToolkit.SPD.SPDAccessor.PageData"/>.
+            </summary>
+            <param name="pageData">Data the caller of this method want to read.</param>
+            <returns>Boolean value to indicate whether page change, based on given parameter, was successful.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.GetPage">
+            <summary>
+            Gets current page.
+            </summary>
+            <returns>Current page.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.SetPage(System.Byte)">
+            <summary>
+            Sets current page.
+            </summary>
+            <param name="page">New page to set.</param>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.Update(System.Int32)">
+            <summary>
+            Updates all volatile data which is available for read, in current implementation of <see cref="T:RAMSPDToolkit.SPD.SPDAccessor"/>.
+            </summary>
+            <param name="retries">Amount of times to retry reading data if SMBus is busy.</param>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.GetModuleManufacturerString">
+            <summary>
+            Uses <see cref="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleManufacturerContinuationCode"/> and <see cref="M:RAMSPDToolkit.SPD.SPDAccessor.ModuleManufacturerIDCode"/> to get mapped manufacturer string from <see cref="F:RAMSPDToolkit.SPD.Mappings.ManufacturerMapping.ManufacturerBanks"/>.
+            </summary>
+            <returns>Manufacturer string or null.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.SPD.SPDAccessor.GetDRAMManufacturerString">
+            <summary>
+            Uses <see cref="M:RAMSPDToolkit.SPD.SPDAccessor.DRAMManufacturerContinuationCode"/> and <see cref="M:RAMSPDToolkit.SPD.SPDAccessor.DRAMManufacturerIDCode"/> to get mapped manufacturer string from <see cref="F:RAMSPDToolkit.SPD.Mappings.ManufacturerMapping.ManufacturerBanks"/>.
+            </summary>
+            <returns>Manufacturer string or null.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.SPDDetector">
+            <summary>
+            Automatically detects <see cref="T:RAMSPDToolkit.SPD.Interop.Shared.SPDMemoryType"/>.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDDetector.Address">
+            <summary>
+            Get address.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDDetector.SPDMemoryType">
+            <summary>
+            Get <see cref="T:RAMSPDToolkit.SPD.Interop.Shared.SPDMemoryType"/>.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDDetector.IsValid">
+            <summary>
+            Checks if current <see cref="T:RAMSPDToolkit.SPD.SPDDetector"/> instance is valid.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.SPDDetector.Accessor">
+            <summary>
+            Get detected <see cref="T:RAMSPDToolkit.SPD.SPDAccessor"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Timings.DDR4Timings">
+            <summary>
+            Contains timings specified by JEDEC standard.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumCycleTime">
+            <summary>
+            The minimum cycle time of the SDRAM device (tCKAVGmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MaximumCycleTime">
+            <summary>
+            The maximum cycle time of the SDRAM device (tCKAVGmax).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.CASLatenciesSupported">
+            <summary>
+            List of supported CAS latencies.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumCASLatencyTime">
+            <summary>
+            Minimum CAS Latency time (tAAmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumRASToCASDelayTime">
+            <summary>
+            Minimum RAS to CAS delay time (tRCDmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumRowPrechargeDelayTime">
+            <summary>
+            Minimum Row Precharge Delay time (tRPmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumActiveToPrechargeDelayTime">
+            <summary>
+            Minimum Active to Precharge Delay time (tRASmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumActiveToActiveRefreshDelayTime">
+            <summary>
+            Minimum Active to Active/Refresh Delay time (tRCmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumRefreshRecoveryDelayTime1">
+            <summary>
+            Minimum Refresh Recovery Delay time 1 (tRFC1min).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumRefreshRecoveryDelayTime2">
+            <summary>
+            Minimum Refresh Recovery Delay time 2 (tRFC2min).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumRefreshRecoveryDelayTime4">
+            <summary>
+            Minimum Refresh Recovery Delay time 4 (tRFC4min).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumFourActivateWindowTime">
+            <summary>
+            Minimum Four Activate Window time (tFAWmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumActivateToActivateDelay_DiffGroup">
+            <summary>
+            Minimum Activate to Activate Delate time (tRRD_smin) different bank group.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumActivateToActivateDelay_SameGroup">
+            <summary>
+            Minimum Activate to Activate Delate time (tRRD_lmin) same bank group.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumCASToCASDelay_SameGroup">
+            <summary>
+            Minimum CAS to CAS Delay time (tCCD_lmin) same bank group.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumWriteRecoveryTime">
+            <summary>
+            Minimum Write Recovery time (tWRmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumWriteToReadTime_DiffGroup">
+            <summary>
+            Minimum Write to Read Time (tWTR_smin) different bank group.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR4Timings.MinimumWriteToReadTime_SameGroup">
+            <summary>
+            Minimum Write to Read Time (tWTR_lmin) same bank group.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SPD.Timings.DDR5Timings">
+            <summary>
+            Contains timings specified by JEDEC standard.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumCycleTime">
+            <summary>
+            The minimum cycle time of the SDRAM device (tCKAVGmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MaximumCycleTime">
+            <summary>
+            The maximum cycle time of the SDRAM device (tCKAVGmax).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.CASLatenciesSupported">
+            <summary>
+            List of supported CAS latencies.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumCASLatencyTime">
+            <summary>
+            Minimum CAS Latency time (tAAmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumRASToCASDelayTime">
+            <summary>
+            Minimum RAS to CAS delay time (tRCDmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumRowPrechargeDelayTime">
+            <summary>
+            Minimum Row Precharge Delay time (tRPmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumActiveToPrechargeDelayTime">
+            <summary>
+            Minimum Active to Precharge Delay time (tRASmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumActiveToActiveRefreshDelayTime">
+            <summary>
+            Minimum Active to Active/Refresh Delay time (tRCmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.MinimumWriteRecoveryTime">
+            <summary>
+            Minimum Write Recovery time (tWRmin).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.NormalRefreshRecoveryTime">
+            <summary>
+            Normal Refresh Recovery Time (tRFC1).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.FineGranularityRefreshRecoveryTime">
+            <summary>
+            Fine Granularity Refresh Recovery Time (tRFC2).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.SameBankRefreshRecoveryTime">
+            <summary>
+            Same Bank Refresh Recovery Time (tRFCsb).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.NormalRefreshRecoveryTime_3DSDifferentLogicalRank">
+            <summary>
+            Normal Refresh Recovery Time, 3DS Different Logical Rank (tRFC1_dlr).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.FineGranularityRefreshRecoveryTime_3DSDifferentLogicalRank">
+            <summary>
+            Fine Granularity Refresh Recovery Time (tRFC2_dlr).
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.SPD.Timings.DDR5Timings.SameBankRefreshRecoveryTime_3DSDifferentLogicalRank">
+            <summary>
+            Same Bank Refresh Recovery Time (tRFCsb_dlr).
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.SuperInOut.SuperIO">
+            <summary>
+            Super IO access.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.SuperInOut.SuperIO.SuperIOEnter(System.Int32)">
+            <summary>
+            Put the Super IO Chip into Extended Function Mode.
+            </summary>
+            <param name="ioReg"></param>
+        </member>
+        <member name="M:RAMSPDToolkit.SuperInOut.SuperIO.SuperIOWriteByte(System.Int32,System.Byte,System.Byte)">
+            <summary>
+            Write a byte to the Super IO configuration register.
+            </summary>
+            <param name="ioReg"></param>
+            <param name="reg"></param>
+            <param name="val"></param>
+        </member>
+        <member name="M:RAMSPDToolkit.SuperInOut.SuperIO.SuperIOReadByte(System.Int32,System.Byte)">
+            <summary>
+            Read a byte from the Super IO configuration register.
+            </summary>
+            <param name="ioReg"></param>
+            <param name="reg"></param>
+        </member>
+        <member name="M:RAMSPDToolkit.Utilities.SPDTemperatureConverter.CheckAndConvertTemperature(System.UInt16)">
+            <summary>
+            Checks temperature for positive or negative value, adjusts value accordingly and returns temperature in celsius.
+            </summary>
+            <param name="temperatureRaw">Raw temperature value directly read from SPD.</param>
+            <returns>Returns temperature in celsius.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.DriverAccess">
+            <summary>
+            Forward to <see cref="T:RAMSPDToolkit.Windows.Driver.Interfaces.IGenericDriver"/>. Wrapper class to abstract calls into driver.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.Windows.Driver.DriverAccess.PciBusDevFunc(System.UInt32,System.UInt32,System.UInt32)">
+            <summary>
+            Combine Bus Number, Device Number and Function Number to PCI Device Address.
+            </summary>
+            <param name="bus">Bus number.</param>
+            <param name="dev">Device number.</param>
+            <param name="func">Function number.</param>
+            <returns>Constructed PCI address.</returns>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.DriverManager">
+            <summary>
+            Manage driver implementation.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.Windows.Driver.DriverManager.DriverImplementation">
+            <summary>
+            Identifies current driver implementation.<br/>
+            This is only valid after <see cref="M:RAMSPDToolkit.Windows.Driver.DriverManager.LoadDriver"/> was called.
+            </summary>
+        </member>
+        <member name="P:RAMSPDToolkit.Windows.Driver.DriverManager.Driver">
+            <summary>
+            Current driver implementation instance.
+            </summary>
+        </member>
+        <member name="M:RAMSPDToolkit.Windows.Driver.DriverManager.LoadDriver">
+            <summary>
+            Loads specified <see cref="P:RAMSPDToolkit.Windows.Driver.DriverManager.Driver"/>.
+            </summary>
+            <returns>Returns boolean value whether loading driver was successful.</returns>
+        </member>
+        <member name="M:RAMSPDToolkit.Windows.Driver.DriverManager.UnloadDriver">
+            <summary>
+            Unloads current instance of <see cref="P:RAMSPDToolkit.Windows.Driver.DriverManager.Driver"/>.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.Implementations.DriverImplementation">
+            <summary>
+            Available implementations for drivers.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.Windows.Driver.Implementations.DriverImplementation.Invalid">
+            <summary>
+            Driver implementation is invalid / not available.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.Windows.Driver.Implementations.DriverImplementation.Custom">
+            <summary>
+            Custom implementation of driver.<br/>
+            This is an external implementation and must be based on <see cref="T:RAMSPDToolkit.Windows.Driver.Interfaces.IGenericDriver"/>.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.Windows.Driver.Implementations.DriverImplementation.WinRing0">
+            <summary>
+            WinRing0 / OLS driver.
+            </summary>
+        </member>
+        <member name="F:RAMSPDToolkit.Windows.Driver.Implementations.DriverImplementation.PawnIO">
+            <summary>
+            PawnIO driver.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.Interfaces.IDriver">
+            <summary>
+            Driver interface for driver implementation.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.Interfaces.IGenericDriver">
+            <summary>
+            Generic driver interface for driver implementation.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.Interfaces.IPawnIODriver">
+            <summary>
+            Driver interface for PawnIO implementation.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.Interfaces.IPawnIOModule">
+            <summary>
+            Interface for PawnIO module implementation.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Driver.Interfaces.IWinRing0Driver">
+            <summary>
+            Driver interface for WinRing0 implementation.
+            </summary>
+        </member>
+        <member name="T:RAMSPDToolkit.Windows.Interop.Kernel32">
+            <summary>
+            Imports of native functions via <see cref="T:System.Runtime.InteropServices.DllImportAttribute"/>.
+            </summary>
+        </member>
+    </members>
+</doc>
