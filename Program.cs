@@ -35,7 +35,8 @@ namespace OmenSuperHub {
     static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     //static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
     static LibreComputer libreComputer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
-    static bool monitorGPU = true, monitorFan = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
+    static volatile bool monitorFan = true;
+    static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
     // Cache last written values to avoid unnecessary disk reads/writes
@@ -52,6 +53,22 @@ namespace OmenSuperHub {
 
     [STAThread]
     static void Main(string[] args) {
+      // ── 静默重启模式：由任务计划登录触发器调用
+      if (args.Length > 0 && args[0] == "--relaunch") {
+        // 终止其他已有实例
+        var currentId = Process.GetCurrentProcess().Id;
+        foreach (var proc in Process.GetProcessesByName("OmenSuperHub")) {
+          if (proc.Id == currentId) continue;
+          try { proc.Kill(); proc.WaitForExit(3000); } catch { }
+        }
+        // 启动新实例（不带参数，走正常流程）
+        Process.Start(new ProcessStartInfo {
+          FileName = Application.ExecutablePath,
+          UseShellExecute = true
+        });
+        return; // 本实例立即退出，不做任何初始化
+      }
+
       bool isNewInstance;
       using (Mutex mutex = new Mutex(true, "MyUniqueAppMutex", out isNewInstance)) {
         if (!isNewInstance) {
@@ -92,7 +109,9 @@ namespace OmenSuperHub {
           int fanSpeed1 = GetFanSpeedForTemperature(0) / 100;
           int fanSpeed2 = GetFanSpeedForTemperature(1) / 100;
           if (monitorFan) {
-            if (fanSpeed1 != fanSpeedNow[0] || fanSpeed2 != fanSpeedNow[1]) {
+            int s0, s1;
+            lock (fanSpeedNow) { s0 = fanSpeedNow[0]; s1 = fanSpeedNow[1]; }
+            if (fanSpeed1 != s0 || fanSpeed2 != s1) {
               SetFanLevel(fanSpeed1, fanSpeed2);
             }
           } else
@@ -231,25 +250,53 @@ namespace OmenSuperHub {
     // 任务计划程序
     static void AutoStartEnable() {
       string currentPath = AppDomain.CurrentDomain.BaseDirectory;
+      string exePath = Path.Combine(currentPath, "OmenSuperHub.exe");
 
       using (TaskService ts = new TaskService()) {
-        TaskDefinition td = ts.NewTask();
-        td.RegistrationInfo.Description = "Start OmenSuperHub with admin rights";
-        td.Principal.RunLevel = TaskRunLevel.Highest;
-        td.Actions.Add(new ExecAction(Path.Combine(currentPath, "OmenSuperHub.exe"), null, null));
 
-        // 设置触发器：在用户登录时触发
+        // ── 任务一：系统启动时以 SYSTEM 账户启动 ──────────────────────────
+        TaskDefinition tdBoot = ts.NewTask();
+        tdBoot.RegistrationInfo.Description = "Start OmenSuperHub at system boot";
+        tdBoot.Principal.RunLevel = TaskRunLevel.Highest;
+        tdBoot.Principal.UserId = "SYSTEM";
+        tdBoot.Principal.LogonType = TaskLogonType.ServiceAccount;
+
+        tdBoot.Actions.Add(new ExecAction(exePath, null, null));
+
+        BootTrigger bootTrigger = new BootTrigger();
+        // bootTrigger.Delay = TimeSpan.FromSeconds(10); // 可选：延迟启动
+        tdBoot.Triggers.Add(bootTrigger);
+
+        tdBoot.Settings.DisallowStartIfOnBatteries = false;
+        tdBoot.Settings.StopIfGoingOnBatteries = false;
+        tdBoot.Settings.ExecutionTimeLimit = TimeSpan.Zero;
+        tdBoot.Settings.AllowHardTerminate = false;
+
+        ts.RootFolder.RegisterTaskDefinition(@"OmenSuperHub", tdBoot);
+        Console.WriteLine("任务一已创建：系统启动时运行。");
+
+        // ── 任务二：用户登录时重启────────────────────────
+        TaskDefinition tdLogon = ts.NewTask();
+        tdLogon.RegistrationInfo.Description = "Restart OmenSuperHub at user logon";
+        tdLogon.Principal.RunLevel = TaskRunLevel.Highest;
+
+        tdLogon.Actions.Add(new ExecAction(
+          exePath,
+          "--relaunch",  // 传入参数，触发静默重启逻辑
+          null
+        ));
+
         LogonTrigger logonTrigger = new LogonTrigger();
-        //logonTrigger.Delay = TimeSpan.FromSeconds(10); // 延迟 10 秒
-        td.Triggers.Add(logonTrigger);
+        tdLogon.Triggers.Add(logonTrigger);
 
-        td.Settings.DisallowStartIfOnBatteries = false;
-        td.Settings.StopIfGoingOnBatteries = false;
-        td.Settings.ExecutionTimeLimit = TimeSpan.Zero;
-        td.Settings.AllowHardTerminate = false;
+        tdLogon.Settings.Hidden = true; // 任务本身也隐藏
+        tdLogon.Settings.DisallowStartIfOnBatteries = false;
+        tdLogon.Settings.StopIfGoingOnBatteries = false;
+        tdLogon.Settings.ExecutionTimeLimit = TimeSpan.Zero;
+        tdLogon.Settings.AllowHardTerminate = false;
 
-        ts.RootFolder.RegisterTaskDefinition(@"OmenSuperHub", td);
-        Console.WriteLine("任务已创建。");
+        ts.RootFolder.RegisterTaskDefinition(@"OmenSuperHub_Logon", tdLogon);
+        Console.WriteLine("任务二已创建：用户登录时重启。");
       }
 
       CleanUpAndRemoveTasks();
@@ -257,15 +304,16 @@ namespace OmenSuperHub {
 
     static void AutoStartDisable() {
       using (TaskService ts = new TaskService()) {
-        // 检查任务是否存在
-        Task existingTask = ts.FindTask("OmenSuperHub");
+        string[] taskNames = { "OmenSuperHub", "OmenSuperHub_Logon" };
 
-        if (existingTask != null) {
-          // 删除任务
-          ts.RootFolder.DeleteTask("OmenSuperHub");
-          Console.WriteLine("任务已删除。");
-        } else {
-          Console.WriteLine("任务不存在，无需删除。");
+        foreach (string taskName in taskNames) {
+          Task existingTask = ts.FindTask(taskName);
+          if (existingTask != null) {
+            ts.RootFolder.DeleteTask(taskName);
+            Console.WriteLine($"任务 {taskName} 已删除。");
+          } else {
+            Console.WriteLine($"任务 {taskName} 不存在，无需删除。");
+          }
         }
       }
     }
@@ -328,6 +376,14 @@ namespace OmenSuperHub {
 
     // Initialize tray icon
     static void InitTrayIcon() {
+      trayIcon = new NotifyIcon() {
+        // Icon = SystemIcons.Application,
+        Icon = Properties.Resources.smallfan,
+        ContextMenuStrip = new ContextMenuStrip(),
+        Visible = true
+      };
+      trayIcon.MouseClick += TrayIcon_MouseClick;
+
       try {
         // 读取图标配置
         using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
@@ -345,15 +401,6 @@ namespace OmenSuperHub {
       } catch (Exception ex) {
         Console.WriteLine($"Error restoring configuration: {ex.Message}");
       }
-
-      trayIcon = new NotifyIcon() {
-        // Icon = SystemIcons.Application,
-        Icon = Properties.Resources.smallfan,
-        ContextMenuStrip = new ContextMenuStrip(),
-        Visible = true
-      };
-
-      trayIcon.MouseClick += TrayIcon_MouseClick;
 
       switch (customIcon) {
         case "original":
@@ -646,6 +693,16 @@ namespace OmenSuperHub {
         SaveConfig("CustomIcon");
       }, false));
       settingMenu.DropDownItems.Add(customIconMenu);
+      ToolStripMenuItem dataLocalizeMenu = new ToolStripMenuItem("数据本地化");
+      dataLocalizeMenu.DropDownItems.Add(CreateMenuItem("开启", "dataLocalizeGroup", (s, e) => {
+        dataLocalize = "on";
+        SaveConfig("DataLocalize");
+      }, false));
+      dataLocalizeMenu.DropDownItems.Add(CreateMenuItem("关闭", "dataLocalizeGroup", (s, e) => {
+        dataLocalize = "off";
+        SaveConfig("DataLocalize");
+      }, true));
+      settingMenu.DropDownItems.Add(dataLocalizeMenu);
       ToolStripMenuItem autoStartMenu = new ToolStripMenuItem("开机自启");
       autoStartMenu.DropDownItems.Add(CreateMenuItem("开启", "autoStartGroup", (s, e) => {
         autoStart = "on";
@@ -658,17 +715,6 @@ namespace OmenSuperHub {
         SaveConfig("AutoStart");
       }, true));
       settingMenu.DropDownItems.Add(autoStartMenu);
-      
-      ToolStripMenuItem dataLocalizeMenu = new ToolStripMenuItem("数据本地化");
-      dataLocalizeMenu.DropDownItems.Add(CreateMenuItem("开启", "dataLocalizeGroup", (s, e) => {
-        dataLocalize = "on";
-        SaveConfig("DataLocalize");
-      }, false));
-      dataLocalizeMenu.DropDownItems.Add(CreateMenuItem("关闭", "dataLocalizeGroup", (s, e) => {
-        dataLocalize = "off";
-        SaveConfig("DataLocalize");
-      }, true));
-      settingMenu.DropDownItems.Add(dataLocalizeMenu);
       
       trayIcon.ContextMenuStrip.Items.Add(settingMenu);
 
@@ -958,7 +1004,6 @@ namespace OmenSuperHub {
       DeleteExtractedFiles(extractedCatFilePath);
 
       Console.WriteLine("操作完成.");
-      Console.ReadLine();
     }
 
     static void ExtractResourceToFile(string resourceName, string outputFilePath) {
@@ -1735,7 +1780,7 @@ namespace OmenSuperHub {
             autoStart = (string)key.GetValue("AutoStart", "off");
             switch (autoStart) {
               case "on":
-                //AutoStartEnable();
+                AutoStartEnable();
                 UpdateCheckedState("autoStartGroup", "开启");
                 break;
               case "off":
@@ -1883,30 +1928,38 @@ namespace OmenSuperHub {
       }
     }
 
+    static CancellationTokenSource _pipeCts;
     static void getOmenKeyTask() {
+      _pipeCts = new CancellationTokenSource();
+      var token = _pipeCts.Token;
       System.Threading.Tasks.Task.Run(() => {
-        while (true) {
-          using (var pipeServer = new NamedPipeServerStream("OmenSuperHubPipe", PipeDirection.In)) {
-            pipeServer.WaitForConnection();
-            using (var reader = new StreamReader(pipeServer)) {
-              string message = reader.ReadToEnd();
-              if (message.Contains("OmenKeyTriggered")) {
-                if (!checkFloating)
+        while (!token.IsCancellationRequested) {
+          try {
+            using (var pipeServer = new NamedPipeServerStream("OmenSuperHubPipe", PipeDirection.In)) {
+              pipeServer.WaitForConnection();    // 若需要支持取消，可用异步版本
+              using (var reader = new StreamReader(pipeServer)) {
+                string message = reader.ReadToEnd();
+                if (message.Contains("OmenKeyTriggered") && !checkFloating)
                   checkFloating = true;
               }
             }
+          } catch (Exception) when (token.IsCancellationRequested) {
+            break;
+          } catch (Exception ex) {
+            Console.WriteLine("Pipe error: " + ex.Message);
           }
         }
-      });
+      }, token);
     }
 
+    static readonly object _floatingLock = new object();
     // 显示浮窗
     static void ShowFloatingForm() {
-      if (floatingForm == null || floatingForm.IsDisposed) {
-        floatingForm = new FloatingForm(monitorText(), textSize, floatingBarLoc);
-        floatingForm.Show();
-      } else {
-        lock (floatingForm) {
+      lock (_floatingLock) {
+        if (floatingForm == null || floatingForm.IsDisposed) {
+          floatingForm = new FloatingForm(monitorText(), textSize, floatingBarLoc);
+          floatingForm.Show();
+        } else {
           floatingForm.BringToFront();
         }
       }
@@ -1914,8 +1967,8 @@ namespace OmenSuperHub {
 
     // 关闭浮窗
     static void CloseFloatingForm() {
-      if (floatingForm != null && !floatingForm.IsDisposed) {
-        lock (floatingForm) {
+      lock (_floatingLock) {
+        if (floatingForm != null && !floatingForm.IsDisposed) {
           floatingForm.Close();
           floatingForm.Dispose();
           floatingForm = null;
@@ -1925,8 +1978,8 @@ namespace OmenSuperHub {
 
     // 更新浮窗的文字内容
     static void UpdateFloatingText() {
-      if (floatingForm != null && !floatingForm.IsDisposed) {
-        lock (floatingForm) {
+      lock (_floatingLock) {
+        if (floatingForm != null && !floatingForm.IsDisposed) {
           floatingForm.TopMost = true;
           floatingForm.SetText(monitorText(), textSize, floatingBarLoc);
         }
@@ -1944,6 +1997,7 @@ namespace OmenSuperHub {
     }
 
     static void Exit() {
+      _pipeCts?.Cancel();
       if (omenKey == "custom") {
         OmenKeyOff();
       }

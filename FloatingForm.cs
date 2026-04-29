@@ -9,26 +9,20 @@ namespace OmenSuperHub {
     private PictureBox displayPictureBox;
 
     public FloatingForm(string text, int textSize, string loc) {
-      this.FormBorderStyle = FormBorderStyle.None; // 去除边框
-      this.BackColor = Color.Black; // 背景设置为一种特殊颜色
-      this.TransparencyKey = this.BackColor; // 将该颜色设为透明
-
-      this.TopMost = true; // 设置始终在最前
-      this.ShowInTaskbar = false; // 不在任务栏中显示
+      this.FormBorderStyle = FormBorderStyle.None;
+      this.TopMost = true;
+      this.ShowInTaskbar = false;
       this.StartPosition = FormStartPosition.Manual;
 
-      // 初始化 PictureBox
       displayPictureBox = new PictureBox();
-      displayPictureBox.BackColor = Color.Transparent; // 背景色透明
-      displayPictureBox.SizeMode = PictureBoxSizeMode.AutoSize; // 自适应大小
+      displayPictureBox.BackColor = Color.Transparent;
+      displayPictureBox.SizeMode = PictureBoxSizeMode.AutoSize;
 
-      ApplySupersampling(text, textSize); // 应用超采样
+      ApplySupersampling(text, textSize);
 
       if (loc == "left") {
-        // 左上角
         SetPositionTopLeft();
       } else {
-        // 右上角
         SetPositionTopRight(textSize);
       }
 
@@ -38,7 +32,7 @@ namespace OmenSuperHub {
 
     private void ApplySupersampling(string text, int textSize) {
       string[] lines = text.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-      Bitmap newBitmap = new Bitmap(700, 300); // 创建新的 bitmap
+      Bitmap newBitmap = new Bitmap(700, 300);
       using (Graphics graphics = Graphics.FromImage(newBitmap)) {
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         graphics.Clear(Color.Transparent);
@@ -65,39 +59,36 @@ namespace OmenSuperHub {
           }
         }
       }
-      // 释放旧的图片
+
       displayPictureBox.Image?.Dispose();
-      displayPictureBox.Image = newBitmap; // 赋值给 PictureBox
+      displayPictureBox.Image = newBitmap;
       displayPictureBox.Size = newBitmap.Size;
+
+      if (IsHandleCreated)
+        RenderLayered(newBitmap);
+      else
+        this.HandleCreated += (s, e) => RenderLayered(newBitmap);
     }
 
     private Color GetColorForTitle(string title) {
-      // 根据title或其他逻辑为其分配不同的颜色
       switch (title) {
-        case "CPU":
-          return Color.FromArgb(0, 128, 192);
-        case "GPU":
-          return Color.FromArgb(0, 128, 192);
-        case "Fan":
-          return Color.FromArgb(0, 128, 64);
-        default:
-          return Color.Black; // 默认颜色
+        case "CPU": return Color.FromArgb(0, 128, 192);
+        case "GPU": return Color.FromArgb(0, 128, 192);
+        case "Fan": return Color.FromArgb(0, 128, 64);
+        default:    return Color.Black;
       }
     }
 
     public void SetText(string text, int textSize, string loc) {
       if (InvokeRequired) {
-        // 使用 BeginInvoke 以减少 UI 阻塞
         BeginInvoke(new Action(() => SetText(text, textSize, loc)));
         return;
       }
       ApplySupersampling(text, textSize);
       AdjustFormSize();
       if (loc == "left") {
-        // 左上角
         SetPositionTopLeft();
       } else {
-        // 右上角
         SetPositionTopRight(textSize);
       }
     }
@@ -105,28 +96,85 @@ namespace OmenSuperHub {
     private void AdjustFormSize() {
       // 根据Label的大小动态调整窗体大小
       this.Size = new Size(displayPictureBox.Width + 20, displayPictureBox.Height + 20);
-      displayPictureBox.Location = new Point(10, 10); // 设置label的居中位置
+      displayPictureBox.Location = new Point(10, 10);
     }
 
-    private const int WS_EX_TRANSPARENT = 0x20;
-    private const int WS_EX_NOACTIVATE = 0x08000000;
+    protected override void OnMove(EventArgs e) {
+      base.OnMove(e);
+      if (displayPictureBox.Image is Bitmap bmp && IsHandleCreated)
+        RenderLayered(bmp);
+    }
+
     protected override CreateParams CreateParams {
       get {
         CreateParams cp = base.CreateParams;
-        cp.ExStyle |= WS_EX_TRANSPARENT | WS_EX_NOACTIVATE; // 设置窗口为透明和不激活
+        cp.ExStyle |= WS_EX_LAYERED
+                   | WS_EX_TRANSPARENT
+                   | WS_EX_NOACTIVATE;
         return cp;
       }
     }
 
-    // 设置窗口位于左上角
     public void SetPositionTopLeft() {
-      this.Location = new Point(0, 0);
+      this.Location = new Point(10, 10);
     }
 
-    // 设置窗口位于右上角
     public void SetPositionTopRight(int textSize) {
       var screenWidth = Screen.PrimaryScreen.WorkingArea.Width;
-      this.Location = new Point((int)(screenWidth - textSize * screenWidth / 256), 0);
+      this.Location = new Point((int)(screenWidth - textSize * screenWidth / 256 + 10), 10);
     }
+
+    private void RenderLayered(Bitmap bitmap) {
+      if (bitmap == null) return;
+
+      IntPtr screenDC  = GetDC(IntPtr.Zero);
+      IntPtr memDC     = CreateCompatibleDC(screenDC);
+      IntPtr hBitmap   = bitmap.GetHbitmap(Color.FromArgb(0));
+      IntPtr oldBitmap = SelectObject(memDC, hBitmap);
+
+      NativeSize  size  = new NativeSize(bitmap.Width, bitmap.Height);
+      NativePoint ptSrc = new NativePoint(0, 0);
+      NativePoint ptDst = new NativePoint(this.Left, this.Top);
+
+      BLENDFUNCTION blend = new BLENDFUNCTION {
+        BlendOp             = AC_SRC_OVER,
+        BlendFlags          = 0,
+        SourceConstantAlpha = 255,
+        AlphaFormat         = AC_SRC_ALPHA
+      };
+
+      UpdateLayeredWindow(this.Handle, screenDC, ref ptDst, ref size,
+                          memDC, ref ptSrc, 0, ref blend, ULW_ALPHA);
+
+      SelectObject(memDC, oldBitmap);
+      DeleteObject(hBitmap);
+      DeleteDC(memDC);
+      ReleaseDC(IntPtr.Zero, screenDC);
+    }
+
+    // ── 常量 ─────────────────────────────────────────────────────────────
+    private const int  WS_EX_LAYERED     = 0x80000;
+    private const int  WS_EX_TRANSPARENT = 0x20;
+    private const int  WS_EX_NOACTIVATE  = 0x08000000;
+    private const int  ULW_ALPHA         = 0x02;
+    private const byte AC_SRC_OVER       = 0x00;
+    private const byte AC_SRC_ALPHA      = 0x01;
+
+    // ── 结构体 ───────────────────────────────────────────────────────────
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeSize  { public int cx, cy; public NativeSize(int x, int y)  { cx = x; cy = y; } }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint { public int x,  y;  public NativePoint(int x, int y) { this.x = x; this.y = y; } }
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct BLENDFUNCTION { public byte BlendOp, BlendFlags, SourceConstantAlpha, AlphaFormat; }
+
+    // ── P/Invoke ─────────────────────────────────────────────────────────
+    [DllImport("user32.dll")] static extern bool   UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref NativePoint pptDst, ref NativeSize psize, IntPtr hdcSrc, ref NativePoint pptSrc, uint crKey, ref BLENDFUNCTION pblend, uint dwFlags);
+    [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr hWnd);
+    [DllImport("user32.dll")] static extern int    ReleaseDC(IntPtr hWnd, IntPtr hDC);
+    [DllImport("gdi32.dll")]  static extern IntPtr CreateCompatibleDC(IntPtr hDC);
+    [DllImport("gdi32.dll")]  static extern bool   DeleteDC(IntPtr hDC);
+    [DllImport("gdi32.dll")]  static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
+    [DllImport("gdi32.dll")]  static extern bool   DeleteObject(IntPtr hObject);
   }
 }
