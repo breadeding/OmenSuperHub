@@ -96,7 +96,6 @@ namespace OmenSuperHub {
         InitTrayIcon();
 
         // Initialize HardwareMonitorLib
-        //openComputer.Open();
         libreComputer.Open();
 
         optimiseTimer = new System.Windows.Forms.Timer();
@@ -512,6 +511,20 @@ namespace OmenSuperHub {
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
       DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
+        string gpuModel = GetNVIDIAModel();
+        if (gpuModel != null) {
+          var match = Regex.Match(gpuModel, @"^\d+");
+          if (match.Success && int.TryParse(match.Value, out int modelNum)) {
+            if (modelNum >= 5000) {
+              MessageBox.Show($"不支持英伟达50系及以后的显卡解锁DB！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+              DBVersion = 2;
+              countDB = 0;
+              SaveConfig("DBVersion");
+              UpdateCheckedState("DBGroup", "普通版本");
+              return;
+            }
+          }
+        }
         SetFanMode(0x31);
         SetMaxGpuPower();
         SetCpuPowerLimit((byte)CPULimitDB);
@@ -1065,6 +1078,21 @@ namespace OmenSuperHub {
       };
       item.Click += (s, e) => {
         if (item.Text == "解锁版本") {
+          string gpuModel = GetNVIDIAModel();
+          if (gpuModel != null) {
+            var match = Regex.Match(gpuModel, @"^\d+");
+            if (match.Success && int.TryParse(match.Value, out int modelNum)) {
+              if (modelNum >= 5000) {
+                MessageBox.Show($"不支持英伟达50系及以后的显卡解锁DB！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                DBVersion = 2;
+                countDB = 0;
+                SaveConfig("DBVersion");
+                UpdateCheckedState("DBGroup", "普通版本");
+                return;
+              }
+            }
+          }
+
           if (!powerOnline) {
             MessageBox.Show($"请连接交流电源", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DBVersion = 2;
@@ -1761,6 +1789,20 @@ namespace OmenSuperHub {
             DBVersion = (int)key.GetValue("DBVersion", 2);
             switch (DBVersion) {
               case 1:
+                string gpuModel = GetNVIDIAModel();
+                if (gpuModel != null) {
+                  var match = Regex.Match(gpuModel, @"^\d+");
+                  if (match.Success && int.TryParse(match.Value, out int modelNum)) {
+                    if (modelNum >= 5000) {
+                      DBVersion = 2;
+                      string deviceId50 = "\"ACPI\\NVDA0820\\NPCF\"";
+                      string command50 = $"pnputil /enable-device {deviceId50}";
+                      ExecuteCommand(command50);
+                      UpdateCheckedState("DBGroup", "普通版本");
+                      break;
+                    }
+                  }
+                }
                 DBVersion = 1;
                 SetFanMode(0x31);
                 SetMaxGpuPower();
