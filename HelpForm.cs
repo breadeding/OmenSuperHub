@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics; // 用于打开浏览器
 using System.Drawing;
 using System.Reflection;
@@ -45,11 +45,8 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）修复：更新硬件监控库，修改传感器名称以适配AMD机型；\n" +
-         "（2）修复：浮窗启动时有窗口闪烁的问题；\n" +
-         "（3）新增功能：系统启动即自启，无需等待用户登录；\n" +
-         "（4）新增功能：可开启数据本地化，可用于Macro Deck实现在其他设备上查看电脑状态；\n" +
-         "（5）新增功能：当CPU温度高于90℃且处于固定转速时，OSH将切换为自动风扇模式。\n\n" +
+         "（1）修复：安装显卡驱动时，OSH因获取传感器而崩溃的问题；\n" +
+         "（2）修复：英伟达50系及以后的显卡不支持解锁DB但依然能执行的问题。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +

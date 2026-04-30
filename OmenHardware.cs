@@ -9,6 +9,173 @@ using System.Threading.Tasks;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
+    // 获取系统 ID (SystemID)，即主板产品号 (Win32_BaseBoard.Product)
+    public static string GetSystemID() {
+      try {
+        using (var searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT Product FROM Win32_BaseBoard")) {
+          using (ManagementObjectCollection results = searcher.Get()) {
+            foreach (ManagementObject obj in results) {
+              // 直接返回第一个非空的 Product 值
+              object product = obj["Product"];
+              if (product != null)
+                return product.ToString().Trim();
+            }
+          }
+        }
+      } catch (Exception ex) {
+        Console.WriteLine($"[ERROR] GetSystemID: {ex.Message}");
+      }
+      return string.Empty;
+    }
+
+    // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
+    public static byte[] GetSystemDesignData() {
+      return SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
+    }
+
+    // 解析并输出 SystemDesignData (128字节) 的关键比特位含义
+    public static void PrintSystemDesignData() {
+      byte[] data = GetSystemDesignData();
+      if (data == null || data.Length < 12) {
+        Console.WriteLine("[ERROR] SystemDesignData 获取失败或长度不足");
+        return;
+      }
+
+      Console.WriteLine("========== System Design Data 解析 ==========");
+      Console.WriteLine($"完整数据: {BitConverter.ToString(data)}");
+      Console.WriteLine();
+
+      // --- 字节 [3]: 热策略版本 ---
+      Console.WriteLine($"[3] ThermalPolicyVersion = {data[3]}");
+      Console.WriteLine(data[3] == 1 ? "  → V1 (BIOS 性能控制)" : "  → V0 (Legacy)");
+      Console.WriteLine();
+
+      // --- 字节 [4]: 平台特性标识 ---
+      byte b4 = data[4];
+      Console.WriteLine($"[4] 平台特性 = 0x{b4:X2} ({Convert.ToString(b4, 2).PadLeft(8, '0')})");
+      Console.WriteLine($"  Bit 0 (ModeAutoSetting)      : {(b4 & 0x01) != 0}");
+      Console.WriteLine($"  Bit 1 (TurboMode)            : {(b4 & 0x02) != 0}");
+      Console.WriteLine($"  Bit 2 (FanAlwaysOn)          : {(b4 & 0x04) != 0}");
+      Console.WriteLine($"  Bit 3 (BIOSFanControl)       : {(b4 & 0x08) != 0}");
+      Console.WriteLine($"  Bit 4 (TwoBytePL4Support)    : {(b4 & 0x10) != 0}");
+      Console.WriteLine($"  Bit 5 (SmartAdapterSupport)  : {(b4 & 0x20) != 0}");
+      Console.WriteLine($"  Bit 6                        : {(b4 & 0x40) != 0}");
+      Console.WriteLine($"  Bit 7                        : {(b4 & 0x80) != 0}");
+      Console.WriteLine($"  => BIOS 掌管控温 (Bit3)     : {((b4 & 0x08) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  => 双字节 PL4 支持 (Bit4)   : {((b4 & 0x10) != 0 ? "是" : "否")}");
+      Console.WriteLine();
+
+      // --- 字节 [5]: PL4 默认值 ---
+      Console.WriteLine($"[5] PL4_Default = {data[5]}W (单字节模式)");
+      Console.WriteLine();
+
+      // --- 字节 [6]: 超频与硬件支持 ---
+      byte b6 = data[6];
+      Console.WriteLine($"[6] 超频支持 = 0x{b6:X2} ({Convert.ToString(b6, 2).PadLeft(8, '0')})");
+      Console.WriteLine($"  Bit 0 (BIOSDefinedOC_AMD)    : {(b6 & 0x01) != 0}");
+      Console.WriteLine($"  Bit 1                        : {(b6 & 0x02) != 0}");
+      Console.WriteLine($"  Bit 2                        : {(b6 & 0x04) != 0}");
+      Console.WriteLine($"  Bit 3                        : {(b6 & 0x08) != 0}");
+      Console.WriteLine($"  Bit 4                        : {(b6 & 0x10) != 0}");
+      Console.WriteLine($"  Bit 5                        : {(b6 & 0x20) != 0}");
+      Console.WriteLine($"  Bit 6                        : {(b6 & 0x40) != 0}");
+      Console.WriteLine($"  Bit 7                        : {(b6 & 0x80) != 0}");
+      Console.WriteLine($"  => AMD BIOS 定义超频 (Bit0) : {((b6 & 0x01) != 0 ? "是" : "否")}");
+      Console.WriteLine();
+
+      // --- 字节 [7]: 保留/未使用 ---
+      Console.WriteLine($"[7] (保留) = 0x{data[7]:X2}");
+      Console.WriteLine();
+
+      // --- 字节 [8]: Default Concurrent TDP ---
+      Console.WriteLine($"[8] DefaultConcurrentTdp = {data[8]} (TPP 默认值)");
+      Console.WriteLine();
+
+      // --- 字节 [9]: 负载线支持级别 ---
+      byte b9 = data[9];
+      int loadLineLevels = b9 & 0x0F;          // 低 4 位
+      int defaultLoadLine = (b9 & 0xF0) >> 4;  // 高 4 位
+      Console.WriteLine($"[9] LoadLine 信息 = 0x{b9:X2} ({Convert.ToString(b9, 2).PadLeft(8, '0')})");
+      Console.WriteLine($"  LoadLineSupportLevels (低4位) : {loadLineLevels}");
+      Console.WriteLine($"  DefaultLoadLine (高4位)       : {defaultLoadLine}");
+      Console.WriteLine();
+
+      // --- 字节 [10]: 传感器能力 ---
+      byte b10 = data[10];
+      Console.WriteLine($"[10] 传感器能力 = 0x{b10:X2} ({Convert.ToString(b10, 2).PadLeft(8, '0')})");
+      Console.WriteLine($"  Bit 0 (IR_Sensor)            : {(b10 & 0x01) != 0}");
+      Console.WriteLine($"  Bit 1 (Ambient_Sensor)       : {(b10 & 0x02) != 0}");
+      Console.WriteLine($"  Bit 2 (PCH_Sensor)           : {(b10 & 0x04) != 0}");
+      Console.WriteLine($"  Bit 3 (VR_Sensor)            : {(b10 & 0x08) != 0}");
+      Console.WriteLine($"  Bit 4                        : {(b10 & 0x10) != 0}");
+      Console.WriteLine($"  Bit 5                        : {(b10 & 0x20) != 0}");
+      Console.WriteLine($"  Bit 6                        : {(b10 & 0x40) != 0}");
+      Console.WriteLine($"  Bit 7                        : {(b10 & 0x80) != 0}");
+      Console.WriteLine($"  => IR 传感器 (Bit0)          : {((b10 & 0x01) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  => 环境传感器 (Bit1)        : {((b10 & 0x02) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  => PCH 过热支持 (Bit2)      : {((b10 & 0x04) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  => VR 传感器 (Bit3)         : {((b10 & 0x08) != 0 ? "是" : "否")}");
+      Console.WriteLine();
+
+      // --- 字节 [11]: 热键与其它功能 ---
+      byte b11 = data[11];
+      Console.WriteLine($"[11] 热键与功能 = 0x{b11:X2} ({Convert.ToString(b11, 2).PadLeft(8, '0')})");
+      Console.WriteLine($"  Bit 0 (Hotkey_FnP)           : {(b11 & 0x01) != 0}");
+      Console.WriteLine($"  Bit 1 (Hotkey_FnF1)          : {(b11 & 0x02) != 0}");
+      Console.WriteLine($"  Bit 2                        : {(b11 & 0x04) != 0}");
+      Console.WriteLine($"  Bit 3                        : {(b11 & 0x08) != 0}");
+      Console.WriteLine($"  Bit 4                        : {(b11 & 0x10) != 0}");
+      Console.WriteLine($"  Bit 5                        : {(b11 & 0x20) != 0}");
+      Console.WriteLine($"  Bit 6                        : {(b11 & 0x40) != 0}");
+      Console.WriteLine($"  Bit 7                        : {(b11 & 0x80) != 0}");
+      Console.WriteLine($"  => Fn+P 热键 (Bit0)          : {((b11 & 0x01) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  => Fn+F1 热键 (Bit1)         : {((b11 & 0x02) != 0 ? "是" : "否")}");
+      Console.WriteLine();
+
+      // --- 后续字节（12-127）：可能包含 OEM 字符串、UI 数据等 ---
+      Console.WriteLine("[12-127] 额外数据:");
+      for (int i = 12; i < data.Length && i < 32; i++)  // 仅打印前 32 字节以减少输出
+      {
+        Console.Write($"0x{data[i]:X2} ");
+      }
+      Console.WriteLine(Environment.NewLine);
+      Console.WriteLine("=============================================");
+    }
+
+    // 设置 LoadLine（负载线校准）级别,level 取值范围取决于平台，通常为 1 ~ LoadLineSupportLevels
+    public static void SetLoadLine(int level) {
+      byte[] inputData = new byte[128];
+      inputData[0] = 0;
+      inputData[1] = 13;        // 子命令：LoadLine 操作
+      inputData[2] = (byte)level;
+      SendOmenBiosWmi(0x37, inputData, 0); // 0x37 = commandType 55
+    }
+
+    // 获取当前 LoadLine 级别
+    public static int GetLoadLine() {
+      byte[] inputData = new byte[4];
+      inputData[0] = 0;
+      inputData[1] = 13;        // 子命令：LoadLine 读取
+      byte[] result = SendOmenBiosWmi(0x37, inputData, 4);
+      if (result != null && result.Length > 2) {
+        return result[2];     // 返回值第3字节为当前级别
+      }
+      return -1;                // 失败或无支持返回 -1
+    }
+
+    // 通过 WMI 设置 IccMax（CPU 电流限制，单位安培）
+    public static bool SetIccMaxByWmi(decimal iccMaxAmpere) {
+      byte[] inputData = new byte[128];
+      inputData[0] = 0;
+      inputData[1] = 15;        // 子命令：IccMax 操作
+      inputData[2] = (byte)((int)iccMaxAmpere & 0xFF);
+      inputData[3] = (byte)(((int)iccMaxAmpere >> 8) & 0xFF);
+      // 写操作，outputSize=0 表示不关心返回数据（官方亦如此）
+      SendOmenBiosWmi(0x37, inputData, 0);
+      // 官方通过 BiosWmiCmd_SetSync 的返回值判断，此处简化处理，认为无异常即成功
+      return true;
+    }
+
     public static void GetFanCount() {
       SendOmenBiosWmi(0x10, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 4);
     }
@@ -52,7 +219,7 @@ namespace OmenSuperHub {
       SendOmenBiosWmi(0x22, new byte[] { 0x00, 0x00, 0x01, 0x00 }, 0);
     }
 
-    // 无作用
+    // Tpp设置，这里似乎无作用
     public static void SetConcurrentCpuPowerLimit(byte value) {
       SendOmenBiosWmi(0x29, new byte[] { 0xFF, 0xFF, 0xFF, value }, 0);
     }

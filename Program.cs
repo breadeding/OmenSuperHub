@@ -11,6 +11,8 @@ using System.Reflection;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Drawing;
+using System.Runtime.ExceptionServices;
+using System.Globalization;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
 using LibreIHardware = LibreHardwareMonitor.Hardware.IHardware;
 using LibreHardwareType = LibreHardwareMonitor.Hardware.HardwareType;
@@ -34,11 +36,19 @@ namespace OmenSuperHub {
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     //static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
-    static LibreComputer libreComputer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
     static volatile bool monitorFan = true;
     static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
+
+    static float rawTempCPU = 50f;
+    static float rawPowerCPU = 0f;
+    static float rawTempGPU = 40f;
+    static float rawPowerGPU = 0f;
+    static bool rawGotGPU = false;
+    static Process hwMonitorProcess;
+    static StreamWriter hwMonitorIn;
+
     // Cache last written values to avoid unnecessary disk reads/writes
     static string lastCpuText = null;
     static string lastGpuText = null;
@@ -53,6 +63,11 @@ namespace OmenSuperHub {
 
     [STAThread]
     static void Main(string[] args) {
+      if (args.Length > 0 && args[0] == "--hwmonitor") {
+        RunHardwareMonitor();
+        return;
+      }
+
       // ── 静默重启模式：由任务计划登录触发器调用
       if (args.Length > 0 && args[0] == "--relaunch") {
         // 终止其他已有实例
@@ -96,7 +111,7 @@ namespace OmenSuperHub {
         InitTrayIcon();
 
         // Initialize HardwareMonitorLib
-        libreComputer.Open();
+        StartHardwareMonitor();
 
         optimiseTimer = new System.Windows.Forms.Timer();
         optimiseTimer.Interval = 30000;
@@ -133,7 +148,7 @@ namespace OmenSuperHub {
         }
 
         SystemEvents.PowerModeChanged += new PowerModeChangedEventHandler(OnPowerChange);
-
+        //Console.WriteLine($"GetSystemID: {GetSystemID()}");
         Application.Run();
       }
     }
@@ -199,6 +214,136 @@ namespace OmenSuperHub {
       }
 
       isConnectedToNVIDIA = true;
+    }
+
+    [HandleProcessCorruptedStateExceptions]
+    static void RunHardwareMonitor() {
+      var computer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
+      
+      try {
+        computer.Open();
+      } catch (Exception ex) {
+        Console.WriteLine("CRASH: Open failed - " + ex.Message);
+        Environment.Exit(1);
+      }
+
+      var readThread = new Thread(() => {
+        while (true) {
+          string line = Console.ReadLine();
+          if (line == null) Environment.Exit(0);
+          if (line == "GPU:ON") computer.IsGpuEnabled = true;
+          if (line == "GPU:OFF") computer.IsGpuEnabled = false;
+        }
+      });
+      readThread.IsBackground = true;
+      readThread.Start();
+
+      float tCpu = 50, pCpu = 0, tGpu = 40, pGpu = 0;
+
+      while (true) {
+        bool gGpu = false;
+        try {
+          foreach (LibreIHardware hw in computer.Hardware) {
+            if (hw.HardwareType != LibreHardwareType.Cpu && hw.HardwareType != LibreHardwareType.GpuNvidia && hw.HardwareType != LibreHardwareType.GpuAmd) continue;
+            
+            // 如果底层驱动对象因为驱动更新导致句柄无效，Update会抛出异常。
+            // 此时我们直接让子进程退出，父进程会重新启动一个新的子进程来进行初始化。
+            try { 
+              hw.Update(); 
+            } catch (Exception ex) { 
+              Console.WriteLine("CRASH: Update failed - " + ex.Message);
+              Environment.Exit(1);
+            }
+            
+            foreach (LibreISensor sensor in hw.Sensors) {
+              try {
+                if (hw.HardwareType == LibreHardwareType.Cpu) {
+                  if (sensor.SensorType == LibreSensorType.Temperature && (sensor.Name.Contains("Package") || sensor.Name.Contains("Tctl/Tdie")))
+                    tCpu = sensor.Value.GetValueOrDefault();
+                  if (sensor.SensorType == LibreSensorType.Power && sensor.Name.Contains("Package"))
+                    pCpu = sensor.Value.GetValueOrDefault();
+                } else if (hw.HardwareType == LibreHardwareType.GpuNvidia || hw.HardwareType == LibreHardwareType.GpuAmd) {
+                  if (sensor.SensorType == LibreSensorType.Temperature && sensor.Name == "GPU Core")
+                    tGpu = sensor.Value.GetValueOrDefault();
+                  if (sensor.SensorType == LibreSensorType.Power && sensor.Name == "GPU Package") {
+                    gGpu = true;
+                    pGpu = sensor.Value.GetValueOrDefault();
+                  }
+                }
+              } catch { }
+            }
+          }
+          Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F2};{1:F2};{2:F2};{3:F2};{4}", tCpu, pCpu, tGpu, pGpu, gGpu ? 1 : 0));
+        } catch (Exception ex) {
+          Console.WriteLine("CRASH: " + ex.Message);
+          Environment.Exit(1);
+        }
+        Thread.Sleep(1000);
+      }
+    }
+
+    static void StartHardwareMonitor() {
+      if (hwMonitorProcess != null && !hwMonitorProcess.HasExited) return;
+
+      hwMonitorProcess = new Process {
+        StartInfo = new ProcessStartInfo {
+          FileName = Application.ExecutablePath,
+          Arguments = "--hwmonitor",
+          UseShellExecute = false,
+          RedirectStandardInput = true,
+          RedirectStandardOutput = true,
+          RedirectStandardError = true,
+          CreateNoWindow = true,
+          WindowStyle = ProcessWindowStyle.Hidden
+        }
+      };
+
+      hwMonitorProcess.OutputDataReceived += (s, e) => {
+        if (string.IsNullOrEmpty(e.Data)) return;
+        //Debug.WriteLine("[HWMonitor OUT] " + e.Data); // 将子进程输出重定向到VS的输出窗口
+        if (e.Data.StartsWith("CRASH:")) return;
+        var parts = e.Data.Split(';');
+        if (parts.Length == 5) {
+          if (float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float tc)) rawTempCPU = tc;
+          if (float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float pc)) rawPowerCPU = pc;
+          if (float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float tg)) rawTempGPU = tg;
+          if (float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float pg)) rawPowerGPU = pg;
+          rawGotGPU = parts[4] == "1";
+        }
+      };
+
+      hwMonitorProcess.ErrorDataReceived += (s, e) => {
+        if (string.IsNullOrEmpty(e.Data)) return;
+        Debug.WriteLine("[HWMonitor ERR] " + e.Data);
+      };
+
+      hwMonitorProcess.EnableRaisingEvents = true;
+      hwMonitorProcess.Exited += (s, e) => {
+        Debug.WriteLine("[HWMonitor] 进程退出，准备重启...");
+        System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ => {
+          try { StartHardwareMonitor(); } catch { }
+        });
+      };
+
+      try {
+        hwMonitorProcess.Start();
+        hwMonitorIn = hwMonitorProcess.StandardInput;
+        hwMonitorProcess.BeginOutputReadLine();
+        hwMonitorProcess.BeginErrorReadLine(); // 必须读取错误流避免死锁
+        SetGpuMonitorState(monitorGPU);
+      } catch (Exception) { }
+    }
+
+    static void SetGpuMonitorState(bool enable) {
+      if (hwMonitorIn != null && hwMonitorProcess != null && !hwMonitorProcess.HasExited) {
+        try { hwMonitorIn.WriteLine(enable ? "GPU:ON" : "GPU:OFF"); } catch { }
+      }
+    }
+
+    static void StopHardwareMonitor() {
+      if (hwMonitorProcess != null && !hwMonitorProcess.HasExited) {
+        try { hwMonitorProcess.Kill(); } catch { }
+      }
     }
 
     static int flagStart = 0;
@@ -602,7 +747,7 @@ namespace OmenSuperHub {
         //重置自动开启标志
         hasStartAuto = false;
         autoStartMonitorGPU = true;
-        libreComputer.IsGpuEnabled = true;
+        SetGpuMonitorState(true);
         SaveConfig("MonitorGPU");
       }, true));
       monitorGPUMenu.DropDownItems.Add(CreateMenuItem("关闭GPU监控", "monitorGPUGroup", (s, e) => {
@@ -612,7 +757,7 @@ namespace OmenSuperHub {
         //重置自动关闭标志
         hasStopAuto = false;
         autoStopMonitorGPU = true;
-        libreComputer.IsGpuEnabled = false;
+        SetGpuMonitorState(false);
         SaveConfig("MonitorGPU");
       }, false));
       hardwareMonitorMenu.DropDownItems.Add(monitorGPUMenu);
@@ -1190,7 +1335,12 @@ namespace OmenSuperHub {
 
     // 状态栏定时更新任务+硬件查询+DB解锁
     static void UpdateTooltip() {
-      QueryHarware();
+      try {
+        QueryHardware();
+      } catch (Exception ex) {
+        Console.WriteLine($"[UpdateTooltip] QueryHardware 异常: {ex.Message}");
+      }
+
       if (monitorFan)
         fanSpeedNow = GetFanLevel();
       trayIcon.Text = monitorText();
@@ -1321,40 +1471,29 @@ namespace OmenSuperHub {
       });
     }
 
+    // 硬件传感器查询
+    private static int _isQuerying = 0; // 防重入标志，支持 Interlocked 原子操作
     static int countQuery = 0;
     static bool autoStartMonitorGPU = true, autoStopMonitorGPU = true;//是否自动根据情况开/关GPU温度监测以节约能源
     static bool hasStartAuto = false, hasStopAuto = false;//是否已经自动开/关过GPU温度监测，在手动开/关时重置
-    static void QueryHarware() {
-      float tempCPU = 50;
-      bool getGPU = false;//是否获取到GPU温度
+    static void QueryHardware() {
+      // 防止定时器重入：上次查询未完成时直接跳过本次
+      if (Interlocked.CompareExchange(ref _isQuerying, 1, 0) != 0)
+        return;
 
-      foreach (LibreIHardware hardware in libreComputer.Hardware) {
-        if (hardware.HardwareType == LibreHardwareType.Cpu || hardware.HardwareType == LibreHardwareType.GpuNvidia || hardware.HardwareType == LibreHardwareType.GpuAmd) {
-          hardware.Update();
+      float tempCPU = rawTempCPU;
+      bool getGPU = false;
 
-          foreach (LibreISensor sensor in hardware.Sensors) {
-            if (hardware.HardwareType == LibreHardwareType.Cpu) {
-              if (sensor.SensorType == LibreSensorType.Temperature) {
-                if (sensor.Name.Contains("Package") || sensor.Name.Contains("Tctl/Tdie")) {
-                  tempCPU = (int)sensor.Value.GetValueOrDefault();
-                }
-              }
-              if (sensor.Name.Contains("Package") && sensor.SensorType == LibreSensorType.Power) {
-                CPUPower = sensor.Value.GetValueOrDefault();
-              }
-            } else if (monitorGPU && hardware.HardwareType == LibreHardwareType.GpuNvidia) {
-              if (sensor.Name == "GPU Core" && sensor.SensorType == LibreSensorType.Temperature) {
-                GPUTemp = (int)sensor.Value.GetValueOrDefault() * respondSpeed + GPUTemp * (1.0f - respondSpeed);
-              }
-              if (sensor.Name == "GPU Package" && sensor.SensorType == LibreSensorType.Power) {
-                getGPU = true;
-                if ((int)(sensor.Value.GetValueOrDefault() * 10) == 5900)
-                  GPUPower = 0;
-                else
-                  GPUPower = sensor.Value.GetValueOrDefault();
-              }
-            }
-          }
+      CPUPower = rawPowerCPU;
+
+      if (monitorGPU) {
+        GPUTemp = rawTempGPU * respondSpeed + GPUTemp * (1.0f - respondSpeed);
+        getGPU = rawGotGPU;
+        if (getGPU) {
+          if ((int)(rawPowerGPU * 10) == 5900)
+            GPUPower = 0;
+          else
+            GPUPower = rawPowerGPU;
         }
       }
 
@@ -1386,7 +1525,7 @@ namespace OmenSuperHub {
         //重置自动开启标志
         hasStartAuto = false;
         autoStartMonitorGPU = true;
-        libreComputer.IsGpuEnabled = false;
+        SetGpuMonitorState(false);
         UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
         SaveConfig("MonitorGPU");
 
@@ -1405,7 +1544,7 @@ namespace OmenSuperHub {
         //重置自动关闭标志
         hasStopAuto = false;
         autoStopMonitorGPU = true;
-        libreComputer.IsGpuEnabled = true;
+        SetGpuMonitorState(true);
         UpdateCheckedState("monitorGPUGroup", "开启GPU监控");
         SaveConfig("MonitorGPU");
 
@@ -1417,16 +1556,13 @@ namespace OmenSuperHub {
       }
 
       // 似乎无法一次性关闭GPU监控及选项
-      if (!monitorGPU && libreComputer.IsGpuEnabled) {
-        libreComputer.IsGpuEnabled = false;
+      if (!monitorGPU) {
+        SetGpuMonitorState(false);
         UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
       }
 
-      //Console.WriteLine($"libreCPU: {libreTempCPU}℃, {librePowerCPU}W");
-      //Console.WriteLine($"libreGPU: {GPUTemp}℃, {GPUPower}W");
-
-      //string tempUnit = "°C";
-      //Console.WriteLine($"CPU: {CPU}{tempUnit}, GPU: {GPU}{tempUnit}, Max: {Math.Max(CPU, GPU + 10)}{tempUnit}");
+      // 释放防重入标志
+      Interlocked.Exchange(ref _isQuerying, 0);
     }
 
     static void LoadDefaultFanConfig(string filePath, float silentCoef) {
@@ -1871,11 +2007,11 @@ namespace OmenSuperHub {
 
             bool monitorGPUCache = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
             if (monitorGPUCache == true) {
-              libreComputer.IsGpuEnabled = true;
+              SetGpuMonitorState(true);
               monitorGPU = true;
               UpdateCheckedState("monitorGPUGroup", "开启GPU监控");
             } else {
-              libreComputer.IsGpuEnabled = false;
+              SetGpuMonitorState(false);
               monitorGPU = false;
               UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
             }
@@ -2021,10 +2157,14 @@ namespace OmenSuperHub {
     // 更新浮窗的文字内容
     static void UpdateFloatingText() {
       lock (_floatingLock) {
-        if (floatingForm != null && !floatingForm.IsDisposed) {
-          floatingForm.TopMost = true;
-          floatingForm.SetText(monitorText(), textSize, floatingBarLoc);
-        }
+        if (floatingForm == null || floatingForm.IsDisposed) return;
+        // debug模式下需取消注释，release模式下需注释以避免打断右键菜单
+        //if (floatingForm.InvokeRequired) {
+        //  floatingForm.BeginInvoke(new System.Action(() => UpdateFloatingText()));
+        //  return;
+        //}
+        floatingForm.TopMost = true;
+        floatingForm.SetText(monitorText(), textSize, floatingBarLoc);
       }
     }
 
@@ -2046,7 +2186,7 @@ namespace OmenSuperHub {
       tooltipUpdateTimer.Stop(); // 停止定时器
 
       //openComputer.Close();
-      libreComputer.Close();
+      StopHardwareMonitor();
       Application.Exit();
     }
 
