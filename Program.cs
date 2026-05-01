@@ -118,6 +118,9 @@ namespace OmenSuperHub {
         optimiseTimer.Tick += (s, e) => optimiseSchedule();
         optimiseTimer.Start();
 
+        // 立即执行一次
+        optimiseSchedule();
+
         // Main loop to query CPU and GPU temperature every second
         fanControlTimer = new System.Threading.Timer((e) => {
           int fanSpeed1 = GetFanSpeedForTemperature(0) / 100;
@@ -365,7 +368,13 @@ namespace OmenSuperHub {
       }
 
       //定时通信避免功耗锁定
-      GetFanCount();
+      if (GetFanCount(out bool ocp, out bool otp)) {
+        if (ocp || otp) {
+          Console.WriteLine($"BIOS 保护状态 - 过流: {ocp}, 过温: {otp}");
+        }
+      } else {
+        Console.WriteLine("无法读取 BIOS 保护状态");
+      }
       //更新显示器连接到显卡状态
       monitorQuery();
       GC.Collect();

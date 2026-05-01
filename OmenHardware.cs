@@ -208,8 +208,23 @@ namespace OmenSuperHub {
       return true;
     }
 
-    public static void GetFanCount() {
-      SendOmenBiosWmi(0x10, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 4);
+    /// <param name="ocp">输出：是否触发过流保护 (Bit 0)</param>
+    /// <param name="otp">输出：是否触发过温保护 (Bit 1)</param>
+    /// <returns>true：成功读取并解析；false：WMI 通信失败</returns>
+    public static bool GetFanCount(out bool ocp, out bool otp) {
+      ocp = false;
+      otp = false;
+
+      byte[] result = SendOmenBiosWmi(0x10, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 4);
+
+      if (result == null || result.Length < 2)
+        return false;   // 通信失败或返回数据不足
+
+      byte protectionByte = result[1];
+      ocp = (protectionByte & 0x01) != 0;    // Bit 0 : OCP
+      otp = (protectionByte & 0x02) != 0;    // Bit 1 : OTP
+
+      return true;
     }
 
     public static List<int> GetFanLevel() {
