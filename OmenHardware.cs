@@ -32,15 +32,15 @@ namespace OmenSuperHub {
     /// 从本机系统 ID 直接加载平台能力配置。
     /// 默认从 C:\Users\fiveb\Desktop\ 下的两个 DLL 中读取资源。
     /// </summary>
-    public static PlatformSettings LoadPlatformSettingsFromDll(string baseDirectory = @"C:\Users\fiveb\Desktop") {
-      return PlatformSettingsResolver.LoadFromCurrentSystem(baseDirectory);
+    public static PlatformSettings LoadPlatformSettingsFromDll() {
+      return PlatformSettingsResolver.LoadFromCurrentSystem();
     }
 
     /// <summary>
     /// 仅返回 HP.Omen.Core.Model.Device.dll 中的 PerformancePlatformList 原始 JSON。
     /// </summary>
-    public static string ReadPerformancePlatformListJson(string baseDirectory = @"C:\Users\fiveb\Desktop") {
-      return PlatformSettingsResolver.ReadPerformancePlatformListJson(baseDirectory);
+    public static string ReadPerformancePlatformListJson() {
+      return PlatformSettingsResolver.ReadPerformancePlatformListJson();
     }
 
     // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
@@ -267,7 +267,7 @@ namespace OmenSuperHub {
     }
 
     // Tpp设置，这里似乎无作用
-    public static void SetConcurrentCpuPowerLimit(byte value) {
+    public static void SetConcurrentTdp(byte value) {
       SendOmenBiosWmi(0x29, new byte[] { 0xFF, 0xFF, 0xFF, value }, 0);
     }
 
@@ -278,8 +278,31 @@ namespace OmenSuperHub {
     }
 
     // PL4，狂暴平衡都生效，50-19，100-54，180-106，200-122，需关闭ts，1-254，和SetCpuPowerLimit优先级相同
-    public static void SetCpuPowerMaxLimit(byte value) {
+    public static void SetCpuPowerLimit4(byte value) {
       SendOmenBiosWmi(0x29, new byte[] { 0xFF, 0xFF, value, 0xFF }, 0);
+    }
+
+    public static bool IsTwoBytePL4Supported() {
+      byte[] data = SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
+      if (data == null || data.Length < 5) {
+        Console.WriteLine("[ERROR] 无法获取 SystemDesignData");
+        return false;
+      }
+
+      // data[4] 的 Bit4 (掩码 0x10) 就是 TwoBytePL4Support 标志
+      return (data[4] & 0x10) != 0;
+    }
+
+    public static void SetPL4DoubleByte(ushort pl4Value) {
+      byte[] data = new byte[128];
+      data[0] = 0x20;                         // 固定标识
+      data[2] = (byte)(pl4Value & 0xFF);       // PL4 低字节
+      data[3] = (byte)((pl4Value >> 8) & 0xFF);// PL4 高字节
+                                               // 其余保留位用默认值
+      data[6] = 0xFF; data[7] = 0xFF;
+      data[10] = 0xFF; data[11] = 0xFF;
+
+      SendOmenBiosWmi(0x37, data, 0); // commandType = 55 = 0x37
     }
 
     public static void SetMaxFanSpeedOn() {

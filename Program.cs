@@ -34,10 +34,9 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
-    //static OpenComputer openComputer = new OpenComputer() { CPUEnabled = true };
+    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off", tppPower = "max", powerLimit4 = "max";
     static volatile bool monitorFan = true;
-    static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false;
+    static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
 
@@ -100,6 +99,8 @@ namespace OmenSuperHub {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
+        AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
+
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
 
@@ -107,8 +108,11 @@ namespace OmenSuperHub {
         string versionString = version.ToString().Replace(".", "");
         alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
 
+        isTwoBytePL4 = IsTwoBytePL4Supported();
+
         // Initialize tray icon
-        InitTrayIcon();
+        var platformSettings = LoadPlatformSettingsFromDll();
+        InitTrayIcon(platformSettings);
 
         // Initialize HardwareMonitorLib
         StartHardwareMonitor();
@@ -153,10 +157,30 @@ namespace OmenSuperHub {
         SystemEvents.PowerModeChanged += new PowerModeChangedEventHandler(OnPowerChange);
         //PrintSystemDesignData();
         //Console.WriteLine($"GetSystemID: {GetSystemID()}");
-        //var platform = LoadPlatformSettingsFromDll();
-        //Console.WriteLine($"platform: {platform.RawJson}");
-        //Console.WriteLine($"platform: {platform.UnleashedModeSupport}");
         Application.Run();
+      }
+    }
+
+    private static Assembly ResolveEmbeddedAssembly(object sender, ResolveEventArgs args) {
+      var assemblyName = new AssemblyName(args.Name).Name + ".dll";
+
+      var currentAssembly = Assembly.GetExecutingAssembly();
+
+      var resourceName = currentAssembly
+          .GetManifestResourceNames()
+          .FirstOrDefault(r => r.EndsWith(assemblyName, StringComparison.OrdinalIgnoreCase));
+
+      if (resourceName == null)
+        return null;
+
+      using (var stream = currentAssembly.GetManifestResourceStream(resourceName)) {
+        if (stream == null)
+          return null;
+
+        var buffer = new byte[stream.Length];
+        stream.Read(buffer, 0, buffer.Length);
+
+        return Assembly.Load(buffer);
       }
     }
 
@@ -226,7 +250,7 @@ namespace OmenSuperHub {
     [HandleProcessCorruptedStateExceptions]
     static void RunHardwareMonitor() {
       var computer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
-      
+
       try {
         computer.Open();
       } catch (Exception ex) {
@@ -252,16 +276,16 @@ namespace OmenSuperHub {
         try {
           foreach (LibreIHardware hw in computer.Hardware) {
             if (hw.HardwareType != LibreHardwareType.Cpu && hw.HardwareType != LibreHardwareType.GpuNvidia && hw.HardwareType != LibreHardwareType.GpuAmd) continue;
-            
+
             // 如果底层驱动对象因为驱动更新导致句柄无效，Update会抛出异常。
             // 此时我们直接让子进程退出，父进程会重新启动一个新的子进程来进行初始化。
-            try { 
-              hw.Update(); 
-            } catch (Exception ex) { 
+            try {
+              hw.Update();
+            } catch (Exception ex) {
               Console.WriteLine("CRASH: Update failed - " + ex.Message);
               Environment.Exit(1);
             }
-            
+
             foreach (LibreISensor sensor in hw.Sensors) {
               try {
                 if (hw.HardwareType == LibreHardwareType.Cpu) {
@@ -532,7 +556,7 @@ namespace OmenSuperHub {
     }
 
     // Initialize tray icon
-    static void InitTrayIcon() {
+    static void InitTrayIcon(PlatformSettings platformSettings) {
       trayIcon = new NotifyIcon() {
         // Icon = SystemIcons.Application,
         Icon = Properties.Resources.smallfan,
@@ -636,6 +660,15 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(fanControlMenu);
 
       ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem("性能控制");
+      if (platformSettings.UnleashedModeSupport) {
+        performanceControlMenu.DropDownItems.Add(CreateMenuItem("大师模式", "fanModeGroup", (s, e) => {
+          fanMode = "extreme";
+          SetFanMode(0x04);
+          SaveConfig("FanMode");
+          // 恢复CPU功耗设定
+          RestoreCPUPower();
+        }, false));
+      }
       performanceControlMenu.DropDownItems.Add(CreateMenuItem("狂暴模式", "fanModeGroup", (s, e) => {
         fanMode = "performance";
         SetFanMode(0x31);
@@ -702,6 +735,48 @@ namespace OmenSuperHub {
         SaveConfig("DBVersion");
       }, true));
       performanceControlMenu.DropDownItems.Add(DBMenu);
+      if (platformSettings.TppSupport) {
+        ToolStripMenuItem tppMenu = new ToolStripMenuItem("Tpp");
+        tppMenu.DropDownItems.Add(CreateMenuItem("最大", "tppPowerGroup", (s, e) => {
+          tppPower = "max";
+          SetConcurrentTdp(254);
+          SaveConfig("TppPower");
+        }, true));
+        for (int power = 20; power <= 240; power += 20) {
+          int currentPower = power;
+          tppMenu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "tppPowerGroup", (s, e) => {
+            tppPower = currentPower + " W";
+            SetConcurrentTdp((byte)currentPower);
+            SaveConfig("TppPower");
+          }, false));
+        }
+        performanceControlMenu.DropDownItems.Add(tppMenu);
+      }
+      ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
+      pl4Menu.DropDownItems.Add(CreateMenuItem("最大", "pl4PowerGroup", (s, e) => {
+        powerLimit4 = "max";
+        if (isTwoBytePL4) {
+          SetPL4DoubleByte(500);
+        } else {
+          SetCpuPowerLimit4(254);
+        }
+        SaveConfig("PL4Power");
+      }, true));
+
+      int doubleFactor = isTwoBytePL4 ? 2 : 1;
+      for (int power = 40; power <= 240 * doubleFactor; power += 20 * doubleFactor) {
+        int currentPower = power;
+        pl4Menu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "pl4PowerGroup", (s, e) => {
+          powerLimit4 = currentPower + " W";
+          if (isTwoBytePL4) {
+            SetPL4DoubleByte((ushort)currentPower);
+          } else {
+            SetCpuPowerLimit4((byte)currentPower);
+          }
+          SaveConfig("PL4Power");
+        }, false));
+      }
+      performanceControlMenu.DropDownItems.Add(pl4Menu);
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem("最大", "cpuPowerGroup", (s, e) => {
         cpuPower = "max";
@@ -886,7 +961,7 @@ namespace OmenSuperHub {
         SaveConfig("AutoStart");
       }, true));
       settingMenu.DropDownItems.Add(autoStartMenu);
-      
+
       trayIcon.ContextMenuStrip.Items.Add(settingMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
@@ -1776,6 +1851,8 @@ namespace OmenSuperHub {
               key.SetValue("FloatingBarLoc", floatingBarLoc);
               key.SetValue("FloatingBar", floatingBar);
               key.SetValue("DataLocalize", dataLocalize);
+              key.SetValue("TppPower", tppPower);
+              key.SetValue("PL4Power", powerLimit4);
             } else {
               switch (configName) {
                 case "FanTable":
@@ -1832,6 +1909,12 @@ namespace OmenSuperHub {
                 case "DataLocalize":
                   key.SetValue("DataLocalize", dataLocalize);
                   break;
+                case "TppPower":
+                  key.SetValue("TppPower", tppPower);
+                  break;
+                case "PL4Power":
+                  key.SetValue("PL4Power", powerLimit4);
+                  break;
               }
             }
           }
@@ -1855,7 +1938,10 @@ namespace OmenSuperHub {
             }
 
             fanMode = (string)key.GetValue("FanMode", "performance");
-            if (fanMode.Contains("performance")) {
+            if (fanMode.Contains("extreme")) {
+              SetFanMode(0x04);
+              UpdateCheckedState("fanModeGroup", "大师模式");
+            } else if (fanMode.Contains("performance")) {
               SetFanMode(0x31);
               UpdateCheckedState("fanModeGroup", "狂暴模式");
             } else if (fanMode.Contains("default")) {
@@ -1898,6 +1984,39 @@ namespace OmenSuperHub {
                 respondSpeed = 0.04f;
                 UpdateCheckedState("tempSensitivityGroup", "低");
                 break;
+            }
+
+            tppPower = (string)key.GetValue("TppPower", "max");
+            if (tppPower == "max") {
+              SetConcurrentTdp(254);
+              UpdateCheckedState("tppPowerGroup", "最大");
+            } else if (tppPower.Contains(" W")) {
+              int value = int.Parse(tppPower.Replace(" W", "").Trim());
+              if (value >= 20 && value <= 240) {
+                SetConcurrentTdp((byte)value);
+                UpdateCheckedState("tppPowerGroup", tppPower);
+              }
+            }
+
+            powerLimit4 = (string)key.GetValue("PL4Power", "max");
+            if (powerLimit4 == "max") {
+              if (isTwoBytePL4) {
+                SetPL4DoubleByte(500);
+              } else {
+                SetCpuPowerLimit4(254);
+              }
+              UpdateCheckedState("pl4PowerGroup", "最大");
+            } else if (powerLimit4.Contains(" W")) {
+              int value = int.Parse(powerLimit4.Replace(" W", "").Trim());
+              int doubleFactor = isTwoBytePL4 ? 2 : 1;
+              if (value >= 40 && value <= 240 * doubleFactor) {
+                if (isTwoBytePL4) {
+                  SetPL4DoubleByte((ushort)value);
+                } else {
+                  SetCpuPowerLimit4((byte)value);
+                }
+                UpdateCheckedState("pl4PowerGroup", powerLimit4);
+              }
             }
 
             cpuPower = (string)key.GetValue("CpuPower", "max");
@@ -2068,7 +2187,7 @@ namespace OmenSuperHub {
               CloseFloatingForm();
               UpdateCheckedState("floatingBarGroup", "关闭浮窗");
             }
-            
+
             dataLocalize = (string)key.GetValue("DataLocalize", "off");
             if (dataLocalize == "on") {
               UpdateCheckedState("dataLocalizeGroup", "开启");

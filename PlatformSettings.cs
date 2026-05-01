@@ -195,10 +195,34 @@ namespace OmenSuperHub {
   }
 
   internal static class PlatformSettingsResolver {
-    private const string DefaultBaseDirectory = @"C:\Users\fiveb\Desktop";
-    private const string ModelDeviceDllName = "HP.Omen.Core.Model.Device.dll";
-    private const string CommonDllName = "HP.Omen.Core.Common.dll";
     private const string PerformancePlatformListSuffix = "HP.Omen.Core.Model.Device.JSON.PerformancePlatformList.json";
+
+    private static readonly Dictionary<string, Assembly> _assemblyCache = new Dictionary<string, Assembly>();
+
+    private static Assembly LoadEmbeddedAssembly(string dllName) {
+      if (_assemblyCache.TryGetValue(dllName, out var cached))
+        return cached;
+
+      var executingAssembly = Assembly.GetExecutingAssembly();
+
+      var resourceName = executingAssembly.GetManifestResourceNames()
+          .FirstOrDefault(n => n.EndsWith(dllName, StringComparison.OrdinalIgnoreCase));
+
+      if (resourceName == null)
+        throw new Exception($"找不到资源 DLL: {dllName}");
+
+      using (var stream = executingAssembly.GetManifestResourceStream(resourceName)) {
+        if (stream == null)
+          throw new Exception($"无法读取资源流: {resourceName}");
+
+        byte[] bytes = new byte[stream.Length];
+        stream.Read(bytes, 0, bytes.Length);
+
+        var asm = Assembly.Load(bytes);
+        _assemblyCache[dllName] = asm;
+        return asm;
+      }
+    }
 
     private static readonly IReadOnlyDictionary<string, string> SsidToPlatformFamily = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
       ["8572"] = "DRX",
@@ -384,30 +408,15 @@ namespace OmenSuperHub {
       ["8F5C"] = "Pocari",
     };
 
-    public static PlatformSettings LoadFromCurrentSystem(string baseDirectory = DefaultBaseDirectory) {
-      if (string.IsNullOrWhiteSpace(baseDirectory))
-        baseDirectory = DefaultBaseDirectory;
-
-      return LoadFromSystemId(OmenHardware.GetSystemID(), baseDirectory);
+    public static PlatformSettings LoadFromCurrentSystem() {
+      return LoadFromSystemId(OmenHardware.GetSystemID());
     }
 
-    public static PlatformSettings LoadFromSystemId(string systemId, string baseDirectory = DefaultBaseDirectory, string gpuName = null, int? cpuCores = null, int? adapterWatts = null) {
+    public static PlatformSettings LoadFromSystemId(string systemId, string gpuName = null, int? cpuCores = null, int? adapterWatts = null) {
       if (string.IsNullOrWhiteSpace(systemId))
         return null;
 
-      if (string.IsNullOrWhiteSpace(baseDirectory))
-        baseDirectory = DefaultBaseDirectory;
-
-      string modelDeviceDllPath = Path.Combine(baseDirectory, ModelDeviceDllName);
-      string commonDllPath = Path.Combine(baseDirectory, CommonDllName);
-
-      if (!File.Exists(modelDeviceDllPath))
-        throw new FileNotFoundException("未找到设备模型 DLL", modelDeviceDllPath);
-
-      if (!File.Exists(commonDllPath))
-        throw new FileNotFoundException("未找到 Common DLL", commonDllPath);
-
-      var performancePlatforms = LoadPerformancePlatformList(modelDeviceDllPath);
+      var performancePlatforms = LoadPerformancePlatformList();
       var entry = performancePlatforms.FirstOrDefault(x => string.Equals(x.SSID, systemId.Trim(), StringComparison.OrdinalIgnoreCase));
       if (entry == null)
         return null;
@@ -417,7 +426,8 @@ namespace OmenSuperHub {
       if (string.IsNullOrWhiteSpace(sku))
         return null;
 
-      var commonAssembly = Assembly.LoadFrom(commonDllPath);
+      var commonAssembly = LoadEmbeddedAssembly("HP.Omen.Core.Common.dll");
+
       var resourceName = ResolveResourceName(commonAssembly, family, sku);
       if (string.IsNullOrWhiteSpace(resourceName))
         return null;
@@ -429,25 +439,8 @@ namespace OmenSuperHub {
       return AttachMeta(PlatformSettings.FromJson(json), systemId.Trim(), family, sku, resourceName);
     }
 
-    public static bool TryLoadFromSystemId(string systemId, out PlatformSettings settings, string baseDirectory = DefaultBaseDirectory, string gpuName = null, int? cpuCores = null, int? adapterWatts = null) {
-      try {
-        settings = LoadFromSystemId(systemId, baseDirectory, gpuName, cpuCores, adapterWatts);
-        return settings != null;
-      } catch {
-        settings = null;
-        return false;
-      }
-    }
-
-    public static string ReadPerformancePlatformListJson(string baseDirectory = DefaultBaseDirectory) {
-      if (string.IsNullOrWhiteSpace(baseDirectory))
-        baseDirectory = DefaultBaseDirectory;
-
-      string modelDeviceDllPath = Path.Combine(baseDirectory, ModelDeviceDllName);
-      if (!File.Exists(modelDeviceDllPath))
-        return null;
-
-      var assembly = Assembly.LoadFrom(modelDeviceDllPath);
+    public static string ReadPerformancePlatformListJson() {
+      var assembly = LoadEmbeddedAssembly("HP.Omen.Core.Model.Device.dll");
       var resourceName = FindResourceName(assembly, PerformancePlatformListSuffix);
       if (resourceName == null)
         return null;
@@ -465,8 +458,8 @@ namespace OmenSuperHub {
       return settings;
     }
 
-    private static List<PerformancePlatformEntry> LoadPerformancePlatformList(string modelDeviceDllPath) {
-      var assembly = Assembly.LoadFrom(modelDeviceDllPath);
+    private static List<PerformancePlatformEntry> LoadPerformancePlatformList() {
+      var assembly = LoadEmbeddedAssembly("HP.Omen.Core.Model.Device.dll");
       var resourceName = FindResourceName(assembly, PerformancePlatformListSuffix);
       if (resourceName == null)
         return new List<PerformancePlatformEntry>();

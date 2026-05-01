@@ -346,6 +346,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\nvpcf_inf.inf" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\HP.Omen.Core.Common.dll" />
+    <EmbeddedResource Include="Resources\HP.Omen.Core.Model.Device.dll" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
     <VisualStudio AllowExistingFolder="true" />
