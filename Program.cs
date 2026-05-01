@@ -148,7 +148,11 @@ namespace OmenSuperHub {
         }
 
         SystemEvents.PowerModeChanged += new PowerModeChangedEventHandler(OnPowerChange);
+        //PrintSystemDesignData();
         //Console.WriteLine($"GetSystemID: {GetSystemID()}");
+        //var platform = LoadPlatformSettingsFromDll();
+        //Console.WriteLine($"platform: {platform.RawJson}");
+        //Console.WriteLine($"platform: {platform.UnleashedModeSupport}");
         Application.Run();
       }
     }

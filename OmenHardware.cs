@@ -28,6 +28,21 @@ namespace OmenSuperHub {
       return string.Empty;
     }
 
+    /// <summary>
+    /// 从本机系统 ID 直接加载平台能力配置。
+    /// 默认从 C:\Users\fiveb\Desktop\ 下的两个 DLL 中读取资源。
+    /// </summary>
+    public static PlatformSettings LoadPlatformSettingsFromDll(string baseDirectory = @"C:\Users\fiveb\Desktop") {
+      return PlatformSettingsResolver.LoadFromCurrentSystem(baseDirectory);
+    }
+
+    /// <summary>
+    /// 仅返回 HP.Omen.Core.Model.Device.dll 中的 PerformancePlatformList 原始 JSON。
+    /// </summary>
+    public static string ReadPerformancePlatformListJson(string baseDirectory = @"C:\Users\fiveb\Desktop") {
+      return PlatformSettingsResolver.ReadPerformancePlatformListJson(baseDirectory);
+    }
+
     // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
     public static byte[] GetSystemDesignData() {
       return SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
@@ -45,6 +60,17 @@ namespace OmenSuperHub {
       Console.WriteLine($"完整数据: {BitConverter.ToString(data)}");
       Console.WriteLine();
 
+      // --- 字节 [0]-[1]: 适配器功率 (来自 PowerControlHelper) ---
+      int adapterPower = data[0] | (data[1] << 8);
+      Console.WriteLine($"[0]-[1] 出厂适配器额定功率 = {adapterPower} W");
+      Console.WriteLine(adapterPower >= 200 ? "  → 支持 BIOS 性能模式 (IsBiosPerformanceModeSupport)" : "  → 不支持 BIOS 性能模式");
+      Console.WriteLine(adapterPower >= 280 ? "  → 支持 TGP/PPAB 功能" : "  → 不支持 TGP/PPAB");
+      Console.WriteLine();
+
+      // --- 字节 [2]: 保留 ---
+      Console.WriteLine($"[2] (保留) = 0x{data[2]:X2}");
+      Console.WriteLine();
+
       // --- 字节 [3]: 热策略版本 ---
       Console.WriteLine($"[3] ThermalPolicyVersion = {data[3]}");
       Console.WriteLine(data[3] == 1 ? "  → V1 (BIOS 性能控制)" : "  → V0 (Legacy)");
@@ -53,16 +79,21 @@ namespace OmenSuperHub {
       // --- 字节 [4]: 平台特性标识 ---
       byte b4 = data[4];
       Console.WriteLine($"[4] 平台特性 = 0x{b4:X2} ({Convert.ToString(b4, 2).PadLeft(8, '0')})");
-      Console.WriteLine($"  Bit 0 (ModeAutoSetting)      : {(b4 & 0x01) != 0}");
-      Console.WriteLine($"  Bit 1 (TurboMode)            : {(b4 & 0x02) != 0}");
-      Console.WriteLine($"  Bit 2 (FanAlwaysOn)          : {(b4 & 0x04) != 0}");
-      Console.WriteLine($"  Bit 3 (BIOSFanControl)       : {(b4 & 0x08) != 0}");
-      Console.WriteLine($"  Bit 4 (TwoBytePL4Support)    : {(b4 & 0x10) != 0}");
-      Console.WriteLine($"  Bit 5 (SmartAdapterSupport)  : {(b4 & 0x20) != 0}");
-      Console.WriteLine($"  Bit 6                        : {(b4 & 0x40) != 0}");
-      Console.WriteLine($"  Bit 7                        : {(b4 & 0x80) != 0}");
-      Console.WriteLine($"  => BIOS 掌管控温 (Bit3)     : {((b4 & 0x08) != 0 ? "是" : "否")}");
-      Console.WriteLine($"  => 双字节 PL4 支持 (Bit4)   : {((b4 & 0x10) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  Bit 0 (SwFanControl)              : {(b4 & 0x01) != 0}");
+      Console.WriteLine($"  Bit 1 (TurboMode/Extreme支持)     : {(b4 & 0x02) != 0}");
+      Console.WriteLine($"  Bit 2 (Extreme解锁)               : {(b4 & 0x04) != 0}");
+      Console.WriteLine($"  Bit 3 (BIOS掌管控温)              : {(b4 & 0x08) != 0}");
+      Console.WriteLine($"  Bit 4 (TwoBytePL4Support)         : {(b4 & 0x10) != 0}");
+      Console.WriteLine($"  Bit 5 (待验证)                    : {(b4 & 0x20) != 0}");
+      Console.WriteLine($"  Bit 6                             : {(b4 & 0x40) != 0}");
+      Console.WriteLine($"  Bit 7                             : {(b4 & 0x80) != 0}");
+
+      // 补充上述位的业务含义
+      Console.WriteLine($"  → 软件风扇控制 (Bit0)      : {((b4 & 0x01) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  → 支持狂暴模式 (Bit1)      : {((b4 & 0x02) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  → 极限模式已解锁 (Bit2)    : {((b4 & 0x04) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  → BIOS完全掌管控温 (Bit3)  : {((b4 & 0x08) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  → 双字节 PL4 支持 (Bit4)   : {((b4 & 0x10) != 0 ? "是" : "否")}");
       Console.WriteLine();
 
       // --- 字节 [5]: PL4 默认值 ---
@@ -88,13 +119,14 @@ namespace OmenSuperHub {
       Console.WriteLine();
 
       // --- 字节 [8]: Default Concurrent TDP ---
-      Console.WriteLine($"[8] DefaultConcurrentTdp = {data[8]} (TPP 默认值)");
+      Console.WriteLine($"[8] DefaultConcurrentTdp = {data[8]} (TPP 最小值)");
+      Console.WriteLine($"  → 取自 PerformanceControlHelper.DefaultConcurrentTdp");
       Console.WriteLine();
 
       // --- 字节 [9]: 负载线支持级别 ---
       byte b9 = data[9];
-      int loadLineLevels = b9 & 0x0F;          // 低 4 位
-      int defaultLoadLine = (b9 & 0xF0) >> 4;  // 高 4 位
+      int loadLineLevels = b9 & 0x0F;
+      int defaultLoadLine = (b9 & 0xF0) >> 4;
       Console.WriteLine($"[9] LoadLine 信息 = 0x{b9:X2} ({Convert.ToString(b9, 2).PadLeft(8, '0')})");
       Console.WriteLine($"  LoadLineSupportLevels (低4位) : {loadLineLevels}");
       Console.WriteLine($"  DefaultLoadLine (高4位)       : {defaultLoadLine}");
@@ -202,7 +234,7 @@ namespace OmenSuperHub {
       //Console.WriteLine("SetFanLevel: " + fanSpeed * 100);
     }
 
-    //mode为0x31代表狂暴模式，0x30代表平衡模式
+    //mode为0x31代表狂暴模式，0x30代表Eco/平衡模式，0x04代表极限/大师模式
     public static void SetFanMode(byte mode) {
       SendOmenBiosWmi(0x1A, new byte[] { 0xFF, mode }, 0);
     }
@@ -224,9 +256,9 @@ namespace OmenSuperHub {
       SendOmenBiosWmi(0x29, new byte[] { 0xFF, 0xFF, 0xFF, value }, 0);
     }
 
-    // PL1+PL2，立即生效，狂暴平衡都生效，直接对应功率W，1-254，需关闭ts，再点击狂暴模式失效
+    // PL2和PL1，立即生效，狂暴平衡都生效，直接对应功率W，1-254，需关闭ts，再点击狂暴模式失效
     public static void SetCpuPowerLimit(byte value) {
-      SendOmenBiosWmi(0x29, new byte[] { value, value, 0xFF, 0xFF }, 0);
+      SendOmenBiosWmi(0x29, new byte[] { value, (byte)(value - 50), 0xFF, 0xFF }, 0);
       //Console.WriteLine("SetCpuPowerLimit: " + value);
     }
 
