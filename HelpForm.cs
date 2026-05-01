@@ -45,8 +45,8 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）新增功能：根据机型自动启用大师模式、Tpp和PL4设置；\n" +
-         "（2）修复：启动时直接调度风扇，而不会延迟一段时间。\n\n" +
+         "（1）新增功能：更改转速配置文件格式并使用新的默认配置方法，以支持更多机型；\n" +
+         "（2）修复：修改CTGP/DB配置名称为最大GPU功率、中等GPU功率和最小GPU功率，以避免错误使用。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +

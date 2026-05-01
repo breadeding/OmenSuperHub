@@ -685,17 +685,17 @@ namespace OmenSuperHub {
         RestoreCPUPower();
       }, false));
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP开+DB开", "gpuPowerGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("最大GPU功率", "gpuPowerGroup", (s, e) => {
         gpuPower = "max";
         SetMaxGpuPower();
         SaveConfig("GpuPower");
       }, true));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP开+DB关", "gpuPowerGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("中等GPU功率", "gpuPowerGroup", (s, e) => {
         gpuPower = "med";
         SetMedGpuPower();
         SaveConfig("GpuPower");
       }, false));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("CTGP关+DB关", "gpuPowerGroup", (s, e) => {
+      performanceControlMenu.DropDownItems.Add(CreateMenuItem("最小GPU功率", "gpuPowerGroup", (s, e) => {
         gpuPower = "min";
         SetMinGpuPower();
         SaveConfig("GpuPower");
@@ -717,7 +717,10 @@ namespace OmenSuperHub {
             }
           }
         }
-        SetFanMode(0x31);
+        if (platformSettings.UnleashedModeSupport)
+          SetFanMode(0x04);
+        else
+          SetFanMode(0x31);
         SetMaxGpuPower();
         SetCpuPowerLimit((byte)CPULimitDB);
         DBVersion = 1;
@@ -1469,7 +1472,10 @@ namespace OmenSuperHub {
               SaveConfig("DBVersion");
               UpdateCheckedState("DBGroup", "普通版本");
             } else {
-              SetFanMode(0x31);
+              if (platformSettings.UnleashedModeSupport)
+                SetFanMode(0x04);
+              else
+                SetFanMode(0x31);
               SetMaxGpuPower();
               SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
@@ -1487,6 +1493,8 @@ namespace OmenSuperHub {
               SetFanMode(0x31);
             } else if (fanMode.Contains("default")) {
               SetFanMode(0x30);
+            } else if (fanMode.Contains("unleashed")) {
+              SetFanMode(0x04);
             }
 
             // 恢复CPU功耗设定
@@ -2090,15 +2098,15 @@ namespace OmenSuperHub {
             switch (gpuPower) {
               case "max":
                 SetMaxGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "CTGP开+DB开");
+                UpdateCheckedState("gpuPowerGroup", "最大GPU功率");
                 break;
               case "med":
                 SetMedGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "CTGP开+DB关");
+                UpdateCheckedState("gpuPowerGroup", "中等GPU功率");
                 break;
               case "min":
                 SetMinGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "CTGP关+DB关");
+                UpdateCheckedState("gpuPowerGroup", "最小GPU功率");
                 break;
             }
 
@@ -2127,7 +2135,10 @@ namespace OmenSuperHub {
                   }
                 }
                 DBVersion = 1;
-                SetFanMode(0x31);
+                if (platformSettings.UnleashedModeSupport)
+                  SetFanMode(0x04);
+                else
+                  SetFanMode(0x31);
                 SetMaxGpuPower();
                 SetCpuPowerLimit((byte)CPULimitDB);
                 countDB = countDBInit;
@@ -2252,7 +2263,10 @@ namespace OmenSuperHub {
           } else {
             // 如果注册表键不存在，可以使用默认值
             LoadFanConfig("silent.txt");
-            SetFanMode(0x31);
+            if (platformSettings.UnleashedModeSupport)
+              SetFanMode(0x04);
+            else
+              SetFanMode(0x31);
             SetMaxFanSpeedOff();
             SetMaxGpuPower();
           }
