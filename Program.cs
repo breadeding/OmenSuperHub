@@ -59,6 +59,7 @@ namespace OmenSuperHub {
     static System.Windows.Forms.Timer checkFloatingTimer, optimiseTimer;
     static NotifyIcon trayIcon;
     static FloatingForm floatingForm;
+    static PlatformSettings platformSettings;
 
     [STAThread]
     static void Main(string[] args) {
@@ -111,8 +112,8 @@ namespace OmenSuperHub {
         isTwoBytePL4 = IsTwoBytePL4Supported();
 
         // Initialize tray icon
-        var platformSettings = LoadPlatformSettingsFromDll();
-        InitTrayIcon(platformSettings);
+        platformSettings = LoadPlatformSettingsFromDll();
+        InitTrayIcon();
 
         // Initialize HardwareMonitorLib
         StartHardwareMonitor();
@@ -556,7 +557,7 @@ namespace OmenSuperHub {
     }
 
     // Initialize tray icon
-    static void InitTrayIcon(PlatformSettings platformSettings) {
+    static void InitTrayIcon() {
       trayIcon = new NotifyIcon() {
         // Icon = SystemIcons.Application,
         Icon = Properties.Resources.smallfan,
@@ -1653,138 +1654,192 @@ namespace OmenSuperHub {
       Interlocked.Exchange(ref _isQuerying, 0);
     }
 
-    static void LoadDefaultFanConfig(string filePath, float silentCoef) {
-      byte[] fanTableBytes = GetFanTable();
+    static void LoadDefaultFanConfig(string filePath) {
+      SwFanControlCustom fanCustom = null;
+      if (platformSettings != null) {
+        if (filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0)
+          fanCustom = platformSettings.SwFanControlCustomDefault;
+        else if (filePath.IndexOf("cool", StringComparison.OrdinalIgnoreCase) >= 0)
+          fanCustom = platformSettings.SwFanControlCustomPerformance;
+      }
 
-      int numberOfFans = fanTableBytes[0];
-      if (numberOfFans != 2) {
-        MessageBox.Show($"本机型不受支持！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+      if (fanCustom?.FanTable == null ||
+          fanCustom.FanTable.Fan_Table_CPU_Temperature_List == null ||
+          fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List == null ||
+          fanCustom.FanTable.Fan_Table_GPU_Temperature_List == null ||
+          fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List == null ||
+          fanCustom.FanTable.Fan_Table_CPU_Temperature_List.Count == 0 ||
+          fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List.Count == 0 ||
+          fanCustom.FanTable.Fan_Table_GPU_Temperature_List.Count == 0 ||
+          fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List.Count == 0) {
         GenerateDefaultMapping(filePath);
         return;
       }
-      int numberOfEntries = fanTableBytes[1];
 
-      int originalMin = int.MaxValue;
-      int originalMax = int.MinValue;
+      var cpuTempList = fanCustom.FanTable.Fan_Table_CPU_Temperature_List;
+      var cpuSpeedList = fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List;
+      var gpuTempList = fanCustom.FanTable.Fan_Table_GPU_Temperature_List;
+      var gpuSpeedList = fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List;
 
-      // 首先找到 temperatureThreshold 的最小值和最大值
-      for (int i = 0; i < numberOfEntries; i++) {
-        int baseIndex = 2 + i * 3;
-        int tempThreshold = fanTableBytes[baseIndex + 2];
-
-        if (tempThreshold < originalMin) {
-          originalMin = tempThreshold;
-        }
-        if (tempThreshold > originalMax) {
-          originalMax = tempThreshold;
-        }
-      }
-
-      // 目标温度范围为 50°C 到 97°C
-      float targetMin = 50.0f;
-      float targetMax = 97.0f;
-
-      lock (CPUTempFanMap) {
-        CPUTempFanMap.Clear();
-        GPUTempFanMap.Clear();
-
-        // 只保留最小和最大 temperatureThreshold 的映射
-        for (int i = 0; i < numberOfEntries; i++) {
-          int baseIndex = 2 + i * 3;
-          int fan1Speed = fanTableBytes[baseIndex];
-          int fan2Speed = fanTableBytes[baseIndex + 1];
-          int originalTempThreshold = fanTableBytes[baseIndex + 2];
-
-          // 将原始 temperatureThreshold 按比例映射到 50°C 到 97°C
-          float cpuTempThreshold = targetMin +
-              (originalTempThreshold - originalMin) * (targetMax - targetMin) / (originalMax - originalMin);
-          float gpuTempThreshold = cpuTempThreshold - 10.0f;
-
-          // 只保留最小和最大温度对应的行
-          if (originalTempThreshold == originalMin || originalTempThreshold == originalMax) {
-            if (!CPUTempFanMap.ContainsKey(cpuTempThreshold)) {
-              CPUTempFanMap[cpuTempThreshold] = new List<int>();
-            }
-            CPUTempFanMap[cpuTempThreshold].Add((int)(fan1Speed * silentCoef) * 100);
-            CPUTempFanMap[cpuTempThreshold].Add((int)(fan2Speed * silentCoef) * 100);
-
-            if (!GPUTempFanMap.ContainsKey(gpuTempThreshold)) {
-              GPUTempFanMap[gpuTempThreshold] = new List<int>();
-            }
-            GPUTempFanMap[gpuTempThreshold].Add((int)(fan1Speed * silentCoef) * 100);
-            GPUTempFanMap[gpuTempThreshold].Add((int)(fan2Speed * silentCoef) * 100);
-          }
-        }
-      }
-
-      // 保存配置文件，只包含最小和最大温度对应的行
-      var lines = new List<string> { "CPU,Fan1,Fan2,GPU,Fan1,Fan2" };
-      lines.AddRange(CPUTempFanMap.Select(kvp =>
-          $"{kvp.Key:F0},{kvp.Value[0]},{kvp.Value[1]},{kvp.Key - 10.0:F0},{kvp.Value[0]},{kvp.Value[1]}"));
+      // 写入新格式文件（速度乘100转为RPM，与SetFanLevel的百分比对应）
+      var lines = new List<string>
+      {
+        "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
+        "Fan_Table_CPU_Fan_Speed_List=" + string.Join(",", cpuSpeedList.Select(s => s * 100)),
+        "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
+        "Fan_Table_GPU_Fan_Speed_List=" + string.Join(",", gpuSpeedList.Select(s => s * 100))
+    };
       File.WriteAllLines(filePath, lines);
+
+      // 直接加载到内存字典
+      var cpuSpeedRpm = cpuSpeedList.Select(s => s * 100).ToList();
+      var gpuSpeedRpm = gpuSpeedList.Select(s => s * 100).ToList();
+      LoadFanConfigFromLists(cpuTempList, cpuSpeedRpm, gpuTempList, gpuSpeedRpm);
     }
 
     static void LoadFanConfig(string filePath) {
-      float silentCoef = 1;
-      if (filePath == "silent.txt")
-        silentCoef = 0.8f;
       string absoluteFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
-      if (File.Exists(absoluteFilePath)) {
-        lock (CPUTempFanMap) {
-          CPUTempFanMap.Clear();
-          GPUTempFanMap.Clear();
-        }
-        var lines = File.ReadAllLines(absoluteFilePath);
+      if (!File.Exists(absoluteFilePath)) {
+        Console.WriteLine($"{absoluteFilePath} not found.");
+        LoadDefaultFanConfig(absoluteFilePath);
+        return;
+      }
 
-        for (int i = 1; i < lines.Length; i++) { // 跳过第一行标题
-          var parts = lines[i].Split(',');
-          if (parts.Length == 6) {
-            // 解析CPU温度阈值、GPU温度阈值和两个风扇的速度
-            if (float.TryParse(parts[0], out float cpuTemp) &&
-                int.TryParse(parts[1], out int cpuFan1Speed) &&
-                int.TryParse(parts[2], out int cpuFan2Speed) &&
-                float.TryParse(parts[3], out float gpuTemp) &&
-                int.TryParse(parts[4], out int gpuFan1Speed) &&
-                int.TryParse(parts[5], out int gpuFan2Speed)) {
+      string[] allLines = File.ReadAllLines(absoluteFilePath);
+      if (allLines.Length == 0) {
+        LoadDefaultFanConfig(absoluteFilePath);
+        return;
+      }
 
-              // 将风扇速度以列表的形式存储在 CPUTempFanMap 和 GPUTempFanMap 中
-              lock (CPUTempFanMap) {
-                CPUTempFanMap[cpuTemp] = new List<int> { cpuFan1Speed, cpuFan2Speed };
-                GPUTempFanMap[gpuTemp] = new List<int> { gpuFan1Speed, gpuFan2Speed };
-              }
-            }
-          } else {
-            Console.WriteLine($"{absoluteFilePath} error.");
-            LoadDefaultFanConfig(absoluteFilePath, silentCoef);
-            return;
+      // 判断文件格式：若第一行包含'='则视为新格式，否则为旧CSV格式
+      bool isNewFormat = allLines[0].Contains('=');
+
+      if (isNewFormat) {
+        var cpuTempList = new List<int>();
+        var cpuSpeedList = new List<int>();
+        var gpuTempList = new List<int>();
+        var gpuSpeedList = new List<int>();
+
+        foreach (string line in allLines) {
+          if (string.IsNullOrWhiteSpace(line)) continue;
+          int eqIdx = line.IndexOf('=');
+          if (eqIdx < 0) continue;
+          string key = line.Substring(0, eqIdx).Trim();
+          string valueStr = line.Substring(eqIdx + 1).Trim();
+          var values = valueStr.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                               .Select(s => int.Parse(s.Trim()))
+                               .ToList();
+
+          switch (key) {
+            case "Fan_Table_CPU_Temperature_List":
+              cpuTempList = values;
+              break;
+            case "Fan_Table_CPU_Fan_Speed_List":
+              cpuSpeedList = values;
+              break;
+            case "Fan_Table_GPU_Temperature_List":
+              gpuTempList = values;
+              break;
+            case "Fan_Table_GPU_Fan_Speed_List":
+              gpuSpeedList = values;
+              break;
           }
         }
-        // Console.WriteLine($"{absoluteFilePath} fan config loaded successfully.");
+
+        // 校验数据完整性
+        if (cpuTempList.Count == 0 || cpuSpeedList.Count == 0 ||
+            gpuTempList.Count == 0 || gpuSpeedList.Count == 0 ||
+            cpuTempList.Count != cpuSpeedList.Count ||
+            gpuTempList.Count != gpuSpeedList.Count) {
+          Console.WriteLine($"{absoluteFilePath} invalid new format, regenerating.");
+          LoadDefaultFanConfig(absoluteFilePath);
+          return;
+        }
+
+        LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
       } else {
-        Console.WriteLine($"{absoluteFilePath} not found.");
-        LoadDefaultFanConfig(absoluteFilePath, silentCoef);
+        // 旧格式：CPU,Fan1,Fan2,GPU,Fan1,Fan2 多行
+        var cpuTempList = new List<int>();
+        var cpuSpeedList = new List<int>();
+        var gpuTempList = new List<int>();
+        var gpuSpeedList = new List<int>();
+
+        try {
+          for (int i = 1; i < allLines.Length; i++) // 跳过标题行
+          {
+            var parts = allLines[i].Split(',');
+            if (parts.Length < 6) continue;
+            int cpuTemp = int.Parse(parts[0].Trim());
+            int cpuFan1 = int.Parse(parts[1].Trim()); // 我们取Fan1作为统一速度
+            int gpuTemp = int.Parse(parts[3].Trim());
+            int gpuFan1 = int.Parse(parts[4].Trim());
+
+            cpuTempList.Add(cpuTemp);
+            cpuSpeedList.Add(cpuFan1);
+            gpuTempList.Add(gpuTemp);
+            gpuSpeedList.Add(gpuFan1);
+          }
+        } catch {
+          Console.WriteLine($"{absoluteFilePath} parse error, regenerating.");
+          LoadDefaultFanConfig(absoluteFilePath);
+          return;
+        }
+
+        if (cpuTempList.Count == 0 || gpuTempList.Count == 0) {
+          LoadDefaultFanConfig(absoluteFilePath);
+          return;
+        }
+
+        // 将旧格式转换为新格式并覆盖写入
+        var newLines = new List<string>
+        {
+            "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
+            "Fan_Table_CPU_Fan_Speed_List=" + string.Join(",", cpuSpeedList),
+            "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
+            "Fan_Table_GPU_Fan_Speed_List=" + string.Join(",", gpuSpeedList)
+        };
+        File.WriteAllLines(absoluteFilePath, newLines);
+
+        LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
       }
     }
 
     // Generate default temperature-fan speed mapping
     static void GenerateDefaultMapping(string filePath) {
+      // 硬编码默认映射（与原逻辑一致，转换为新格式）
+      var cpuTempList = new List<int> { 30, 50, 60, 85, 100 };
+      var cpuSpeedList = new List<int> { 0, 1600, 2000, 4000, 5600 };   // RPM
+      var gpuTempList = new List<int> { 20, 40, 50, 75, 90 };
+      var gpuSpeedList = new List<int> { 0, 1600, 2000, 4000, 5600 };
+
+      var lines = new List<string>
+      {
+        "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
+        "Fan_Table_CPU_Fan_Speed_List=" + string.Join(",", cpuSpeedList),
+        "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
+        "Fan_Table_GPU_Fan_Speed_List=" + string.Join(",", gpuSpeedList)
+    };
+      File.WriteAllLines(filePath, lines);
+
+      LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
+    }
+
+    static void LoadFanConfigFromLists(List<int> cpuTempList, List<int> cpuSpeedList,
+                                   List<int> gpuTempList, List<int> gpuSpeedList) {
       lock (CPUTempFanMap) {
         CPUTempFanMap.Clear();
-        CPUTempFanMap[30] = new List<int> { 0, 0 };
-        CPUTempFanMap[50] = new List<int> { 1600, 1900 };
-        CPUTempFanMap[60] = new List<int> { 2000, 2300 };
-        CPUTempFanMap[85] = new List<int> { 4000, 4300 };
-        CPUTempFanMap[100] = new List<int> { 6100, 6400 };
-
         GPUTempFanMap.Clear();
-        foreach (var kvp in CPUTempFanMap) {
-          GPUTempFanMap[kvp.Key - 10] = new List<int> { kvp.Value[0], kvp.Value[1] };
+
+        for (int i = 0; i < cpuTempList.Count; i++) {
+          int speedRpm = cpuSpeedList[i];
+          CPUTempFanMap[cpuTempList[i]] = new List<int> { speedRpm, speedRpm }; // 双风扇同速
+        }
+
+        for (int i = 0; i < gpuTempList.Count; i++) {
+          int speedRpm = gpuSpeedList[i];
+          GPUTempFanMap[gpuTempList[i]] = new List<int> { speedRpm, speedRpm };
         }
       }
-      var lines = new List<string> { "CPU,Fan1,Fan2,GPU,Fan1,Fan2" };
-      lines.AddRange(CPUTempFanMap.Select(kvp =>
-          $"{kvp.Key:F0},{kvp.Value[0]},{kvp.Value[1]},{kvp.Key - 10:F0},{kvp.Value[0]},{kvp.Value[1]}"));
-      File.WriteAllLines(filePath, lines);
     }
 
     // Get fan speed for CPU and GPU and return the maximum
