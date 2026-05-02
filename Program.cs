@@ -45,6 +45,7 @@ namespace OmenSuperHub {
     static float rawTempGPU = 40f;
     static float rawPowerGPU = 0f;
     static bool rawGotGPU = false;
+    static volatile bool tempReady = false; // 子进程首次输出有效温度后置 true
     static Process hwMonitorProcess;
     static StreamWriter hwMonitorIn;
 
@@ -128,6 +129,8 @@ namespace OmenSuperHub {
 
         // Main loop to query CPU and GPU temperature every second
         fanControlTimer = new System.Threading.Timer((e) => {
+          // 自动模式下，首次获取到真实温度数据前不进行转速控制
+          if (!tempReady && fanControl == "auto") return;
           int fanSpeed1 = GetFanSpeedForTemperature(0) / 100;
           int fanSpeed2 = GetFanSpeedForTemperature(1) / 100;
           if (monitorFan) {
@@ -341,6 +344,11 @@ namespace OmenSuperHub {
           if (float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float tg)) rawTempGPU = tg;
           if (float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float pg)) rawPowerGPU = pg;
           rawGotGPU = parts[4] == "1";
+          if (!tempReady) {
+            smoothedCPUTemp = rawTempCPU;
+            smoothedGPUTemp = rawTempGPU;
+          }
+          tempReady = true;
         }
       };
 
@@ -1624,6 +1632,10 @@ namespace OmenSuperHub {
     static int countQuery = 0;
     static bool autoStartMonitorGPU = true, autoStopMonitorGPU = true;//是否自动根据情况开/关GPU温度监测以节约能源
     static bool hasStartAuto = false, hasStopAuto = false;//是否已经自动开/关过GPU温度监测，在手动开/关时重置
+    // 用于风扇查表的平滑温度（受高中低档影响）
+    static float smoothedCPUTemp = 50f;
+    static float smoothedGPUTemp = 40f;
+
     static void QueryHardware() {
       // 防止定时器重入：上次查询未完成时直接跳过本次
       if (Interlocked.CompareExchange(ref _isQuerying, 1, 0) != 0)
@@ -1635,7 +1647,10 @@ namespace OmenSuperHub {
       CPUPower = rawPowerCPU;
 
       if (monitorGPU) {
-        GPUTemp = rawTempGPU * respondSpeed + GPUTemp * (1.0f - respondSpeed);
+        // 平滑温度用于风扇查表
+        smoothedGPUTemp = rawTempGPU * respondSpeed + smoothedGPUTemp * (1.0f - respondSpeed);
+        // 显示温度始终为实时值
+        GPUTemp = rawTempGPU;
         getGPU = rawGotGPU;
         if (getGPU) {
           if ((int)(rawPowerGPU * 10) == 5900)
@@ -1645,7 +1660,10 @@ namespace OmenSuperHub {
         }
       }
 
-      CPUTemp = tempCPU * respondSpeed + CPUTemp * (1.0f - respondSpeed);
+      // 平滑温度用于风扇查表
+      smoothedCPUTemp = tempCPU * respondSpeed + smoothedCPUTemp * (1.0f - respondSpeed);
+      // 显示温度始终为实时值
+      CPUTemp = tempCPU;
 
       if (CPUTemp > 90 && fanControl.Contains(" RPM")) {
         fanControl = "auto";
@@ -1714,58 +1732,82 @@ namespace OmenSuperHub {
     }
 
     static void LoadDefaultFanConfig(string filePath) {
-      SwFanControlCustom fanCustom = null;
+      // ── 1. 从三个 SwFanControlCustom 中提取最大转速 ──────────────────────
+      int? maxFanSpeed = null;
       if (platformSettings != null) {
-        bool hasUnleashed = platformSettings.SwFanControlCustomUnleashed?.FanTable != null;
-        if (filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0)
-          fanCustom = hasUnleashed ? platformSettings.SwFanControlCustomPerformance : platformSettings.SwFanControlCustomDefault;
-        else if (filePath.IndexOf("cool", StringComparison.OrdinalIgnoreCase) >= 0)
-          fanCustom = hasUnleashed ? platformSettings.SwFanControlCustomUnleashed : platformSettings.SwFanControlCustomPerformance;
+        var candidates = new[] {
+      platformSettings.SwFanControlCustomDefault,
+      platformSettings.SwFanControlCustomPerformance,
+      platformSettings.SwFanControlCustomUnleashed
+    };
+        foreach (var fanCustom in candidates) {
+          if (fanCustom?.FanTable == null) continue;
+          var cpuSpeeds = fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List;
+          var gpuSpeeds = fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List;
+          if (cpuSpeeds != null) {
+            foreach (var v in cpuSpeeds)
+              if (!maxFanSpeed.HasValue || v > maxFanSpeed.Value) maxFanSpeed = v;
+          }
+          if (gpuSpeeds != null) {
+            foreach (var v in gpuSpeeds)
+              if (!maxFanSpeed.HasValue || v > maxFanSpeed.Value) maxFanSpeed = v;
+          }
+        }
+        // 数值代表转速/100，需要*100才代表转速（RPM）
+        if (maxFanSpeed.HasValue) maxFanSpeed = maxFanSpeed.Value * 100;
       }
 
-      if (fanCustom?.FanTable == null ||
-          fanCustom.FanTable.Fan_Table_CPU_Temperature_List == null ||
-          fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List == null ||
-          fanCustom.FanTable.Fan_Table_GPU_Temperature_List == null ||
-          fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List == null ||
-          fanCustom.FanTable.Fan_Table_CPU_Temperature_List.Count == 0 ||
-          fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List.Count == 0 ||
-          fanCustom.FanTable.Fan_Table_GPU_Temperature_List.Count == 0 ||
-          fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List.Count == 0) {
-        GenerateDefaultMapping(filePath);
+      // ── 2. 从 platformSettings 获取 CPU 允许最高温度 ─────────────────────
+      int? maxCPUTemp = null;
+      int maxGPUTemp = 87;
+      int? tempDelta = null;
+      if (platformSettings != null) {
+        int throttle = platformSettings.temperatureThrottlingPerformance;
+        if (throttle > 0) {
+          maxCPUTemp = throttle;
+          tempDelta = maxCPUTemp - maxGPUTemp;
+        }
+      }
+
+      // ── 3. 若两个值均获取成功，则生成 silent / cool 转速表 ──────────────
+      if (maxFanSpeed.HasValue && maxCPUTemp.HasValue && tempDelta.HasValue) {
+        int maxRpm = maxFanSpeed.Value;
+        int maxCpu = maxCPUTemp.Value;
+        int delta = tempDelta.Value;
+
+        List<int> cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList;
+
+        bool isSilent = filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        if (isSilent) {
+          // silent: cpu30/gpu20 → 0RPM, 60℃ → maxRpm/3, 87℃ → maxRpm*2/3, maxTemp → maxRpm
+          cpuTempList = new List<int> { 30, 60, 87, maxCpu };
+          cpuSpeedList = new List<int> { 0, maxRpm / 3, maxRpm * 2 / 3, maxRpm - maxRpm / 10 };
+          gpuTempList = new List<int> { 30 - delta, 60 - delta, 87 - delta, maxGPUTemp };
+          gpuSpeedList = new List<int> { 0, maxRpm / 3, maxRpm * 2 / 3, maxRpm - maxRpm / 10 };
+        } else {
+          // cool: cpu45/gpu35 → maxRpm/4, (maxTemp-5)℃ → maxRpm
+          cpuTempList = new List<int> { 45, maxCpu - 5, maxCpu };
+          cpuSpeedList = new List<int> { maxRpm / 4, maxRpm, maxRpm + maxRpm / 10 };
+          gpuTempList = new List<int> { 45 - delta, maxGPUTemp - 5, maxGPUTemp };
+          gpuSpeedList = new List<int> { maxRpm / 4, maxRpm, maxRpm + maxRpm / 10 };
+        }
+
+        // 写入文件
+        var lines = new List<string> {
+      "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
+      "Fan_Table_CPU_Fan_Speed_List="   + string.Join(",", cpuSpeedList),
+      "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
+      "Fan_Table_GPU_Fan_Speed_List="   + string.Join(",", gpuSpeedList)
+    };
+        File.WriteAllLines(filePath, lines);
+
+        LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
         return;
       }
 
-      var cpuTempList = fanCustom.FanTable.Fan_Table_CPU_Temperature_List;
-      var cpuSpeedList = fanCustom.FanTable.Fan_Table_CPU_Fan_Speed_List;
-      var gpuTempList = fanCustom.FanTable.Fan_Table_GPU_Temperature_List;
-      var gpuSpeedList = fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List;
-
-      // ===== 转速为0的项，对应温度也改为0 =====
-      for (int i = 0; i < Math.Min(cpuTempList.Count, cpuSpeedList.Count); i++) {
-        if (cpuSpeedList[i] == 0)
-          cpuTempList[i] = 0;
-      }
-
-      for (int i = 0; i < Math.Min(gpuTempList.Count, gpuSpeedList.Count); i++) {
-        if (gpuSpeedList[i] == 0)
-          gpuTempList[i] = 0;
-      }
-
-      // 写入新格式文件（速度乘100转为RPM，与SetFanLevel的百分比对应）
-      var lines = new List<string>
-      {
-        "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
-        "Fan_Table_CPU_Fan_Speed_List=" + string.Join(",", cpuSpeedList.Select(s => s * 100)),
-        "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
-        "Fan_Table_GPU_Fan_Speed_List=" + string.Join(",", gpuSpeedList.Select(s => s * 100))
-    };
-      File.WriteAllLines(filePath, lines);
-
-      // 直接加载到内存字典
-      var cpuSpeedRpm = cpuSpeedList.Select(s => s * 100).ToList();
-      var gpuSpeedRpm = gpuSpeedList.Select(s => s * 100).ToList();
-      LoadFanConfigFromLists(cpuTempList, cpuSpeedRpm, gpuTempList, gpuSpeedRpm);
+      // ── 4. 兜底：无法提取参数时使用硬编码默认值 ─────────────────────────
+      GenerateDefaultMapping(filePath);
     }
 
     static void LoadFanConfig(string filePath) {
@@ -1914,13 +1956,14 @@ namespace OmenSuperHub {
     }
 
     // Get fan speed for CPU and GPU and return the maximum
+    // 使用平滑后的温度查表，保证高中低档响应速度生效；实时档下平滑温度==原始温度
     static int GetFanSpeedForTemperature(int fanIndex) {
       if (CPUTempFanMap.Count == 0 || GPUTempFanMap.Count == 0) return 0;
 
-      int cpuFanSpeed = GetFanSpeedForSpecificTemperature(CPUTemp, CPUTempFanMap, fanIndex);
+      int cpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedCPUTemp, CPUTempFanMap, fanIndex);
 
       if (monitorGPU) {
-        int gpuFanSpeed = GetFanSpeedForSpecificTemperature(GPUTemp, GPUTempFanMap, fanIndex);
+        int gpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedGPUTemp, GPUTempFanMap, fanIndex);
         return Math.Max(cpuFanSpeed, gpuFanSpeed);
       }
 

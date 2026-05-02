@@ -45,8 +45,9 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）新增功能：扩展CPU功率范围至200W，优化默认转速配置；\n" +
-         "（2）修复：移除可能导致问题的PL4。\n\n" +
+         "（1）优化初始转速表，尽量使其开箱即用，无需手动调整；\n" +
+         "（2）温度改为始终显示实时值，风扇配置中的转速平滑程度改为直接作用于转速；\n" +
+         "（3）自动模式下改为获取到温度之后才会控制风扇，实现更加平滑的转速控制。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +
