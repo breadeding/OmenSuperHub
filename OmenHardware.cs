@@ -273,7 +273,7 @@ namespace OmenSuperHub {
 
     // PL2和PL1，立即生效，狂暴平衡都生效，直接对应功率W，1-254，需关闭ts，再点击狂暴模式失效
     public static void SetCpuPowerLimit(byte value) {
-      SendOmenBiosWmi(0x29, new byte[] { value, (byte)(value - 50), 0xFF, 0xFF }, 0);
+      SendOmenBiosWmi(0x29, new byte[] { value, value, 0xFF, 0xFF }, 0);
       //Console.WriteLine("SetCpuPowerLimit: " + value);
     }
 

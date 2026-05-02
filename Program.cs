@@ -661,7 +661,7 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(fanControlMenu);
 
       ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem("性能控制");
-      if (platformSettings.UnleashedModeSupport) {
+      if (platformSettings != null && platformSettings.UnleashedModeSupport) {
         performanceControlMenu.DropDownItems.Add(CreateMenuItem("大师模式", "fanModeGroup", (s, e) => {
           fanMode = "extreme";
           SetFanMode(0x04);
@@ -717,7 +717,7 @@ namespace OmenSuperHub {
             }
           }
         }
-        if (platformSettings.UnleashedModeSupport)
+        if (platformSettings != null && platformSettings.UnleashedModeSupport)
           SetFanMode(0x04);
         else
           SetFanMode(0x31);
@@ -739,7 +739,7 @@ namespace OmenSuperHub {
         SaveConfig("DBVersion");
       }, true));
       performanceControlMenu.DropDownItems.Add(DBMenu);
-      if (platformSettings.TppSupport) {
+      if (platformSettings != null && platformSettings.TppSupport) {
         ToolStripMenuItem tppMenu = new ToolStripMenuItem("Tpp");
         tppMenu.DropDownItems.Add(CreateMenuItem("最大", "tppPowerGroup", (s, e) => {
           tppPower = "max";
@@ -1472,7 +1472,7 @@ namespace OmenSuperHub {
               SaveConfig("DBVersion");
               UpdateCheckedState("DBGroup", "普通版本");
             } else {
-              if (platformSettings.UnleashedModeSupport)
+              if (platformSettings != null && platformSettings.UnleashedModeSupport)
                 SetFanMode(0x04);
               else
                 SetFanMode(0x31);
@@ -2135,7 +2135,7 @@ namespace OmenSuperHub {
                   }
                 }
                 DBVersion = 1;
-                if (platformSettings.UnleashedModeSupport)
+                if (platformSettings != null && platformSettings.UnleashedModeSupport)
                   SetFanMode(0x04);
                 else
                   SetFanMode(0x31);
@@ -2263,7 +2263,7 @@ namespace OmenSuperHub {
           } else {
             // 如果注册表键不存在，可以使用默认值
             LoadFanConfig("silent.txt");
-            if (platformSettings.UnleashedModeSupport)
+            if (platformSettings != null && platformSettings.UnleashedModeSupport)
               SetFanMode(0x04);
             else
               SetFanMode(0x31);
