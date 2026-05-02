@@ -34,7 +34,7 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", powerLimit4 = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
+    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", powerLimit4 = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
     static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
@@ -788,6 +788,46 @@ namespace OmenSuperHub {
         }, false));
       }
       performanceControlMenu.DropDownItems.Add(pl4Menu);
+      if (platformSettings != null && platformSettings.UnleashedModeMaxIccMax > 0) {
+        ToolStripMenuItem iccMaxMenu = new ToolStripMenuItem("IccMax");
+        iccMaxMenu.DropDownItems.Add(CreateMenuItem("不设置", "iccMaxGroup", (s, e) => {
+          iccMax = "null";
+          SaveConfig("IccMax");
+        }, true));
+        for (int ampere = 150; ampere <= 350; ampere += 20) {
+          int currentAmpere = ampere;
+          iccMaxMenu.DropDownItems.Add(CreateMenuItem(currentAmpere + " A", "iccMaxGroup", (s, e) => {
+            iccMax = currentAmpere + " A";
+            SetIccMaxByWmi((decimal)currentAmpere);
+            SaveConfig("IccMax");
+          }, false));
+        }
+        performanceControlMenu.DropDownItems.Add(iccMaxMenu);
+      }
+      if (IsLoadLineSupported()) {
+        ToolStripMenuItem acLoadLineMenu = new ToolStripMenuItem("AC Load Line");
+        acLoadLineMenu.DropDownItems.Add(CreateMenuItem("不设置", "acLoadLineGroup", (s, e) => {
+          acLoadline = "null";
+          SaveConfig("AcLoadLine");
+        }, true));
+        int maxSupportedLevel = GetLoadLineSupportLevels();
+        for (int level = 1; level <= maxSupportedLevel + 5; level++) {
+          int currentLevel = level;
+          string displayText = (180 - 10 * currentLevel).ToString();
+          acLoadLineMenu.DropDownItems.Add(CreateMenuItem(displayText, "acLoadLineGroup", (s, e) => {
+            acLoadline = currentLevel.ToString();
+            if (currentLevel > maxSupportedLevel) {
+              trayIcon.BalloonTipTitle = "AC Load Line 提示";
+              trayIcon.BalloonTipText = $"当前设备支持的最大 AC Load Line 为 {180 - 10 * maxSupportedLevel}，将尝试设置 {180 - 10 * currentLevel}。";
+              trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
+              trayIcon.ShowBalloonTip(3000);
+            }
+            SetLoadLine(currentLevel);
+            SaveConfig("AcLoadLine");
+          }, false));
+        }
+        performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
+      }
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem("不设置", "cpuPowerGroup", (s, e) => {
         cpuPower = "null";
@@ -1700,6 +1740,17 @@ namespace OmenSuperHub {
       var gpuTempList = fanCustom.FanTable.Fan_Table_GPU_Temperature_List;
       var gpuSpeedList = fanCustom.FanTable.Fan_Table_GPU_Fan_Speed_List;
 
+      // ===== 转速为0的项，对应温度也改为0 =====
+      for (int i = 0; i < Math.Min(cpuTempList.Count, cpuSpeedList.Count); i++) {
+        if (cpuSpeedList[i] == 0)
+          cpuTempList[i] = 0;
+      }
+
+      for (int i = 0; i < Math.Min(gpuTempList.Count, gpuSpeedList.Count); i++) {
+        if (gpuSpeedList[i] == 0)
+          gpuTempList[i] = 0;
+      }
+
       // 写入新格式文件（速度乘100转为RPM，与SetFanLevel的百分比对应）
       var lines = new List<string>
       {
@@ -1826,10 +1877,10 @@ namespace OmenSuperHub {
     // Generate default temperature-fan speed mapping
     static void GenerateDefaultMapping(string filePath) {
       // 硬编码默认映射（与原逻辑一致，转换为新格式）
-      var cpuTempList = new List<int> { 30, 50, 60, 85, 100 };
-      var cpuSpeedList = new List<int> { 0, 1600, 2000, 4000, 5600 };   // RPM
-      var gpuTempList = new List<int> { 20, 40, 50, 75, 90 };
-      var gpuSpeedList = new List<int> { 0, 1600, 2000, 4000, 5600 };
+      var cpuTempList = new List<int> { 50, 60, 85, 100 };
+      var cpuSpeedList = new List<int> { 1600, 2000, 4000, 5600 };   // RPM
+      var gpuTempList = new List<int> { 40, 50, 75, 90 };
+      var gpuSpeedList = new List<int> { 1600, 2000, 4000, 5600 };
 
       var lines = new List<string>
       {
@@ -1927,6 +1978,8 @@ namespace OmenSuperHub {
               key.SetValue("DataLocalize", dataLocalize);
               key.SetValue("TppPower", tppPower);
               key.SetValue("PL4Power", powerLimit4);
+              key.SetValue("IccMax", iccMax);
+              key.SetValue("AcLoadLine", acLoadline);
             } else {
               switch (configName) {
                 case "FanTable":
@@ -1988,6 +2041,12 @@ namespace OmenSuperHub {
                   break;
                 case "PL4Power":
                   key.SetValue("PL4Power", powerLimit4);
+                  break;
+                case "IccMax":
+                  key.SetValue("IccMax", iccMax);
+                  break;
+                case "AcLoadLine":
+                  key.SetValue("AcLoadLine", acLoadline);
                   break;
               }
             }
@@ -2095,6 +2154,25 @@ namespace OmenSuperHub {
                 }
                 UpdateCheckedState("pl4PowerGroup", powerLimit4);
               }
+            }
+
+            iccMax = (string)key.GetValue("IccMax", "null");
+            if (iccMax == "null") {
+              UpdateCheckedState("iccMaxGroup", "不设置");
+            } else if (iccMax.Contains(" A")) {
+              if (int.TryParse(iccMax.Replace(" A", "").Trim(), out int ampVal) && ampVal >= 150 && ampVal <= 350) {
+                SetIccMaxByWmi((decimal)ampVal);
+                UpdateCheckedState("iccMaxGroup", iccMax);
+              }
+            }
+
+            acLoadline = (string)key.GetValue("AcLoadLine", "null");
+            if (acLoadline == "null") {
+              UpdateCheckedState("acLoadLineGroup", "不设置");
+            } else if (int.TryParse(acLoadline, out int llVal) && llVal >= 1) {
+              SetLoadLine(llVal);
+              string llDisplay = (180 - 10 * llVal).ToString();
+              UpdateCheckedState("acLoadLineGroup", llDisplay);
             }
 
             cpuPower = (string)key.GetValue("CpuPower", "null");

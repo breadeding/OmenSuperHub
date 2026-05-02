@@ -174,6 +174,26 @@ namespace OmenSuperHub {
       Console.WriteLine("=============================================");
     }
 
+    public static bool IsLoadLineSupported() {
+      byte[] data = GetSystemDesignData();
+      if (data == null || data.Length < 10)
+        return false;
+
+      byte b9 = data[9];
+      int levels = b9 & 0x0F;           // 低 4 位：支持的级别数
+      int defaultLL = (b9 >> 4) & 0x0F; // 高 4 位：默认级别
+
+      return levels > 0 && defaultLL > 0;
+    }
+
+    public static int GetLoadLineSupportLevels() {
+      byte[] data = GetSystemDesignData();
+      if (data == null || data.Length < 10)
+        return 0;
+
+      return data[9] & 0x0F;
+    }
+
     // 设置 LoadLine（负载线校准）级别,level 取值范围取决于平台，通常为 1 ~ LoadLineSupportLevels
     public static void SetLoadLine(int level) {
       byte[] inputData = new byte[128];
@@ -283,7 +303,7 @@ namespace OmenSuperHub {
     }
 
     public static bool IsTwoBytePL4Supported() {
-      byte[] data = SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
+      byte[] data = GetSystemDesignData();
       if (data == null || data.Length < 5) {
         Console.WriteLine("[ERROR] 无法获取 SystemDesignData");
         return false;
