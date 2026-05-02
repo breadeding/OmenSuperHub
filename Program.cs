@@ -34,7 +34,7 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", powerLimit4 = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
+    static string fanTable = "cool", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
     static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
@@ -606,12 +606,12 @@ namespace OmenSuperHub {
         fanTable = "silent";
         LoadFanConfig("silent.txt");
         SaveConfig("FanTable");
-      }, true));
+      }, false));
       fanConfigMenu.DropDownItems.Add(CreateMenuItem("降温模式", "fanTableGroup", (s, e) => {
         fanTable = "cool";
         LoadFanConfig("cool.txt");
         SaveConfig("FanTable");
-      }, false));
+      }, true));
       fanConfigMenu.DropDownItems.Add(new ToolStripSeparator());
       fanConfigMenu.DropDownItems.Add(CreateMenuItem("实时", "tempSensitivityGroup", (s, e) => {
         tempSensitivity = "realtime";
@@ -760,34 +760,34 @@ namespace OmenSuperHub {
         }
         performanceControlMenu.DropDownItems.Add(tppMenu);
       }
-      ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
-      pl4Menu.DropDownItems.Add(CreateMenuItem("不设置", "pl4PowerGroup", (s, e) => {
-        powerLimit4 = "null";
-        SaveConfig("PL4Power");
-      }, true));
-      pl4Menu.DropDownItems.Add(CreateMenuItem("最大", "pl4PowerGroup", (s, e) => {
-        powerLimit4 = "max";
-        if (isTwoBytePL4) {
-          SetPL4DoubleByte(500);
-        } else {
-          SetCpuPowerLimit4(254);
-        }
-        SaveConfig("PL4Power");
-      }, false));
-      int doubleFactor = isTwoBytePL4 ? 2 : 1;
-      for (int power = 40; power <= 240 * doubleFactor; power += 20 * doubleFactor) {
-        int currentPower = power;
-        pl4Menu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "pl4PowerGroup", (s, e) => {
-          powerLimit4 = currentPower + " W";
-          if (isTwoBytePL4) {
-            SetPL4DoubleByte((ushort)currentPower);
-          } else {
-            SetCpuPowerLimit4((byte)currentPower);
-          }
-          SaveConfig("PL4Power");
-        }, false));
-      }
-      performanceControlMenu.DropDownItems.Add(pl4Menu);
+      //ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
+      //pl4Menu.DropDownItems.Add(CreateMenuItem("不设置", "pl4PowerGroup", (s, e) => {
+      //  powerLimit4 = "null";
+      //  SaveConfig("PL4Power");
+      //}, true));
+      //pl4Menu.DropDownItems.Add(CreateMenuItem("最大", "pl4PowerGroup", (s, e) => {
+      //  powerLimit4 = "max";
+      //  if (isTwoBytePL4) {
+      //    SetPL4DoubleByte(500);
+      //  } else {
+      //    SetCpuPowerLimit4(254);
+      //  }
+      //  SaveConfig("PL4Power");
+      //}, false));
+      //int doubleFactor = isTwoBytePL4 ? 2 : 1;
+      //for (int power = 40; power <= 240 * doubleFactor; power += 20 * doubleFactor) {
+      //  int currentPower = power;
+      //  pl4Menu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "pl4PowerGroup", (s, e) => {
+      //    powerLimit4 = currentPower + " W";
+      //    if (isTwoBytePL4) {
+      //      SetPL4DoubleByte((ushort)currentPower);
+      //    } else {
+      //      SetCpuPowerLimit4((byte)currentPower);
+      //    }
+      //    SaveConfig("PL4Power");
+      //  }, false));
+      //}
+      //performanceControlMenu.DropDownItems.Add(pl4Menu);
       if (platformSettings != null && platformSettings.UnleashedModeMaxIccMax > 0) {
         ToolStripMenuItem iccMaxMenu = new ToolStripMenuItem("IccMax");
         iccMaxMenu.DropDownItems.Add(CreateMenuItem("不设置", "iccMaxGroup", (s, e) => {
@@ -838,7 +838,7 @@ namespace OmenSuperHub {
         SetCpuPowerLimit(254);
         SaveConfig("CpuPower");
       }, false));
-      for (int power = 10; power <= 120; power += 10) {
+      for (int power = 10; power <= 200; power += 10) {
         int currentPower = power;  // 创建一个局部变量，保存当前的 power 值
         cpuPowerMenu.DropDownItems.Add(CreateMenuItem(power + " W", "cpuPowerGroup", (s, e) => {
           cpuPower = currentPower + " W";
@@ -1716,10 +1716,11 @@ namespace OmenSuperHub {
     static void LoadDefaultFanConfig(string filePath) {
       SwFanControlCustom fanCustom = null;
       if (platformSettings != null) {
+        bool hasUnleashed = platformSettings.SwFanControlCustomUnleashed?.FanTable != null;
         if (filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0)
-          fanCustom = platformSettings.SwFanControlCustomDefault;
+          fanCustom = hasUnleashed ? platformSettings.SwFanControlCustomPerformance : platformSettings.SwFanControlCustomDefault;
         else if (filePath.IndexOf("cool", StringComparison.OrdinalIgnoreCase) >= 0)
-          fanCustom = platformSettings.SwFanControlCustomPerformance;
+          fanCustom = hasUnleashed ? platformSettings.SwFanControlCustomUnleashed : platformSettings.SwFanControlCustomPerformance;
       }
 
       if (fanCustom?.FanTable == null ||
@@ -1977,7 +1978,7 @@ namespace OmenSuperHub {
               key.SetValue("FloatingBar", floatingBar);
               key.SetValue("DataLocalize", dataLocalize);
               key.SetValue("TppPower", tppPower);
-              key.SetValue("PL4Power", powerLimit4);
+              //key.SetValue("PL4Power", powerLimit4);
               key.SetValue("IccMax", iccMax);
               key.SetValue("AcLoadLine", acLoadline);
             } else {
@@ -2040,7 +2041,7 @@ namespace OmenSuperHub {
                   key.SetValue("TppPower", tppPower);
                   break;
                 case "PL4Power":
-                  key.SetValue("PL4Power", powerLimit4);
+                  //key.SetValue("PL4Power", powerLimit4);
                   break;
                 case "IccMax":
                   key.SetValue("IccMax", iccMax);
@@ -2061,7 +2062,7 @@ namespace OmenSuperHub {
       try {
         using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
           if (key != null) {
-            fanTable = (string)key.GetValue("FanTable", "silent");
+            fanTable = (string)key.GetValue("FanTable", "cool");
             if (fanTable.Contains("cool")) {
               LoadFanConfig("cool.txt");
               UpdateCheckedState("fanTableGroup", "降温模式");
@@ -2133,28 +2134,28 @@ namespace OmenSuperHub {
               }
             }
 
-            powerLimit4 = (string)key.GetValue("PL4Power", "null");
-            if (powerLimit4 == "null") {
-              UpdateCheckedState("pl4PowerGroup", "不设置");
-            } else if (powerLimit4 == "max") {
-              if (isTwoBytePL4) {
-                SetPL4DoubleByte(500);
-              } else {
-                SetCpuPowerLimit4(254);
-              }
-              UpdateCheckedState("pl4PowerGroup", "最大");
-            } else if (powerLimit4.Contains(" W")) {
-              int value = int.Parse(powerLimit4.Replace(" W", "").Trim());
-              int doubleFactor = isTwoBytePL4 ? 2 : 1;
-              if (value >= 40 && value <= 240 * doubleFactor) {
-                if (isTwoBytePL4) {
-                  SetPL4DoubleByte((ushort)value);
-                } else {
-                  SetCpuPowerLimit4((byte)value);
-                }
-                UpdateCheckedState("pl4PowerGroup", powerLimit4);
-              }
-            }
+            //powerLimit4 = (string)key.GetValue("PL4Power", "null");
+            //if (powerLimit4 == "null") {
+            //  UpdateCheckedState("pl4PowerGroup", "不设置");
+            //} else if (powerLimit4 == "max") {
+            //  if (isTwoBytePL4) {
+            //    SetPL4DoubleByte(500);
+            //  } else {
+            //    SetCpuPowerLimit4(254);
+            //  }
+            //  UpdateCheckedState("pl4PowerGroup", "最大");
+            //} else if (powerLimit4.Contains(" W")) {
+            //  int value = int.Parse(powerLimit4.Replace(" W", "").Trim());
+            //  int doubleFactor = isTwoBytePL4 ? 2 : 1;
+            //  if (value >= 40 && value <= 240 * doubleFactor) {
+            //    if (isTwoBytePL4) {
+            //      SetPL4DoubleByte((ushort)value);
+            //    } else {
+            //      SetCpuPowerLimit4((byte)value);
+            //    }
+            //    UpdateCheckedState("pl4PowerGroup", powerLimit4);
+            //  }
+            //}
 
             iccMax = (string)key.GetValue("IccMax", "null");
             if (iccMax == "null") {
