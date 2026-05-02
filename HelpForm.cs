@@ -49,7 +49,7 @@ namespace OmenSuperHub {
          "（2）新增功能：为性能控制菜单中的Tpp、PL4、IccMax、AC Load Line和CPU功率选项添加“不设置”选项并作为默认值；\n" +
          "（3）修复：更改转速配置文件格式并使用新的默认配置方法，以支持更多机型；\n" +
          "（4）修复：修改CTGP/DB配置名称为最大GPU功率、中等GPU功率和最小GPU功率，以避免错误使用；\n" +
-         "（5）修复：启动时直接调度风扇，而不会延迟一段时间；\n\n" +
+         "（5）修复：启动时直接调度风扇，而不会延迟一段时间。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +
