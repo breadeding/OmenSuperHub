@@ -34,7 +34,7 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", cpuPower = "max", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off", tppPower = "max", powerLimit4 = "max";
+    static string fanTable = "silent", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", powerLimit4 = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
     static bool monitorGPU = true, isConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
@@ -741,11 +741,15 @@ namespace OmenSuperHub {
       performanceControlMenu.DropDownItems.Add(DBMenu);
       if (platformSettings != null && platformSettings.TppSupport) {
         ToolStripMenuItem tppMenu = new ToolStripMenuItem("Tpp");
+        tppMenu.DropDownItems.Add(CreateMenuItem("不设置", "tppPowerGroup", (s, e) => {
+          tppPower = "null";
+          SaveConfig("TppPower");
+        }, true));
         tppMenu.DropDownItems.Add(CreateMenuItem("最大", "tppPowerGroup", (s, e) => {
           tppPower = "max";
           SetConcurrentTdp(254);
           SaveConfig("TppPower");
-        }, true));
+        }, false));
         for (int power = 20; power <= 240; power += 20) {
           int currentPower = power;
           tppMenu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "tppPowerGroup", (s, e) => {
@@ -757,6 +761,10 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(tppMenu);
       }
       ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
+      pl4Menu.DropDownItems.Add(CreateMenuItem("不设置", "pl4PowerGroup", (s, e) => {
+        powerLimit4 = "null";
+        SaveConfig("PL4Power");
+      }, true));
       pl4Menu.DropDownItems.Add(CreateMenuItem("最大", "pl4PowerGroup", (s, e) => {
         powerLimit4 = "max";
         if (isTwoBytePL4) {
@@ -765,8 +773,7 @@ namespace OmenSuperHub {
           SetCpuPowerLimit4(254);
         }
         SaveConfig("PL4Power");
-      }, true));
-
+      }, false));
       int doubleFactor = isTwoBytePL4 ? 2 : 1;
       for (int power = 40; power <= 240 * doubleFactor; power += 20 * doubleFactor) {
         int currentPower = power;
@@ -782,11 +789,15 @@ namespace OmenSuperHub {
       }
       performanceControlMenu.DropDownItems.Add(pl4Menu);
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
+      cpuPowerMenu.DropDownItems.Add(CreateMenuItem("不设置", "cpuPowerGroup", (s, e) => {
+        cpuPower = "null";
+        SaveConfig("CpuPower");
+      }, true));
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem("最大", "cpuPowerGroup", (s, e) => {
         cpuPower = "max";
         SetCpuPowerLimit(254);
         SaveConfig("CpuPower");
-      }, true));
+      }, false));
       for (int power = 10; power <= 120; power += 10) {
         int currentPower = power;  // 创建一个局部变量，保存当前的 power 值
         cpuPowerMenu.DropDownItems.Add(CreateMenuItem(power + " W", "cpuPowerGroup", (s, e) => {
@@ -2049,8 +2060,10 @@ namespace OmenSuperHub {
                 break;
             }
 
-            tppPower = (string)key.GetValue("TppPower", "max");
-            if (tppPower == "max") {
+            tppPower = (string)key.GetValue("TppPower", "null");
+            if (tppPower == "null") {
+              UpdateCheckedState("tppPowerGroup", "不设置");
+            } else if (tppPower == "max") {
               SetConcurrentTdp(254);
               UpdateCheckedState("tppPowerGroup", "最大");
             } else if (tppPower.Contains(" W")) {
@@ -2061,8 +2074,10 @@ namespace OmenSuperHub {
               }
             }
 
-            powerLimit4 = (string)key.GetValue("PL4Power", "max");
-            if (powerLimit4 == "max") {
+            powerLimit4 = (string)key.GetValue("PL4Power", "null");
+            if (powerLimit4 == "null") {
+              UpdateCheckedState("pl4PowerGroup", "不设置");
+            } else if (powerLimit4 == "max") {
               if (isTwoBytePL4) {
                 SetPL4DoubleByte(500);
               } else {
@@ -2082,8 +2097,10 @@ namespace OmenSuperHub {
               }
             }
 
-            cpuPower = (string)key.GetValue("CpuPower", "max");
-            if (cpuPower == "max") {
+            cpuPower = (string)key.GetValue("CpuPower", "null");
+            if (cpuPower == "null") {
+              UpdateCheckedState("cpuPowerGroup", "不设置");
+            } else if (cpuPower == "max") {
               SetCpuPowerLimit(254);
               UpdateCheckedState("cpuPowerGroup", "最大");
             } else if (cpuPower.Contains(" W")) {
