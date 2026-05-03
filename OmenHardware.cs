@@ -6,6 +6,8 @@ using System.Management;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
+using System.Windows.Media;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
@@ -347,6 +349,99 @@ namespace OmenSuperHub {
       for (int i = 25; i <= 36; i++)
         dataIn[i] = 0x80;
       SendOmenBiosWmi(0x03, dataIn, 0, 0x20009);
+    }
+
+    /// <summary>读取指定分区的灯光颜色</summary>
+    /// <param name="zone">分区编号 (1-4)</param>
+    public static Color GetLightZoneColor(int zone) {
+      byte[] input = new byte[4];
+      input[0] = (byte)zone;
+      byte[] result = SendOmenBiosWmi(0x04, input, 4, 0x20009);
+      if (result != null && result.Length >= 3)
+        return Color.FromRgb(result[0], result[1], result[2]);
+      return Colors.Black;
+    }
+
+    /// <summary>设置动画效果（使用默认参数）</summary>
+    public static int GetCurrentAnimationEffect() {
+      byte[] input = new byte[4];
+      byte[] result = SendOmenBiosWmi(0x0C, input, 4, 0x20009); // commandType=12
+      if (result == null || result.Length < 1)
+        return -1;
+      return result[0];  // 效果编号，如 2=COLOR_CYCLE, 8=AUDIO_PULSE 等
+    }
+
+    /// <summary>
+    /// 设置键盘灯光动画效果
+    /// </summary>
+    /// <param name="device">设备类型：1=LightBar, 2=Keyboard</param>
+    /// <param name="effectId">效果编号：2=COLOR_CYCLE颜色循环, 3=STARLIGHT星光, 4=BREATHING呼吸, 6=WAVE波浪,
+    /// 7=RAINDROP雨滴, 8=AUDIO_PULSE音频脉冲, 9=CONFETTI五彩纸屑, 10=SUN太阳, 11=SWIPE划过</param>
+    /// <param name="brightness">亮度 0-100</param>
+    /// <param name="speed">速度：0=慢, 1=中, 2=快</param>
+    /// <param name="direction">方向：0=左, 1=右</param>
+    /// <param name="theme">主题：0=银河, 1=火山, 2=丛林, 3=海洋, 4=自定义</param>
+    /// <param name="customColors">自定义颜色列表（仅 theme=4 时有效，最多 4 个颜色）</param>
+    public static void SetLightAnimation(
+        byte device,
+        int effectId,
+        byte brightness = 100,
+        byte speed = 1,
+        byte direction = 0,
+        byte theme = 0,
+        List<Color> customColors = null) {
+      byte[] data = new byte[128];
+
+      // [0] 设备类型
+      data[0] = device;
+
+      // [1] 效果编号
+      data[1] = (byte)effectId;
+
+      // [2] 速度 + 方向 + 主题（严格遵照官方位域编码）
+      // Bit0-1: 速度 (0=慢,1=中,2=快)
+      // Bit2-3: 方向 (4=左,8=右)
+      // Bit4-7: 主题 (0x10=银河,0x20=火山,0x30=丛林,0x40=海洋,0x50=自定义)
+      data[2] &= 0xFC;  // 清除速度位
+      switch (speed) {
+        case 0: /* slow, 值=0 */ break;
+        case 1: data[2]++; break;      // medium = 1
+        case 2: data[2] += 2; break;   // fast = 2
+      }
+
+      data[2] &= 0xF3;  // 清除方向位
+      switch (direction) {
+        case 0: data[2] += 4; break;   // LEFT = 4
+        case 1: data[2] += 8; break;   // RIGHT = 8
+      }
+
+      data[2] &= 0x0F;  // 清除主题位，保留低4位
+      switch (theme) {
+        case 0: data[2] += 0x10; break; // GALAXY
+        case 1: data[2] += 0x20; break; // VOLCANO
+        case 2: data[2] += 0x30; break; // JUNGLE
+        case 3: data[2] += 0x40; break; // OCEAN
+        case 4: data[2] += 0x50; break; // CUSTOM
+      }
+
+      // [3] 亮度
+      data[3] = brightness;
+
+      // [4]-[5] 保留为 0 (tribe 和 bass，音频律动用)
+      // data[4] = 0;
+      // data[5] = 0;
+
+      // [6]-[18] 自定义颜色 (仅 CUSTOM 主题时填充)
+      if (theme == 4 && customColors != null && customColors.Count > 0) {
+        data[6] = (byte)customColors.Count;  // 颜色数量
+        for (int i = 0; i < Math.Min(customColors.Count, 4); i++) {
+          data[7 + i * 3] = customColors[i].R;
+          data[8 + i * 3] = customColors[i].G;
+          data[9 + i * 3] = customColors[i].B;
+        }
+      }
+
+      SendOmenBiosWmi(0x0B, data, 0, 0x20009);
     }
 
     //// 似乎没有作用，且不支持AMD
