@@ -72,6 +72,7 @@ namespace OmenSuperHub {
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
     static ToolStripMenuItem adapterPowerMenu;
+
     static bool isSysInfoMenuOpen = false;
     static int? maxCPUTemp = null;
     static int maxGPUTemp = 87;
@@ -182,29 +183,6 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
-
-        // 读取当前模式
-        //GraphicsMode current = GetGfxMode();
-        //Console.WriteLine($"当前显卡模式：{current}");
-
-        // 设置
-        //NvidiaAPI_SYS_UIControl(false);
-
-        // 检查支持的模式
-        byte supported = GetSupportedGfxModes();
-        bool nvddsSupported = (supported & 0x08) != 0; // SupportMode_DDS = 8
-        Console.WriteLine($"NVIDIA DDS 支持: {nvddsSupported}");
-
-        if (AmdGpuSwitcher.IsSupported()) {
-          var current = AmdGpuSwitcher.GetMode();
-          Console.WriteLine($"当前模式: {(current == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED ? "独显直连" : "混合输出")}");
-
-          // 切换到独显直连
-          //AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED);
-          //Console.WriteLine("已切换");
-        } else {
-          Console.WriteLine("该设备不支持 AMD SmartAccess Graphics");
-        }
 
         Application.Run();
       }
@@ -908,21 +886,42 @@ namespace OmenSuperHub {
         RestoreCPUPower();
       }, false));
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("最大GPU功率", "gpuPowerGroup", (s, e) => {
-        gpuPower = "max";
-        SetMaxGpuPower();
-        SaveConfig("GpuPower");
-      }, true));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("中等GPU功率", "gpuPowerGroup", (s, e) => {
-        gpuPower = "med";
-        SetMedGpuPower();
-        SaveConfig("GpuPower");
-      }, false));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("最小GPU功率", "gpuPowerGroup", (s, e) => {
-        gpuPower = "min";
-        SetMinGpuPower();
-        SaveConfig("GpuPower");
-      }, false));
+      // 图形模式
+      ToolStripMenuItem graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
+      if (HasAmdGpu()) {
+        var initAmdMode = AmdGpuSwitcher.GetMode();
+        bool amdIsDiscrete = initAmdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
+        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("独显直连", "graphicsModeGroup", (s, e) => {
+          AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED);
+        }, amdIsDiscrete));
+        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("混合输出", "graphicsModeGroup", (s, e) => {
+          AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_DISABLED);
+        }, !amdIsDiscrete));
+      } else {
+        var initNvMode = GetGfxMode();
+        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("NV动态切换", "graphicsModeGroup", (s, e) => {
+          LaunchDDS();
+        }, initNvMode == GraphicsMode.Hybrid));
+        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("独显直连", "graphicsModeGroup", (s, e) => {
+          LaunchDDS();
+        }, initNvMode == GraphicsMode.Discrete));
+      }
+      performanceControlMenu.DropDownItems.Add(graphicsModeControlMenu);
+      graphicsModeControlMenu.DropDownOpening += (s, e) => {
+        if (HasAmdGpu()) {
+          var amdMode = AmdGpuSwitcher.GetMode();
+          bool isDisc = amdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
+          UpdateCheckedState("graphicsModeGroup", isDisc ? "独显直连" : "混合输出");
+        } else {
+          var nvMode = GetGfxMode();
+          string chk;
+          switch (nvMode) {
+            case GraphicsMode.Discrete: chk = "独显直连"; break;
+            default: chk = "NV动态切换"; break;
+          }
+          UpdateCheckedState("graphicsModeGroup", chk);
+        }
+      };
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
       DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
@@ -1070,6 +1069,23 @@ namespace OmenSuperHub {
         }, false));
       }
       performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
+      ToolStripMenuItem gpuPowerMenu = new ToolStripMenuItem("GPU功率");
+      gpuPowerMenu.DropDownItems.Add(CreateMenuItem("最大", "gpuPowerGroup", (s, e) => {
+        gpuPower = "max";
+        SetMaxGpuPower();
+        SaveConfig("GpuPower");
+      }, true));
+      gpuPowerMenu.DropDownItems.Add(CreateMenuItem("中等", "gpuPowerGroup", (s, e) => {
+        gpuPower = "med";
+        SetMedGpuPower();
+        SaveConfig("GpuPower");
+      }, false));
+      gpuPowerMenu.DropDownItems.Add(CreateMenuItem("最小", "gpuPowerGroup", (s, e) => {
+        gpuPower = "min";
+        SetMinGpuPower();
+        SaveConfig("GpuPower");
+      }, false));
+      performanceControlMenu.DropDownItems.Add(gpuPowerMenu);
       ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem("GPU频率限制");
       gpuClockMenu.DropDownItems.Add(CreateMenuItem("还原", "gpuClockGroup", (s, e) => {
         gpuClock = 0;
@@ -1123,8 +1139,8 @@ namespace OmenSuperHub {
         SaveConfig("MonitorCPU");
       }, true));
       monitorCPUMenu.DropDownItems.Add(CreateMenuItem("关闭CPU监控", "monitorCPUGroup", (s, e) => {
-        // 自动转速模式下禁止关闭监控
-        if (fanControl == "auto") {
+        // 自动转速模式下禁止彻底关闭监控
+        if (!monitorGPU && fanControl == "auto") {
           MessageBox.Show("当前为自动转速模式，若要关闭监控需切换为其他转速控制模式。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           UpdateCheckedState("monitorCPUGroup", monitorCPU ? "开启CPU监控" : "关闭CPU监控");
           return;
@@ -1167,8 +1183,8 @@ namespace OmenSuperHub {
         SaveConfig("MonitorGPU");
       }, true));
       monitorGPUMenu.DropDownItems.Add(CreateMenuItem("关闭GPU监控", "monitorGPUGroup", (s, e) => {
-        // 自动转速模式下禁止关闭监控
-        if (fanControl == "auto") {
+        // 自动转速模式下禁止彻底关闭监控
+        if (!monitorCPU && fanControl == "auto") {
           MessageBox.Show("当前为自动转速模式，若要关闭监控需切换为其他转速控制模式。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
           return;
@@ -2634,15 +2650,15 @@ namespace OmenSuperHub {
             switch (gpuPower) {
               case "max":
                 SetMaxGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "最大GPU功率");
+                UpdateCheckedState("gpuPowerGroup", "最大");
                 break;
               case "med":
                 SetMedGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "中等GPU功率");
+                UpdateCheckedState("gpuPowerGroup", "中等");
                 break;
               case "min":
                 SetMinGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "最小GPU功率");
+                UpdateCheckedState("gpuPowerGroup", "最小");
                 break;
             }
 

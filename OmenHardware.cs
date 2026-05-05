@@ -125,8 +125,8 @@ namespace OmenSuperHub {
       Console.WriteLine($"  => AMD BIOS 定义超频 (Bit0) : {((b6 & 0x01) != 0 ? "是" : "否")}");
       Console.WriteLine();
 
-      // --- 字节 [7]: 保留/未使用 ---
-      Console.WriteLine($"[7] (保留) = 0x{data[7]:X2}");
+      // --- 字节 [7]: 图形模式支持标记 ---
+      Console.WriteLine($"[7] 图形模式支持标记 = 0x{data[7]:X2}");
       Console.WriteLine();
 
       // --- 字节 [8]: Default Concurrent TDP ---
@@ -193,7 +193,7 @@ namespace OmenSuperHub {
     }
 
     /// <summary>
-    /// 获取当前显卡模式（读取时返回的是当前生效的模式，可能需要重启后才会变化）
+    /// 获取当前显卡模式（指BIOS中的设置）
     /// </summary>
     public static GraphicsMode GetGfxMode() {
       byte[] result = SendOmenBiosWmi(82, new byte[4] { 0, 0, 0, 0 }, 4, 1);
