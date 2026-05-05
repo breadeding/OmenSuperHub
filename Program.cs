@@ -36,7 +36,9 @@ namespace OmenSuperHub {
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string fanTable = "cool", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
+    static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
+    static bool hasAmdGpu; // 启动时一次性检测，硬件状态不会改变
     static string monitorRefreshRate = "low"; // 刷新频率：low=1s, high=0.25s
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
@@ -127,6 +129,7 @@ namespace OmenSuperHub {
         alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
 
         isTwoBytePL4 = IsTwoBytePL4Supported();
+        hasAmdGpu = HasAmdGpu();
 
         // Initialize tray icon
         platformSettings = LoadPlatformSettingsFromDll();
@@ -231,7 +234,7 @@ namespace OmenSuperHub {
       }
 
       public static bool IsSupported() {
-        if (!HasAmdGpu())      // ★ 先检查硬件，避免触发 ADL
+        if (!hasAmdGpu)      // ★ 先检查硬件，避免触发 ADL
           return false;
 
         object helper = GetSAGHelper();
@@ -888,7 +891,7 @@ namespace OmenSuperHub {
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       // 图形模式
       ToolStripMenuItem graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
-      if (HasAmdGpu()) {
+      if (hasAmdGpu) {
         var initAmdMode = AmdGpuSwitcher.GetMode();
         bool amdIsDiscrete = initAmdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
         graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("独显直连", "graphicsModeGroup", (s, e) => {
@@ -908,7 +911,7 @@ namespace OmenSuperHub {
       }
       performanceControlMenu.DropDownItems.Add(graphicsModeControlMenu);
       graphicsModeControlMenu.DropDownOpening += (s, e) => {
-        if (HasAmdGpu()) {
+        if (hasAmdGpu) {
           var amdMode = AmdGpuSwitcher.GetMode();
           bool isDisc = amdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
           UpdateCheckedState("graphicsModeGroup", isDisc ? "独显直连" : "混合输出");
@@ -1143,6 +1146,7 @@ namespace OmenSuperHub {
         if (!monitorGPU && fanControl == "auto") {
           MessageBox.Show("当前为自动转速模式，若要关闭监控需切换为其他转速控制模式。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           UpdateCheckedState("monitorCPUGroup", monitorCPU ? "开启CPU监控" : "关闭CPU监控");
+          skipCheckedUpdate = true;
           return;
         }
         monitorCPU = false;
@@ -1187,6 +1191,7 @@ namespace OmenSuperHub {
         if (!monitorCPU && fanControl == "auto") {
           MessageBox.Show("当前为自动转速模式，若要关闭监控需切换为其他转速控制模式。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
           UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
+          skipCheckedUpdate = true;
           return;
         }
         monitorGPU = false;
@@ -1755,7 +1760,11 @@ namespace OmenSuperHub {
 
         action(s, e); // Perform the original action
         if (group != null) {
-          UpdateCheckedState(group, null, item);
+          if (skipCheckedUpdate) {
+            skipCheckedUpdate = false;
+          } else {
+            UpdateCheckedState(group, null, item);
+          }
         }
       };
       return item;
