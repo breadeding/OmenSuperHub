@@ -119,7 +119,9 @@ namespace OmenSuperHub {
         Application.SetCompatibleTextRenderingDefault(false);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
-        ExtractAndPreloadNativeDll("NvidiaApi.dll");
+        hasAmdGpu = HasAmdGpu();
+        if (!hasAmdGpu)
+          ExtractAndPreloadNativeDll("NvidiaApi.dll");
 
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
@@ -129,7 +131,6 @@ namespace OmenSuperHub {
         alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
 
         isTwoBytePL4 = IsTwoBytePL4Supported();
-        hasAmdGpu = HasAmdGpu();
 
         // Initialize tray icon
         platformSettings = LoadPlatformSettingsFromDll();
@@ -191,11 +192,19 @@ namespace OmenSuperHub {
       }
     }
 
-    [DllImport("NvidiaApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern int NvidiaAPI_SYS_UIControl(bool on);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
 
     public static int LaunchDDS() {
-      return NvidiaAPI_SYS_UIControl(true);
+      IntPtr hModule = GetModuleHandle("NvidiaApi.dll");
+      if (hModule == IntPtr.Zero) return -1;
+      IntPtr proc = GetProcAddress(hModule, "NvidiaAPI_SYS_UIControl");
+      if (proc == IntPtr.Zero) return -1;
+      var fn = Marshal.GetDelegateForFunctionPointer<Func<bool, int>>(proc);
+      return fn(true);
     }
 
     public static bool HasAmdGpu() {
