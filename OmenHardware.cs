@@ -50,6 +50,15 @@ namespace OmenSuperHub {
       return SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
     }
 
+    // 提取适配器功率
+    public static int GetAdapterPower() {
+      byte[] data = GetSystemDesignData();
+      if (data == null || data.Length < 2) {
+        return -1;
+      }
+      return data[0] | (data[1] << 8);
+    }
+
     // 解析并输出 SystemDesignData (128字节) 的关键比特位含义
     public static void PrintSystemDesignData() {
       byte[] data = GetSystemDesignData();
@@ -134,7 +143,7 @@ namespace OmenSuperHub {
       Console.WriteLine($"  DefaultLoadLine (高4位)       : {defaultLoadLine}");
       Console.WriteLine();
 
-      // --- 字节 [10]: 传感器能力 ---
+      // --- 字节 [10]: 传感器能力，但是为0也可能能获取传感器值 ---
       byte b10 = data[10];
       Console.WriteLine($"[10] 传感器能力 = 0x{b10:X2} ({Convert.ToString(b10, 2).PadLeft(8, '0')})");
       Console.WriteLine($"  Bit 0 (IR_Sensor)            : {(b10 & 0x01) != 0}");
@@ -147,7 +156,7 @@ namespace OmenSuperHub {
       Console.WriteLine($"  Bit 7                        : {(b10 & 0x80) != 0}");
       Console.WriteLine($"  => IR 传感器 (Bit0)          : {((b10 & 0x01) != 0 ? "是" : "否")}");
       Console.WriteLine($"  => 环境传感器 (Bit1)        : {((b10 & 0x02) != 0 ? "是" : "否")}");
-      Console.WriteLine($"  => PCH 过热支持 (Bit2)      : {((b10 & 0x04) != 0 ? "是" : "否")}");
+      Console.WriteLine($"  => PCH 传感器 (Bit2)      : {((b10 & 0x04) != 0 ? "是" : "否")}");
       Console.WriteLine($"  => VR 传感器 (Bit3)         : {((b10 & 0x08) != 0 ? "是" : "否")}");
       Console.WriteLine();
 
@@ -174,6 +183,100 @@ namespace OmenSuperHub {
       }
       Console.WriteLine(Environment.NewLine);
       Console.WriteLine("=============================================");
+    }
+
+    public enum GraphicsMode {
+      Hybrid = 0,    // 混合模式
+      Discrete = 1,  // 独显直连
+      Optimus = 2,   // Optimus
+      UMA = 3        // 仅核显
+    }
+
+    /// <summary>
+    /// 获取当前显卡模式（读取时返回的是当前生效的模式，可能需要重启后才会变化）
+    /// </summary>
+    public static GraphicsMode GetGfxMode() {
+      byte[] result = SendOmenBiosWmi(82, new byte[4] { 0, 0, 0, 0 }, 4, 1);
+      if (result != null && result.Length > 0) {
+        int modeValue = result[0] & 0x7F; // 忽略最高位（可能是状态位）
+        if (modeValue >= 0 && modeValue <= 3)
+          return (GraphicsMode)modeValue;
+      }
+      return GraphicsMode.Hybrid; // 默认返回混合模式
+    }
+
+    /// <summary>
+    /// 检查支持的模式（若需要）
+    /// 优先从系统设计数据字节[7]获取，失败时回退到旧版检测
+    /// </summary>
+    public static byte GetSupportedGfxModes() {
+      // 尝试从系统设计数据获取
+      byte[] designData = GetSystemDesignData();
+      if (designData != null && designData.Length > 7 && designData[7] != 0)
+        return designData[7];
+
+      // 回退到旧版检测：读取命令1, 82的返回码
+      byte[] result = SendOmenBiosWmi(82, null, 4, 1);
+      if (result != null && result.Length > 0) {
+        int code = result[0];
+        if (code != 3 && code != 4) // 3=无效命令, 4=无效命令类型
+          return 6; // 6 = 支持 legacy 模式
+      }
+      return 0; // 不支持
+    }
+
+    public static void PrintSupportedGfxModes(byte supported) {
+      Console.WriteLine($"支持的模式标志：0x{supported:X2}");
+
+      if (supported == 0) {
+        Console.WriteLine("  → 不支持任何显卡切换模式");
+        return;
+      }
+
+      var modes = new List<string>();
+      if ((supported & 1) != 0) modes.Add("UMA（仅集显）");
+      if ((supported & 2) != 0) modes.Add("Hybrid（混合输出/Optimus）");
+      if ((supported & 4) != 0) modes.Add("Discrete（独显直连）");
+      if ((supported & 8) != 0) modes.Add("DDS（动态切换/Advanced Optimus）");
+
+      Console.WriteLine("  → 支持的模式：");
+      foreach (var m in modes)
+        Console.WriteLine($"     - {m}");
+
+      // 用传统 switch 语句替代 switch 表达式
+      string constantName = null;
+      switch (supported) {
+        case 0:
+          constantName = "SupportMode_None";
+          break;
+        case 1:
+          constantName = "SupportMode_UMA";
+          break;
+        case 2:
+          constantName = "SupportMode_Hybrid";
+          break;
+        case 3:
+          constantName = "SupportMode_HybridUMA";
+          break;
+        case 4:
+          constantName = "SupportMode_Discrete";
+          break;
+        case 5:
+          constantName = "SupportMode_DiscrerteUMA";
+          break;
+        case 6:
+          constantName = "SupportMode_Legacy";
+          break;
+        case 8:
+          constantName = "SupportMode_DDS";
+          break;
+          // 其他组合没有对应常量，保持 null
+      }
+
+      if (constantName != null)
+        Console.WriteLine($"  → 对应常量：{constantName}");
+      else
+        Console.WriteLine("  （此为组合模式，无对应单一常量）");
     }
 
     public static bool IsLoadLineSupported() {
@@ -218,16 +321,38 @@ namespace OmenSuperHub {
     }
 
     // 通过 WMI 设置 IccMax（CPU 电流限制，单位安培）
-    public static bool SetIccMaxByWmi(decimal iccMaxAmpere) {
+    public static void SetIccMaxByWmi(decimal iccMaxAmpere) {
       byte[] inputData = new byte[128];
       inputData[0] = 0;
       inputData[1] = 15;        // 子命令：IccMax 操作
       inputData[2] = (byte)((int)iccMaxAmpere & 0xFF);
       inputData[3] = (byte)(((int)iccMaxAmpere >> 8) & 0xFF);
-      // 写操作，outputSize=0 表示不关心返回数据（官方亦如此）
       SendOmenBiosWmi(0x37, inputData, 0);
-      // 官方通过 BiosWmiCmd_SetSync 的返回值判断，此处简化处理，认为无异常即成功
-      return true;
+    }
+
+    /// <summary>
+    /// 根据传感器索引获取温度（摄氏度）
+    /// </summary>
+    /// <param name="sensorIndex">
+    /// 传感器索引：
+    /// 0 - IR 传感器（主板/系统内部温度，部分新机型会映射为环境传感器）
+    /// 1 - 环境传感器（机箱内空气温度）
+    /// 2 - PCH 芯片温度
+    /// 3 - VR（电压调节模块）温度
+    /// </param>
+    /// <returns>温度值（℃），失败或传感器无效时返回 -1</returns>
+    public static int GetSensorTemperature(byte sensorIndex) {
+      byte[] input = new byte[4];
+      input[0] = sensorIndex;   // 其余字节自动为 0
+
+      // commandType = 35 (0x23), 返回 4 字节
+      byte[] result = SendOmenBiosWmi(0x23, input, 4);
+
+      if (result != null && result.Length > 0) {
+        return result[0];
+      }
+
+      return -1;
     }
 
     /// <param name="ocp">输出：是否触发过流保护 (Bit 0)</param>

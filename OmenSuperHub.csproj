@@ -350,6 +350,18 @@
     <EmbeddedResource Include="Resources\HP.Omen.Core.Common.dll" />
     <EmbeddedResource Include="Resources\HP.Omen.Core.Model.Device.dll" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\NvidiaApi.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\HP.Omen.Core.Logger.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\HP.Omen.Logger.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\HP.Omen.Logger.APIs.dll" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
     <VisualStudio AllowExistingFolder="true" />

@@ -1,25 +1,25 @@
 ﻿using System;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Threading;
-using Microsoft.Win32.TaskScheduler;
 using System.Diagnostics;
-using System.Reflection;
-using Microsoft.Win32;
-using System.Text.RegularExpressions;
 using System.Drawing;
-using System.Runtime.ExceptionServices;
 using System.Globalization;
+using System.IO;
+using System.IO.Pipes;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
+using Microsoft.Win32;
+using Microsoft.Win32.TaskScheduler;
+using static OmenSuperHub.OmenHardware;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
-using LibreIHardware = LibreHardwareMonitor.Hardware.IHardware;
 using LibreHardwareType = LibreHardwareMonitor.Hardware.HardwareType;
+using LibreIHardware = LibreHardwareMonitor.Hardware.IHardware;
 using LibreISensor = LibreHardwareMonitor.Hardware.ISensor;
 using LibreSensorType = LibreHardwareMonitor.Hardware.SensorType;
-using static OmenSuperHub.OmenHardware;
-using System.IO.Pipes;
 
 namespace OmenSuperHub {
   static class Program {
@@ -67,6 +67,14 @@ namespace OmenSuperHub {
     static NotifyIcon trayIcon;
     static FloatingForm floatingForm;
     static PlatformSettings platformSettings;
+    static ToolStripMenuItem irSensorMenu;
+    static ToolStripMenuItem ambientSensorMenu;
+    static ToolStripMenuItem pchSensorMenu;
+    static ToolStripMenuItem vrSensorMenu;
+    static ToolStripMenuItem adapterPowerMenu;
+    static bool isSysInfoMenuOpen = false;
+    static int? maxCPUTemp = null;
+    static int maxGPUTemp = 87;
 
     [STAThread]
     static void Main(string[] args) {
@@ -108,6 +116,7 @@ namespace OmenSuperHub {
         Application.SetCompatibleTextRenderingDefault(false);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
+        ExtractAndPreloadNativeDll("NvidiaApi.dll");
 
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
@@ -120,6 +129,7 @@ namespace OmenSuperHub {
 
         // Initialize tray icon
         platformSettings = LoadPlatformSettingsFromDll();
+        InitMaxTemp();
         InitPlatformMaxFanSpeed();
         InitTrayIcon();
 
@@ -172,7 +182,149 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
+
+        // 读取当前模式
+        //GraphicsMode current = GetGfxMode();
+        //Console.WriteLine($"当前显卡模式：{current}");
+
+        // 设置
+        //NvidiaAPI_SYS_UIControl(false);
+
+        // 检查支持的模式
+        byte supported = GetSupportedGfxModes();
+        bool nvddsSupported = (supported & 0x08) != 0; // SupportMode_DDS = 8
+        Console.WriteLine($"NVIDIA DDS 支持: {nvddsSupported}");
+
+        if (AmdGpuSwitcher.IsSupported()) {
+          var current = AmdGpuSwitcher.GetMode();
+          Console.WriteLine($"当前模式: {(current == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED ? "独显直连" : "混合输出")}");
+
+          // 切换到独显直连
+          //AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED);
+          //Console.WriteLine("已切换");
+        } else {
+          Console.WriteLine("该设备不支持 AMD SmartAccess Graphics");
+        }
+
         Application.Run();
+      }
+    }
+
+    [DllImport("NvidiaApi.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int NvidiaAPI_SYS_UIControl(bool on);
+
+    public static int LaunchDDS() {
+      return NvidiaAPI_SYS_UIControl(true);
+    }
+
+    public static bool HasAmdGpu() {
+      try {
+        using (var searcher = new System.Management.ManagementObjectSearcher(
+            "root\\CIMV2", "SELECT Name FROM Win32_VideoController")) {
+          foreach (var obj in searcher.Get()) {
+            string name = obj["Name"]?.ToString() ?? "";
+            if (name.IndexOf("AMD", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("Radeon", StringComparison.OrdinalIgnoreCase) >= 0)
+              return true;
+          }
+        }
+      } catch { }
+      return false;
+    }
+
+    public static class AmdGpuSwitcher {
+      // 本地枚举定义（与 DLL 中的值完全对应）
+      public enum LocalADLSmartMuxEnableState {
+        ADL_MUXCONTROL_DISABLED = 0,
+        ADL_MUXCONTROL_ENABLED = 1
+      }
+
+      private static object GetSAGHelper() {
+        // 获取 SmartAccessGraphicsHelp 类型
+        Assembly commonAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .First(a => a.GetName().Name == "HP.Omen.Core.Common");
+        Type sagHelpType = commonAssembly.GetType(
+            "HP.Omen.Core.Common.Utilities.SmartAccessGraphicsHelp.SmartAccessGraphicsHelp");
+
+        // 获取 SAGHelper 静态属性（单例）
+        PropertyInfo sagHelperProp = sagHelpType.GetProperty("SAGHelper",
+            BindingFlags.Public | BindingFlags.Static);
+        return sagHelperProp.GetValue(null); // 静态属性，get
+      }
+
+      public static bool IsSupported() {
+        if (!HasAmdGpu())      // ★ 先检查硬件，避免触发 ADL
+          return false;
+
+        object helper = GetSAGHelper();
+        if (helper == null) return false;
+
+        PropertyInfo supportProp = helper.GetType().GetProperty(
+            "SmartAccessGraphicsSupport",
+            BindingFlags.Public | BindingFlags.Instance);
+        return (bool)supportProp.GetValue(helper);
+      }
+
+      public static LocalADLSmartMuxEnableState GetMode() {
+        object helper = GetSAGHelper();
+        if (helper == null) return LocalADLSmartMuxEnableState.ADL_MUXCONTROL_DISABLED;
+
+        PropertyInfo modeProp = helper.GetType().GetProperty(
+            "SmartAccessGraphicsMode",
+            BindingFlags.Public | BindingFlags.Instance);
+        int modeValue = (int)modeProp.GetValue(helper);
+        return (LocalADLSmartMuxEnableState)modeValue;
+      }
+
+      public static void SetMode(LocalADLSmartMuxEnableState mode) {
+        object helper = GetSAGHelper();
+        if (helper == null) return;
+
+        // 获取 DLL 中的枚举类型
+        Assembly commonAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .First(a => a.GetName().Name == "HP.Omen.Core.Common");
+        Type stateEnum = commonAssembly.GetType(
+            "HP.Omen.Core.Common.Utilities.SmartAccessGraphicsHelp.ADLSmartMuxEnableState");
+
+        // 将本地枚举值转换为 DLL 枚举对象
+        object modeValue = Enum.ToObject(stateEnum, (int)mode);
+
+        MethodInfo setMethod = helper.GetType().GetMethod(
+            "SetSmartAccessGraphicsMode",
+            BindingFlags.Public | BindingFlags.Instance);
+        setMethod.Invoke(helper, new[] { modeValue });
+      }
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern IntPtr LoadLibrary(string lpFileName);
+
+    private static void ExtractAndPreloadNativeDll(string dllName) {
+      var currentAssembly = Assembly.GetExecutingAssembly();
+
+      // 在嵌入资源中查找（资源名通常是 "命名空间.文件名"）
+      var resourceName = currentAssembly
+          .GetManifestResourceNames()
+          .FirstOrDefault(r => r.EndsWith(dllName, StringComparison.OrdinalIgnoreCase));
+
+      if (resourceName == null) {
+        throw new FileNotFoundException($"嵌入资源中找不到 {dllName}");
+      }
+
+      // 释放到程序目录（或 Temp 目录）
+      string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, dllName);
+
+      if (!File.Exists(outputPath)) {
+        using (var stream = currentAssembly.GetManifestResourceStream(resourceName))
+        using (var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write)) {
+          stream.CopyTo(fs);
+        }
+      }
+
+      // 提前加载，之后 DllImport 会自动复用
+      IntPtr handle = LoadLibrary(outputPath);
+      if (handle == IntPtr.Zero) {
+        throw new Exception($"LoadLibrary 失败，错误码: {Marshal.GetLastWin32Error()}");
       }
     }
 
@@ -647,9 +799,27 @@ namespace OmenSuperHub {
           break;
       }
 
-      trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("关于OSH", null, (s, e) => {
-        HelpForm.Instance.Show();
-      }, false));
+      ToolStripMenuItem sysInfoMenu = new ToolStripMenuItem("本机信息");
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"主板产品号: {GetSystemID()}") { Enabled = false });
+      if (platformMaxFanSpeed.HasValue) {
+        sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"CPU温度墙: {(maxCPUTemp.HasValue ? maxCPUTemp.Value.ToString() : "未知")}°C") { Enabled = false });
+      }
+      irSensorMenu = new ToolStripMenuItem("IR传感器: --°C") { Enabled = false };
+      ambientSensorMenu = new ToolStripMenuItem("环境传感器: --°C") { Enabled = false };
+      pchSensorMenu = new ToolStripMenuItem("PCH传感器: --°C") { Enabled = false };
+      vrSensorMenu = new ToolStripMenuItem("VR传感器: --°C") { Enabled = false };
+      adapterPowerMenu = new ToolStripMenuItem("适配器功率: --W") { Enabled = false };
+      sysInfoMenu.DropDownItems.Add(irSensorMenu);
+      sysInfoMenu.DropDownItems.Add(ambientSensorMenu);
+      sysInfoMenu.DropDownItems.Add(pchSensorMenu);
+      sysInfoMenu.DropDownItems.Add(vrSensorMenu);
+      sysInfoMenu.DropDownItems.Add(adapterPowerMenu);
+
+      // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
+      sysInfoMenu.DropDownOpening += (s, e) => { isSysInfoMenuOpen = true; };
+      sysInfoMenu.DropDownClosed += (s, e) => { isSysInfoMenuOpen = false; };
+
+      trayIcon.ContextMenuStrip.Items.Add(sysInfoMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
       ToolStripMenuItem fanConfigMenu = new ToolStripMenuItem("风扇配置");
@@ -1160,6 +1330,10 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(settingMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
+      trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("帮助", null, (s, e) => {
+        HelpForm.Instance.Show();
+      }, false));
+      trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
       trayIcon.ContextMenuStrip.Items.Add(CreateMenuItem("退出", null, (s, e) => Exit(), false));
 
       // Initialize tooltip update timer
@@ -1650,6 +1824,27 @@ namespace OmenSuperHub {
       if (customIcon == "dynamic")
         UpdateDynamicIcon();
 
+      // Debug/Release模式下可能不支持在非UI线程直接修改MenuItem.Text，因此使用Invoke
+      // 同时只有当 SysInfo 菜单处于展开状态时，才去进行耗时的查询和更新操作，以节省资源
+      ToolStrip parentStrip = irSensorMenu?.GetCurrentParent();
+      if (isSysInfoMenuOpen && parentStrip != null) {
+        if (parentStrip.InvokeRequired) {
+          parentStrip.Invoke(new System.Action(() => {
+            irSensorMenu.Text = $"IR传感器: {GetSensorTemperature(0)}°C";
+            ambientSensorMenu.Text = $"环境传感器: {GetSensorTemperature(1)}°C";
+            pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
+            vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
+            adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
+          }));
+        } else {
+          irSensorMenu.Text = $"IR传感器: {GetSensorTemperature(0)}°C";
+          ambientSensorMenu.Text = $"环境传感器: {GetSensorTemperature(1)}°C";
+          pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
+          vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
+          adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
+        }
+      }
+
       // 启用再禁用DB驱动
       if (countDB > 0) {
         countDB--;
@@ -1816,14 +2011,8 @@ namespace OmenSuperHub {
       if (monitorGPU && gpuTempReady)
         GPUTemp = (tempDisplayMode == "raw") ? rawTempGPU : smoothedGPUTemp;
 
-      int maxCPUTemp = 97;
-      if (platformSettings != null) {
-        int throttle = platformSettings.temperatureThrottlingPerformance;
-        if (throttle > 0) {
-          maxCPUTemp = throttle;
-        }
-      }
-      if (platformMaxFanSpeed.HasValue && smoothedCPUTemp > maxCPUTemp - 5 && fanControl.Contains(" RPM")) {
+      int currentMaxCPUTemp = maxCPUTemp ?? 97;
+      if (platformMaxFanSpeed.HasValue && smoothedCPUTemp > currentMaxCPUTemp - 5 && fanControl.Contains(" RPM")) {
         // 检查是否满足转速低于平台最大转速90%的条件
         bool fanSpeedCondition = true;
         if (platformMaxFanSpeed.Value > 0) {
@@ -1847,7 +2036,7 @@ namespace OmenSuperHub {
           SaveConfig("FanControl");
 
           trayIcon.BalloonTipTitle = "温度过高警告";
-          trayIcon.BalloonTipText = $"检测到CPU温度高于{maxCPUTemp - 5}℃ ({smoothedCPUTemp:F1}℃)，且风扇处于固定转速状态，OSH已自动切换为降温模式并将风扇控制切换为自动模式。";
+          trayIcon.BalloonTipText = $"检测到CPU温度高于{currentMaxCPUTemp - 5}℃ ({smoothedCPUTemp:F1}℃)，且风扇处于固定转速状态，OSH已自动切换为降温模式并将风扇控制切换为自动模式。";
           trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
           trayIcon.ShowBalloonTip(3000);
         }
@@ -1912,6 +2101,17 @@ namespace OmenSuperHub {
       Interlocked.Exchange(ref _isQuerying, 0);
     }
 
+    static void InitMaxTemp() {
+      maxCPUTemp = null;
+      maxGPUTemp = 87;
+      if (platformSettings != null) {
+        int throttle = platformSettings.temperatureThrottlingPerformance;
+        if (throttle > 0) {
+          maxCPUTemp = throttle;
+        }
+      }
+    }
+
     // 从 platformSettings 提取平台最大转速，独立于风扇配置加载，启动时调用一次
     static void InitPlatformMaxFanSpeed() {
       if (platformSettings == null) return;
@@ -1937,16 +2137,10 @@ namespace OmenSuperHub {
     }
 
     static void LoadDefaultFanConfig(string filePath) {
-      // ── 1. 从 platformSettings 获取 CPU 允许最高温度 ─────────────────────
-      int? maxCPUTemp = null;
-      int maxGPUTemp = 87;
+      // ── 1. 获取 CPU 与 GPU 的允许最高温度差 ─────────────────────
       int? tempDelta = null;
-      if (platformSettings != null) {
-        int throttle = platformSettings.temperatureThrottlingPerformance;
-        if (throttle > 0) {
-          maxCPUTemp = throttle;
-          tempDelta = maxCPUTemp - maxGPUTemp;
-        }
+      if (maxCPUTemp.HasValue) {
+        tempDelta = maxCPUTemp.Value - maxGPUTemp;
       }
 
       // ── 2. 若两个值均获取成功，则生成 silent / cool 转速表 ──────────────
