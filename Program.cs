@@ -970,12 +970,12 @@ namespace OmenSuperHub {
         };
         performanceControlMenu.DropDownItems.Add(gpuAppsMenu);
 
-        //ToolStripMenuItem forceSleepMenu = new ToolStripMenuItem("重启显卡");
-        //forceSleepMenu.ToolTipText = "可能会导致应用崩溃，请尽可能通过手动关闭占用进程来解除独立显卡占用。";
-        //forceSleepMenu.Click += (s, e) => {
-        //    GpuAppManager.ForceSleepGpu();
-        //};
-        //performanceControlMenu.DropDownItems.Add(forceSleepMenu);
+        ToolStripMenuItem restartGpuMenu = new ToolStripMenuItem("重启显卡");
+        restartGpuMenu.ToolTipText = "可能会导致应用崩溃，请尽可能通过手动关闭占用进程来解除独立显卡占用。";
+        restartGpuMenu.Click += (s, e) => {
+          GpuAppManager.RestartGpu();
+        };
+        performanceControlMenu.DropDownItems.Add(restartGpuMenu);
       }
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");

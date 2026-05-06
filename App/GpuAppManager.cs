@@ -1,7 +1,12 @@
 using System;
-using System.Diagnostics;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Management;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
+using HidSharp.Utility;
 
 namespace OmenSuperHub {
   public static class GpuAppManager {
@@ -47,28 +52,43 @@ namespace OmenSuperHub {
       return apps;
     }
 
-    public static void ForceSleepGpu() {
+    public static void RestartGpu() {
       try {
-        // Restart driver using pnputil
-        string deviceId = "";
-        var processStartInfoDisable = new ProcessStartInfo {
-          FileName = "pnputil",
-          Arguments = $"/disable-device {deviceId}",
-          RedirectStandardOutput = true,
-          UseShellExecute = false,
-          CreateNoWindow = true
-        };
-        using (var p = Process.Start(processStartInfoDisable)) p.WaitForExit();
+        // 1. 获取 NVIDIA 显卡的设备实例 ID (PNPDeviceID)
+        string instanceId = null;
+        string query = "SELECT * FROM Win32_PnPEntity WHERE PNPClass = 'Display'";
+        using (var searcher = new System.Management.ManagementObjectSearcher(query)) {
+          foreach (System.Management.ManagementObject device in searcher.Get()) {
+            string description = device["Description"]?.ToString();
+            if (!string.IsNullOrEmpty(description) &&
+                description.IndexOf("nvidia", StringComparison.OrdinalIgnoreCase) >= 0) {
+              instanceId = device["PNPDeviceID"]?.ToString();
+              break;
+            }
+          }
+        }
+        if (string.IsNullOrEmpty(instanceId))
+          MessageBox.Show($"未找到描述包含 NVIDIA 的显示适配器！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-        var processStartInfoEnable = new ProcessStartInfo {
+        // 2. 执行 pnputil /restart-device
+        var processStartInfo = new ProcessStartInfo {
           FileName = "pnputil",
-          Arguments = $"/enable-device {deviceId}",
+          Arguments = $"/restart-device \"{instanceId}\"",
           RedirectStandardOutput = true,
+          RedirectStandardError = true,
           UseShellExecute = false,
           CreateNoWindow = true
         };
-        using (var p = Process.Start(processStartInfoEnable)) p.WaitForExit();
-      } catch { }
+
+        using (var process = new Process { StartInfo = processStartInfo }) {
+          process.Start();
+          string output = process.StandardOutput.ReadToEnd();
+          string error = process.StandardError.ReadToEnd();
+          process.WaitForExit();
+        }
+      } catch {
+        MessageBox.Show($"重启显卡失败！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+      }
     }
 
     public static float[] GetGpuPowerLimits() {
