@@ -9,7 +9,7 @@ namespace OmenSuperHub {
     private static HelpForm _instance;
     public HelpForm() {
       this.TopMost = true;
-      Text = "OmenSuperHub";
+      Text = "OmenSuperHub帮助";
 
       // 获取屏幕的大小
       Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
@@ -45,10 +45,9 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）功能：新增本机信息，包括IR、南桥、环境传感器温度和主板产品号等；\n" +
-         "（2）功能：添加图形模式显示和切换功能；\n" +
-         "（3）修复：CPU与GPU监控均关闭时才会提示不能使用自动转速控制模式；\n" +
-         "（4）修复：CPU/GPU禁止关闭监控时菜单显示已关闭的问题。\n\n" +
+         "（1）功能：添加占用GPU的程序选项，可点击关闭；\n" +
+         "（2）功能：对于英伟达平台，本机信息新增GPU当前功率限制/最大功率；\n" +
+         "（3）修复：图形模式在NVIDIA机型上无法热切换的问题（任意点击一个图形模式即可打开热切换菜单）。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +

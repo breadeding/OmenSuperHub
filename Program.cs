@@ -797,6 +797,14 @@ namespace OmenSuperHub {
       if (platformMaxFanSpeed.HasValue) {
         sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"CPU温度墙: {(maxCPUTemp.HasValue ? maxCPUTemp.Value.ToString() : "未知")}°C") { Enabled = false });
       }
+      ToolStripMenuItem gpuPowerLimitsMenu = null;
+      if (!hasAmdGpu) {
+        string gpuModel = GetNVIDIAModel() ?? "未知";
+        sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"显卡型号: {gpuModel}") { Enabled = false });
+
+        gpuPowerLimitsMenu = new ToolStripMenuItem("显卡功率限制: --W / --W") { Enabled = false };
+        sysInfoMenu.DropDownItems.Add(gpuPowerLimitsMenu);
+      }
       irSensorMenu = new ToolStripMenuItem("IR传感器: --°C") { Enabled = false };
       ambientSensorMenu = new ToolStripMenuItem("环境传感器: --°C") { Enabled = false };
       pchSensorMenu = new ToolStripMenuItem("PCH传感器: --°C") { Enabled = false };
@@ -937,6 +945,38 @@ namespace OmenSuperHub {
           UpdateCheckedState("graphicsModeGroup", chk);
         }
       };
+      if (!hasAmdGpu) {
+        ToolStripMenuItem gpuAppsMenu = new ToolStripMenuItem("占用GPU的程序");
+        gpuAppsMenu.DropDownOpening += (s, e) => {
+          gpuAppsMenu.DropDownItems.Clear();
+          var apps = GpuAppManager.GetGpuApps();
+          if (apps.Count == 0) {
+            gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem("无") { Enabled = false });
+          } else {
+            foreach (var app in apps) {
+              var appItem = new ToolStripMenuItem($"{app.ProcessName} (PID: {app.ProcessId})");
+              appItem.Click += (sender, args) => {
+                if (MessageBox.Show($"是否关闭进程 {app.ProcessName}?", "关闭确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+                  try {
+                    Process.GetProcessById(app.ProcessId).Kill();
+                  } catch (Exception ex) {
+                    MessageBox.Show($"关闭进程失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                  }
+                }
+              };
+              gpuAppsMenu.DropDownItems.Add(appItem);
+            }
+          }
+        };
+        performanceControlMenu.DropDownItems.Add(gpuAppsMenu);
+
+        //ToolStripMenuItem forceSleepMenu = new ToolStripMenuItem("重启显卡");
+        //forceSleepMenu.ToolTipText = "可能会导致应用崩溃，请尽可能通过手动关闭占用进程来解除独立显卡占用。";
+        //forceSleepMenu.Click += (s, e) => {
+        //    GpuAppManager.ForceSleepGpu();
+        //};
+        //performanceControlMenu.DropDownItems.Add(forceSleepMenu);
+      }
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
       DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
@@ -1872,6 +1912,12 @@ namespace OmenSuperHub {
             pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
             vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
             adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
+            if (!hasAmdGpu) {
+              var limits = GpuAppManager.GetGpuPowerLimits();
+              string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+              ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("显卡功率限制"));
+              if (limitsMenu != null) limitsMenu.Text = $"显卡功率限制: {limitsText}";
+            }
           }));
         } else {
           irSensorMenu.Text = $"IR传感器: {GetSensorTemperature(0)}°C";
@@ -1879,6 +1925,12 @@ namespace OmenSuperHub {
           pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
           vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
           adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
+          if (!hasAmdGpu) {
+              var limits = GpuAppManager.GetGpuPowerLimits();
+              string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+              ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("显卡功率限制"));
+              if (limitsMenu != null) limitsMenu.Text = $"显卡功率限制: {limitsText}";
+          }
         }
       }
 
@@ -2084,25 +2136,36 @@ namespace OmenSuperHub {
         countQuery++;
       //自动关闭GPU监控
       if (countQuery > 5 && autoStopMonitorGPU && !isConnectedToNVIDIA && monitorGPU && ((GPUPower >= 0 && GPUPower <= 1.3) || !getGPU)) {
-        GPUPower = 0;
-        rawPowerGPU = 0f;
-        getGPU = false;
-        hasStopAuto = true;
-        countQuery = 0;
-        monitorGPU = false;
-        gpuTempReady = false; // 关闭后温度不再有效
-        //重置自动开启标志
-        hasStartAuto = false;
-        autoStartMonitorGPU = true;
-        SetGpuMonitorState(false);
-        UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
-        SaveConfig("MonitorGPU");
+        // 如果是非AMD平台，进一步检查是否有程序占用GPU
+        bool isGpuIdle = true;
+        if (!hasAmdGpu) {
+            var gpuApps = GpuAppManager.GetGpuApps();
+            if (gpuApps != null && gpuApps.Count > 0) {
+                isGpuIdle = false;
+            }
+        }
 
-        // 设置通知的文本和标题
-        trayIcon.BalloonTipTitle = "状态更改提示";
-        trayIcon.BalloonTipText = "检测到显卡进入低功耗状态，OSH已停止监控GPU以节约能源。\n手动打开GPU监控后，本次将不再自动停止监控GPU。";
-        trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
-        trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
+        if (isGpuIdle) {
+            GPUPower = 0;
+            rawPowerGPU = 0f;
+            getGPU = false;
+            hasStopAuto = true;
+            countQuery = 0;
+            monitorGPU = false;
+            gpuTempReady = false; // 关闭后温度不再有效
+            //重置自动开启标志
+            hasStartAuto = false;
+            autoStartMonitorGPU = true;
+            SetGpuMonitorState(false);
+            UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
+            SaveConfig("MonitorGPU");
+
+            // 设置通知的文本和标题
+            trayIcon.BalloonTipTitle = "状态更改提示";
+            trayIcon.BalloonTipText = "检测到显卡进入低功耗状态，OSH已停止监控GPU以节约能源。\n手动打开GPU监控后，本次将不再自动停止监控GPU。";
+            trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
+            trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
+        }
       }
       //自动开启GPU监控：需从"未连接显示器"切换为"已连接"时才触发
       if (autoStartMonitorGPU && isConnectedToNVIDIA && !prevIsConnectedToNVIDIA && !monitorGPU) {
