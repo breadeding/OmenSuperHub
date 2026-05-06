@@ -206,6 +206,23 @@ namespace OmenSuperHub {
     }
 
     /// <summary>
+    /// 设置显卡模式
+    /// </summary>
+    /// <param name="mode">目标模式</param>
+    /// <param name="dynamicSwitch">是否为动态切换（DDS，无需重启）</param>
+    /// <returns>true 表示命令发送成功</returns>
+    public static bool SetGfxMode(GraphicsMode mode, bool dynamicSwitch = false) {
+      byte modeByte = (byte)mode;
+      // 如果是动态切换且支持 DDS，设置 bit7
+      if (dynamicSwitch)
+        modeByte |= 0x80;
+
+      byte[] data = new byte[4] { modeByte, 0, 0, 0 };
+      byte[] result = SendOmenBiosWmi(82, data, 0, 2);
+      return result != null; // 写操作输出为0，成功时不返回数据
+    }
+
+    /// <summary>
     /// 检查支持的模式（若需要）
     /// 优先从系统设计数据字节[7]获取，失败时回退到旧版检测
     /// </summary>
@@ -629,6 +646,8 @@ namespace OmenSuperHub {
             return (byte[])outData["Data"];
           } else {
             // Console.WriteLine("+ OK");
+            // 写操作成功，无数据返回，用空数组表示成功
+            return Array.Empty<byte>();
           }
         } else {
           Console.WriteLine("- Failed: Error " + returnCode);

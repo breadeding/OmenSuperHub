@@ -45,9 +45,9 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）功能：添加占用GPU的程序选项，可点击关闭；\n" +
-         "（2）功能：对于英伟达平台，本机信息新增GPU当前功率限制/最大功率；\n" +
-         "（3）修复：图形模式在NVIDIA机型上无法热切换的问题（任意点击一个图形模式即可打开热切换菜单）。\n\n" +
+         "（1）功能：在支持的机型上，可使用图形模式冷切换功能；\n" +
+         "（2）功能：新增重启显卡选项；\n" +
+         "（3）修复：仅核显模式在NVIDIA机型上报错的问题。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +
