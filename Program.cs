@@ -198,12 +198,15 @@ namespace OmenSuperHub {
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string lpModuleName);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int NvidiaAPI_SYS_UIControl_Delegate(bool on);
+
     public static int LaunchDDS() {
       IntPtr hModule = GetModuleHandle("NvidiaApi.dll");
       if (hModule == IntPtr.Zero) return -1;
       IntPtr proc = GetProcAddress(hModule, "NvidiaAPI_SYS_UIControl");
       if (proc == IntPtr.Zero) return -1;
-      var fn = Marshal.GetDelegateForFunctionPointer<Func<bool, int>>(proc);
+      var fn = (NvidiaAPI_SYS_UIControl_Delegate)Marshal.GetDelegateForFunctionPointer(proc, typeof(NvidiaAPI_SYS_UIControl_Delegate));
       return fn(true);
     }
 
