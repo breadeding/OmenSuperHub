@@ -380,5 +380,7 @@
     <Error Condition="!Exists('packages\Costura.Fody.5.7.0\build\Costura.Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Costura.Fody.5.7.0\build\Costura.Fody.targets'))" />
   </Target>
   <Import Project="packages\Costura.Fody.5.7.0\build\Costura.Fody.targets" Condition="Exists('packages\Costura.Fody.5.7.0\build\Costura.Fody.targets')" />
-  <ItemGroup><Compile Include="App\GpuAppManager.cs" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="App\GpuAppManager.cs" />
+  </ItemGroup>
 </Project>

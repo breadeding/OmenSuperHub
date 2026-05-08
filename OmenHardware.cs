@@ -388,13 +388,13 @@ namespace OmenSuperHub {
     new Dictionary<PerformanceModeOnUI, string>
     {
         { PerformanceModeOnUI.Default, "适合各种类型的任务。" },
-        { PerformanceModeOnUI.Performance, "适合游戏和内容创作。可能提高温度和噪音水平。\n注意，在此模式下，OSH会将Tpp锁定为设定值以避免系统降低性能。" },
+        { PerformanceModeOnUI.Performance, "适合游戏和内容创作。可能提高温度和噪音水平。\n注意，在此模式下，OSH会将Ppab条件锁定为设定值以避免系统降低性能。" },
         { PerformanceModeOnUI.Cool, "适合轻度任务。降低 CPU 和 GPU 温度。" },
         { PerformanceModeOnUI.Quiet, "通过降低性能将风扇噪音保持在最低限度。" },
-        { PerformanceModeOnUI.Extreme, "解除功率限制以获得最高性能。即使在连接电源时，系统也可能从电池中获取额外电力。建议高级用户使用。\n注意，在此模式下，OSH会将Tpp锁定为设定值以避免系统降低性能。" },
+        { PerformanceModeOnUI.Extreme, "解除功率限制以获得最高性能。即使在连接电源时，系统也可能从电池中获取额外电力。建议高级用户使用。\n注意，在此模式下，OSH会将Ppab条件锁定为设定值以避免系统降低性能。" },
         { PerformanceModeOnUI.Balance, "适合常规任务。降低性能上限换取更低的噪音和温度，但可能同时改变其它选项的实际生效值。" },
         { PerformanceModeOnUI.Eco, "限制系统性能和功耗，以降低热量和噪音水平。当切换到节能模式时，屏幕可能会短暂闪烁。" },
-        { PerformanceModeOnUI.Unleash, "解除功率限制以获得最高性能。即使在连接电源时，系统也可能从电池中获取额外电力。建议高级用户使用。\n注意，在此模式下，OSH会将Tpp锁定为设定值以避免系统降低性能。" }
+        { PerformanceModeOnUI.Unleash, "解除功率限制以获得最高性能。即使在连接电源时，系统也可能从电池中获取额外电力。建议高级用户使用。\n注意，在此模式下，OSH会将Ppab条件锁定为设定值以避免系统降低性能。" }
     };
 
     public enum PerformanceMode {
@@ -516,18 +516,6 @@ namespace OmenSuperHub {
       SendOmenBiosWmi(0x1A, new byte[] { 0xFF, ecCommand }, 0);
     }
 
-    public static void SetMaxGpuPower() {
-      SendOmenBiosWmi(0x22, new byte[] { 0x01, 0x01, 0x01, 0x00 }, 0);
-    }
-
-    public static void SetMedGpuPower() {
-      SendOmenBiosWmi(0x22, new byte[] { 0x01, 0x00, 0x01, 0x00 }, 0);
-    }
-
-    public static void SetMinGpuPower() {
-      SendOmenBiosWmi(0x22, new byte[] { 0x00, 0x00, 0x01, 0x00 }, 0);
-    }
-
     /// <summary>
     /// 设置 GPU 实时功耗状态（对应 commandType=34）
     /// </summary>
@@ -535,7 +523,7 @@ namespace OmenSuperHub {
     /// <param name="enablePpab">是否启用 PPAB</param>
     /// <param name="dState">功耗状态（1=正常, 2=低功耗）</param>
     /// <param name="gps">图形性能级别（取决于平台配置的 GpsMin/MaxTemperature）</param>
-    public static void SetGpuPowerState(bool enableTgp, bool enablePpab, int dState, int gps) {
+    public static void SetGpuPowerState(bool enableTgp, bool enablePpab, int dState = 1, int gps = 0) {
       byte[] data = new byte[4]
       {
         Convert.ToByte(enableTgp),

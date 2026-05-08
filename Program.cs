@@ -13,10 +13,11 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using LibreHardwareMonitor.Hardware.Motherboard;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
-using static OmenSuperHub.OmenHardware;
 using static OmenSuperHub.GpuAppManager;
+using static OmenSuperHub.OmenHardware;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
 using LibreHardwareType = LibreHardwareMonitor.Hardware.HardwareType;
 using LibreIHardware = LibreHardwareMonitor.Hardware.IHardware;
@@ -37,7 +38,7 @@ namespace OmenSuperHub {
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static PerformanceModeOnUI fanMode = PerformanceModeOnUI.Performance;
-    static string fanTable = "cool" , fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
+    static string fanTable = "cool" , fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
@@ -987,6 +988,8 @@ namespace OmenSuperHub {
         
         if (supportedGfxModes != 0) {
           graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
+          graphicsModeControlMenu.DropDownItems.Add(new ToolStripMenuItem("💡仅部分机型支持在此修改图形模式（需重启），若不支持可在BIOS设置修改。") { Enabled = false });
+          graphicsModeControlMenu.DropDownItems.Add(new ToolStripSeparator());
           bool supportsUMA = (supportedGfxModes & 0x01) != 0;
           bool supportsHybrid = (supportedGfxModes & 0x02) != 0;
           bool supportsDiscrete = (supportedGfxModes & 0x04) != 0;
@@ -1090,28 +1093,6 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(restartGpuMenu);
       }
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      if (platformSettings != null && platformSettings.TppSupport) {
-        ToolStripMenuItem tppMenu = new ToolStripMenuItem("Tpp");
-        tppMenu.ToolTipText = "改变DB增益点，即 GPU 功率在 CPU 功率低于多少时获得额外的DB功耗。";
-        tppMenu.DropDownItems.Add(CreateMenuItem("不设置", "tppPowerGroup", (s, e) => {
-          tppPower = "null";
-          SaveConfig("TppPower");
-        }, true));
-        tppMenu.DropDownItems.Add(CreateMenuItem("最大", "tppPowerGroup", (s, e) => {
-          tppPower = "max";
-          SetConcurrentTdp(254);
-          SaveConfig("TppPower");
-        }, false));
-        for (int power = 20; power <= 240; power += 20) {
-          int currentPower = power;
-          tppMenu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "tppPowerGroup", (s, e) => {
-            tppPower = currentPower + " W";
-            SetConcurrentTdp((byte)currentPower);
-            SaveConfig("TppPower");
-          }, false));
-        }
-        performanceControlMenu.DropDownItems.Add(tppMenu);
-      }
       //ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
       //pl4Menu.DropDownItems.Add(CreateMenuItem("不设置", "pl4PowerGroup", (s, e) => {
       //  powerLimit4 = "null";
@@ -1181,7 +1162,8 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
       }
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
-      cpuPowerMenu.ToolTipText = "同时控制PL1与PL2，选择最大或过高的数值不一定生效，建议优先选择合适的数值而不是无脑最大。";
+      cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem("💡同时控制PL1与PL2，选择最大或过高的数值不一定生效，建议优先选择合适的数值而不是无脑最大。") { Enabled = false });
+      cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem("不设置", "cpuPowerGroup", (s, e) => {
         cpuPower = "null";
         SaveConfig("CpuPower");
@@ -1200,22 +1182,78 @@ namespace OmenSuperHub {
         }, false));
       }
       performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
-      ToolStripMenuItem gpuPowerMenu = new ToolStripMenuItem("GPU功率");
-      gpuPowerMenu.DropDownItems.Add(CreateMenuItem("最大", "gpuPowerGroup", (s, e) => {
-        gpuPower = "max";
-        SetMaxGpuPower();
-        SaveConfig("GpuPower");
+
+      ToolStripMenuItem gpuPowerMenu = new ToolStripMenuItem("GPU功率控制");
+
+      ToolStripMenuItem tgpMenu = new ToolStripMenuItem("Tgp");
+      tgpMenu.DropDownItems.Add(new ToolStripMenuItem("💡关闭可降低GPU最大功耗。") { Enabled = false });
+      tgpMenu.DropDownItems.Add(new ToolStripSeparator());
+      tgpMenu.DropDownItems.Add(CreateMenuItem("开启", "tgpPowerGroup", (s, e) => {
+        tgpPower = "on";
+        SetGpuPowerState(true, ppabPower == "on", dState == "normal" ? 1 : 2);
+        SaveConfig("TgpPower");
       }, true));
-      gpuPowerMenu.DropDownItems.Add(CreateMenuItem("中等", "gpuPowerGroup", (s, e) => {
-        gpuPower = "med";
-        SetMedGpuPower();
-        SaveConfig("GpuPower");
+      tgpMenu.DropDownItems.Add(CreateMenuItem("关闭", "tgpPowerGroup", (s, e) => {
+        tgpPower = "off";
+        SetGpuPowerState(false, ppabPower == "on", dState == "normal" ? 1 : 2);
+        SaveConfig("TgpPower");
       }, false));
-      gpuPowerMenu.DropDownItems.Add(CreateMenuItem("最小", "gpuPowerGroup", (s, e) => {
-        gpuPower = "min";
-        SetMinGpuPower();
-        SaveConfig("GpuPower");
+      gpuPowerMenu.DropDownItems.Add(tgpMenu);
+
+      ToolStripMenuItem ppabMenu = new ToolStripMenuItem("Ppab");
+      ppabMenu.DropDownItems.Add(new ToolStripMenuItem("💡关闭可降低GPU最大功耗。") { Enabled = false });
+      ppabMenu.DropDownItems.Add(new ToolStripSeparator());
+      ppabMenu.DropDownItems.Add(CreateMenuItem("开启", "ppabPowerGroup", (s, e) => {
+        ppabPower = "on";
+        SetGpuPowerState(tgpPower == "on", true, dState == "normal" ? 1 : 2);
+        SaveConfig("PpabPower");
+      }, true));
+      ppabMenu.DropDownItems.Add(CreateMenuItem("关闭", "ppabPowerGroup", (s, e) => {
+        ppabPower = "off";
+        SetGpuPowerState(tgpPower == "on", false, dState == "normal" ? 1 : 2);
+        SaveConfig("PpabPower");
       }, false));
+      gpuPowerMenu.DropDownItems.Add(ppabMenu);
+
+      if (platformSettings != null && platformSettings.TppSupport) {
+        ToolStripMenuItem tppMenu = new ToolStripMenuItem("Ppab条件");
+        tppMenu.DropDownItems.Add(new ToolStripMenuItem("💡改变Ppab/DB增益点，即 GPU 功率在 CPU 功率低于多少时获得额外的Ppab/DB功耗。") { Enabled = false });
+        tppMenu.DropDownItems.Add(new ToolStripSeparator());
+        tppMenu.DropDownItems.Add(CreateMenuItem("不设置", "tppPowerGroup", (s, e) => {
+          tppPower = "null";
+          SaveConfig("TppPower");
+        }, true));
+        tppMenu.DropDownItems.Add(CreateMenuItem("最大", "tppPowerGroup", (s, e) => {
+          tppPower = "max";
+          SetConcurrentTdp(254);
+          SaveConfig("TppPower");
+        }, false));
+        for (int power = 20; power <= 240; power += 20) {
+          int currentPower = power;
+          tppMenu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "tppPowerGroup", (s, e) => {
+            tppPower = currentPower + " W";
+            SetConcurrentTdp((byte)currentPower);
+            SaveConfig("TppPower");
+          }, false));
+        }
+        gpuPowerMenu.DropDownItems.Add(tppMenu);
+      }
+
+      ToolStripMenuItem dStateMenu = new ToolStripMenuItem("功耗状态");
+      dStateMenu.DropDownItems.Add(new ToolStripMenuItem("💡选择低功耗将把GPU功率限制在一个较低水平。") { Enabled = false });
+      dStateMenu.DropDownItems.Add(new ToolStripSeparator());
+      dStateMenu.DropDownItems.Add(CreateMenuItem("正常", "dStateGroup", (s, e) => {
+        dState = "normal";
+        SetGpuPowerState(tgpPower == "on", ppabPower == "on", 1);
+        SaveConfig("DState");
+      }, true));
+      dStateMenu.DropDownItems.Add(CreateMenuItem("低功耗", "dStateGroup", (s, e) => {
+        dState = "low";
+        SetGpuPowerState(tgpPower == "on", ppabPower == "on", 2);
+        SaveConfig("DState");
+      }, false));
+      gpuPowerMenu.DropDownItems.Add(dStateMenu);
+
       performanceControlMenu.DropDownItems.Add(gpuPowerMenu);
       if (hasNVIDIAGpu) {
         ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem("GPU频率限制");
@@ -1250,8 +1288,10 @@ namespace OmenSuperHub {
         }
         performanceControlMenu.DropDownItems.Add(gpuClockMenu);
         ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
-        if (platformSettings != null && platformSettings.TppSupport)
-          DBMenu.ToolTipText = "你的设备拥有Tpp支持，请优先选择增大Tpp而不是更改DB版本，两者效果相同。";
+        if (platformSettings != null && platformSettings.TppSupport) {
+          DBMenu.DropDownItems.Add(new ToolStripMenuItem("💡你的设备支持Ppab条件更改，请优先选择增大Ppab条件中的功率而不是更改DB版本，两者效果相同。") { Enabled = false });
+          DBMenu.DropDownItems.Add(new ToolStripSeparator());
+        }
         DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
           string gpuModel = GetNVIDIAModel();
           if (gpuModel != null) {
@@ -1272,7 +1312,7 @@ namespace OmenSuperHub {
               SetFanMode(PerformanceModeOnUI.Unleash);
             else
               SetFanMode(PerformanceModeOnUI.Performance);
-            SetMaxGpuPower();
+            SetGpuPowerState(true, true);
             SetCpuPowerLimit((byte)CPULimitDB);
             DBVersion = 1;
             ChangeDBVersion(DBVersion);
@@ -1538,17 +1578,17 @@ namespace OmenSuperHub {
       tooltipUpdateTimer.Start();
     }
 
-    //static void RestoreCPUPower() {
-    //  // 恢复CPU功耗设定
-    //  if (cpuPower == "max") {
-    //    SetCpuPowerLimit(254);
-    //  } else if (cpuPower.Contains(" W")) {
-    //    int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-    //    if (value > 10 && value <= 254) {
-    //      SetCpuPowerLimit((byte)value);
-    //    }
-    //  }
-    //}
+    static void RestoreCPUPower() {
+      // 恢复CPU功耗设定
+      if (cpuPower == "max") {
+        SetCpuPowerLimit(254);
+      } else if (cpuPower.Contains(" W")) {
+        int value = int.Parse(cpuPower.Replace(" W", "").Trim());
+        if (value > 10 && value <= 254) {
+          SetCpuPowerLimit((byte)value);
+        }
+      }
+    }
 
     static void RestoreTppPower() {
       // 恢复TPP功耗设定
@@ -1842,7 +1882,7 @@ namespace OmenSuperHub {
                 SetFanMode(PerformanceModeOnUI.Unleash);
               else
                 SetFanMode(PerformanceModeOnUI.Performance);
-              SetMaxGpuPower();
+              SetGpuPowerState(true, true);
               SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
             }
@@ -1857,7 +1897,14 @@ namespace OmenSuperHub {
             // 恢复模式设定
             SetFanMode(fanMode);
             // 恢复CPU功耗设定
-            //RestoreCPUPower();
+            RestoreCPUPower();
+            // 恢复GPU功耗设定
+            SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
+            if (fanMode == PerformanceModeOnUI.Performance || fanMode == PerformanceModeOnUI.Extreme || fanMode == PerformanceModeOnUI.Unleash) {
+              System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+                RestoreTppPower();
+              });
+            }
           }
         } else if (countDB == countDBInit - 1) {
           // 启用DB驱动
@@ -2363,7 +2410,9 @@ namespace OmenSuperHub {
               key.SetValue("FanControl", fanControl);
               key.SetValue("TempSensitivity", tempSensitivity);
               key.SetValue("CpuPower", cpuPower);
-              key.SetValue("GpuPower", gpuPower);
+              key.SetValue("TgpPower", tgpPower);
+              key.SetValue("PpabPower", ppabPower);
+              key.SetValue("DState", dState);
               if (hasNVIDIAGpu) {
                 key.SetValue("GpuClock", gpuClock);
                 key.SetValue("DBVersion", DBVersion);
@@ -2402,8 +2451,14 @@ namespace OmenSuperHub {
                 case "CpuPower":
                   key.SetValue("CpuPower", cpuPower);
                   break;
-                case "GpuPower":
-                  key.SetValue("GpuPower", gpuPower);
+                case "TgpPower":
+                  key.SetValue("TgpPower", tgpPower);
+                  break;
+                case "PpabPower":
+                  key.SetValue("PpabPower", ppabPower);
+                  break;
+                case "DState":
+                  key.SetValue("DState", dState);
                   break;
                 case "GpuClock":
                   key.SetValue("GpuClock", gpuClock);
@@ -2609,21 +2664,14 @@ namespace OmenSuperHub {
               }
             }
 
-            gpuPower = (string)key.GetValue("GpuPower", "max");
-            switch (gpuPower) {
-              case "max":
-                SetMaxGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "最大");
-                break;
-              case "med":
-                SetMedGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "中等");
-                break;
-              case "min":
-                SetMinGpuPower();
-                UpdateCheckedState("gpuPowerGroup", "最小");
-                break;
-            }
+            tgpPower = (string)key.GetValue("TgpPower", "on");
+            ppabPower = (string)key.GetValue("PpabPower", "on");
+            dState = (string)key.GetValue("DState", "normal");
+
+            SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
+            UpdateCheckedState("tgpPowerGroup", tgpPower == "on" ? "开启" : "关闭");
+            UpdateCheckedState("ppabPowerGroup", ppabPower == "on" ? "开启" : "关闭");
+            UpdateCheckedState("dStateGroup", dState == "normal" ? "正常" : "低功耗");
 
             if (hasNVIDIAGpu) {
               gpuClock = (int)key.GetValue("GpuClock", 0);
@@ -2655,7 +2703,7 @@ namespace OmenSuperHub {
                     SetFanMode(PerformanceModeOnUI.Unleash);
                   else
                     SetFanMode(PerformanceModeOnUI.Performance);
-                  SetMaxGpuPower();
+                  SetGpuPowerState(true, true); // fallback for db state
                   SetCpuPowerLimit((byte)CPULimitDB);
                   countDB = countDBInit;
                   UpdateCheckedState("DBGroup", "解锁版本");
@@ -2816,7 +2864,7 @@ namespace OmenSuperHub {
             else
               SetFanMode(PerformanceModeOnUI.Performance);
             SetMaxFanSpeedOff();
-            SetMaxGpuPower();
+            SetGpuPowerState(true, true); // fallback for default state
             // 首次运行：默认开启 CPU/GPU 监控，启动进程
             StartHardwareMonitor();
           }
