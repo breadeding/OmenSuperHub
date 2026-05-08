@@ -186,6 +186,7 @@ namespace OmenSuperHub {
     }
 
     public enum GraphicsMode {
+      NotSupported = -1, // 不支持显卡切换
       Hybrid = 0,    // 混合模式
       Discrete = 1,  // 独显直连
       Optimus = 2,   // Optimus
@@ -202,7 +203,7 @@ namespace OmenSuperHub {
         if (modeValue >= 0 && modeValue <= 3)
           return (GraphicsMode)modeValue;
       }
-      return GraphicsMode.Hybrid; // 默认返回混合模式
+      return GraphicsMode.NotSupported;
     }
 
     /// <summary>
@@ -240,60 +241,6 @@ namespace OmenSuperHub {
           return 6; // 6 = 支持 legacy 模式
       }
       return 0; // 不支持
-    }
-
-    public static void PrintSupportedGfxModes(byte supported) {
-      Console.WriteLine($"支持的模式标志：0x{supported:X2}");
-
-      if (supported == 0) {
-        Console.WriteLine("  → 不支持任何显卡切换模式");
-        return;
-      }
-
-      var modes = new List<string>();
-      if ((supported & 1) != 0) modes.Add("UMA（仅集显）");
-      if ((supported & 2) != 0) modes.Add("Hybrid（混合输出/Optimus）");
-      if ((supported & 4) != 0) modes.Add("Discrete（独显直连）");
-      if ((supported & 8) != 0) modes.Add("DDS（动态切换/Advanced Optimus）");
-
-      Console.WriteLine("  → 支持的模式：");
-      foreach (var m in modes)
-        Console.WriteLine($"     - {m}");
-
-      // 用传统 switch 语句替代 switch 表达式
-      string constantName = null;
-      switch (supported) {
-        case 0:
-          constantName = "SupportMode_None";
-          break;
-        case 1:
-          constantName = "SupportMode_UMA";
-          break;
-        case 2:
-          constantName = "SupportMode_Hybrid";
-          break;
-        case 3:
-          constantName = "SupportMode_HybridUMA";
-          break;
-        case 4:
-          constantName = "SupportMode_Discrete";
-          break;
-        case 5:
-          constantName = "SupportMode_DiscrerteUMA";
-          break;
-        case 6:
-          constantName = "SupportMode_Legacy";
-          break;
-        case 8:
-          constantName = "SupportMode_DDS";
-          break;
-          // 其他组合没有对应常量，保持 null
-      }
-
-      if (constantName != null)
-        Console.WriteLine($"  → 对应常量：{constantName}");
-      else
-        Console.WriteLine("  （此为组合模式，无对应单一常量）");
     }
 
     public static bool IsLoadLineSupported() {
@@ -413,9 +360,160 @@ namespace OmenSuperHub {
       //Console.WriteLine("SetFanLevel: " + fanSpeed * 100);
     }
 
-    //mode为0x31代表狂暴模式，0x30代表Eco/平衡模式，0x04代表极限/大师模式
-    public static void SetFanMode(byte mode) {
-      SendOmenBiosWmi(0x1A, new byte[] { 0xFF, mode }, 0);
+    public enum PerformanceModeOnUI {
+      Default,
+      Performance,
+      Cool,
+      Quiet,
+      Extreme,
+      Balance,
+      Eco,
+      Unleash
+    }
+
+    public static readonly Dictionary<PerformanceModeOnUI, string> ModeNames =
+    new Dictionary<PerformanceModeOnUI, string>
+    {
+        { PerformanceModeOnUI.Default, "均衡模式" },
+        { PerformanceModeOnUI.Performance, "狂暴模式" },
+        { PerformanceModeOnUI.Cool, "酷冷模式" },
+        { PerformanceModeOnUI.Quiet, "安静模式" },
+        { PerformanceModeOnUI.Extreme, "极限模式" },
+        { PerformanceModeOnUI.Balance, "平衡模式" },
+        { PerformanceModeOnUI.Eco, "Eco（节能模式）" },
+        { PerformanceModeOnUI.Unleash, "大师模式" }
+    };
+
+    public static readonly Dictionary<PerformanceModeOnUI, string> ModeDescriptions =
+    new Dictionary<PerformanceModeOnUI, string>
+    {
+        { PerformanceModeOnUI.Default, "适合各种类型的任务。" },
+        { PerformanceModeOnUI.Performance, "适合游戏和内容创作。可能提高温度和噪音水平。\n注意，在此模式下，OSH会将Tpp锁定为设定值以避免系统降低性能。" },
+        { PerformanceModeOnUI.Cool, "适合轻度任务。降低 CPU 和 GPU 温度。" },
+        { PerformanceModeOnUI.Quiet, "通过降低性能将风扇噪音保持在最低限度。" },
+        { PerformanceModeOnUI.Extreme, "解除功率限制以获得最高性能。即使在连接电源时，系统也可能从电池中获取额外电力。建议高级用户使用。\n注意，在此模式下，OSH会将Tpp锁定为设定值以避免系统降低性能。" },
+        { PerformanceModeOnUI.Balance, "适合常规任务。降低性能上限换取更低的噪音和温度，但可能同时改变其它选项的实际生效值。" },
+        { PerformanceModeOnUI.Eco, "限制系统性能和功耗，以降低热量和噪音水平。当切换到节能模式时，屏幕可能会短暂闪烁。" },
+        { PerformanceModeOnUI.Unleash, "解除功率限制以获得最高性能。即使在连接电源时，系统也可能从电池中获取额外电力。建议高级用户使用。\n注意，在此模式下，OSH会将Tpp锁定为设定值以避免系统降低性能。" }
+    };
+
+    public enum PerformanceMode {
+      Default = 0,
+      Performance = 1,
+      Cool = 2,
+      Quiet = 3,
+      Extreme = 4,
+      L8 = 4,
+      L0 = 16, // 0x00000010
+      L5 = 17, // 0x00000011
+      L1 = 32, // 0x00000020
+      L6 = 33, // 0x00000021
+      L2 = 48, // 0x00000030
+      L7 = 49, // 0x00000031
+      L3 = 64, // 0x00000040
+      L4 = 80, // 0x00000050
+      Eco = 256, // 0x00000100
+    }
+
+    /// <summary>
+    /// 热策略版本
+    /// </summary>
+    public enum ThermalPolicyVersion {
+      V0 = 0,   // 旧版
+      V1 = 1    // 新版（支持更多模式映射）
+    }
+
+    /// <summary>
+    /// 从 SystemDesignData 第 3 字节获取热策略版本
+    /// </summary>
+    public static ThermalPolicyVersion GetThermalPolicyVersion() {
+      byte[] data = GetSystemDesignData(); // 你已有的 128 字节数据
+      if (data == null || data.Length < 4)
+        return ThermalPolicyVersion.V0; // 默认旧版
+
+      // SystemDesignData[3] 存储 ThermalPolicyVersion
+      switch (data[3]) {
+        case 1:
+          return ThermalPolicyVersion.V1;
+        default:
+          return ThermalPolicyVersion.V0;
+      }
+    }
+
+    /// <summary>
+    /// 获取当前机型支持的性能模式列表（UI 层）
+    /// </summary>
+    public static List<PerformanceModeOnUI> GetSupportedPerformanceModes() {
+      var modes = new List<PerformanceModeOnUI>();
+      byte[] design = GetSystemDesignData();
+      if (design == null || design.Length < 5) return modes; // 无数据
+
+      ThermalPolicyVersion version = GetThermalPolicyVersion();
+
+      // 从 design[4] 提取能力位
+      bool swFanControl = (design[4] & 0x01) != 0;   // bit0
+      bool turboSupport = (design[4] & 0x02) != 0;   // bit1 (Extreme / Unleash 相关)
+
+      if (version == ThermalPolicyVersion.V1) {
+        modes.Add(PerformanceModeOnUI.Eco);
+        modes.Add(PerformanceModeOnUI.Balance);
+        if (swFanControl) {
+          modes.Add(PerformanceModeOnUI.Performance);
+          if (turboSupport)
+            modes.Add(PerformanceModeOnUI.Unleash);
+        }
+      } else {
+        modes.Add(PerformanceModeOnUI.Eco);
+        modes.Add(PerformanceModeOnUI.Default);
+        modes.Add(PerformanceModeOnUI.Cool);
+        if (turboSupport)
+          modes.Add(PerformanceModeOnUI.Performance);
+        
+      }
+      return modes;
+    }
+
+    /// <summary>
+    /// 根据 UI 层性能模式和当前热策略版本，自动映射为 EC 风扇指令，
+    /// </summary>
+    public static void SetFanMode(PerformanceModeOnUI uiMode) {
+      ThermalPolicyVersion version = GetThermalPolicyVersion();
+      byte ecCommand = 0;
+
+      switch (version) {
+        case ThermalPolicyVersion.V0:
+          // V0：Eco → Default(0)，其他模式保持原值（底层枚举值）
+          ecCommand = (byte)(uiMode == PerformanceModeOnUI.Eco
+                             ? PerformanceModeOnUI.Default
+                             : uiMode);
+          break;
+
+        case ThermalPolicyVersion.V1:
+          switch (uiMode) {
+            case PerformanceModeOnUI.Default:
+            case PerformanceModeOnUI.Balance:
+            case PerformanceModeOnUI.Eco:
+              ecCommand = (byte)PerformanceMode.L2;   // 48
+              break;
+            case PerformanceModeOnUI.Performance:
+              ecCommand = (byte)PerformanceMode.L7;   // 49
+              break;
+            case PerformanceModeOnUI.Cool:
+              ecCommand = (byte)PerformanceMode.L4;   // 80
+              break;
+            case PerformanceModeOnUI.Extreme:
+            case PerformanceModeOnUI.Unleash:
+              ecCommand = (byte)PerformanceMode.L7;
+              break;
+            case PerformanceModeOnUI.Quiet:
+            default:
+              ecCommand = (byte)PerformanceMode.L2;   // 回退为平衡
+              break;
+          }
+          break;
+      }
+
+      SendOmenBiosWmi(0x1A, new byte[] { 0xFF, ecCommand }, 0);
     }
 
     public static void SetMaxGpuPower() {
@@ -428,6 +526,24 @@ namespace OmenSuperHub {
 
     public static void SetMinGpuPower() {
       SendOmenBiosWmi(0x22, new byte[] { 0x00, 0x00, 0x01, 0x00 }, 0);
+    }
+
+    /// <summary>
+    /// 设置 GPU 实时功耗状态（对应 commandType=34）
+    /// </summary>
+    /// <param name="enableTgp">是否启用可配置 TGP</param>
+    /// <param name="enablePpab">是否启用 PPAB</param>
+    /// <param name="dState">功耗状态（1=正常, 2=低功耗）</param>
+    /// <param name="gps">图形性能级别（取决于平台配置的 GpsMin/MaxTemperature）</param>
+    public static void SetGpuPowerState(bool enableTgp, bool enablePpab, int dState, int gps) {
+      byte[] data = new byte[4]
+      {
+        Convert.ToByte(enableTgp),
+        Convert.ToByte(enablePpab),
+        Convert.ToByte(dState),
+        Convert.ToByte(gps)
+      };
+      SendOmenBiosWmi(0x22, data, 0, 0x20008); // commandType=34, command=131080
     }
 
     // Tpp设置，这里似乎无作用
@@ -745,54 +861,61 @@ namespace OmenSuperHub {
       string methodName = "hpqBIOSInt" + outputSize.ToString(); // Change here
       byte[] sign = { 0x53, 0x45, 0x43, 0x55 };
 
-      // Prepare the request
-      using (var biosDataIn = new ManagementClass(namespaceName, "hpqBDataIn", null).CreateInstance()) {
-        biosDataIn["Command"] = command;
-        biosDataIn["CommandType"] = commandType;
-        biosDataIn["Sign"] = sign;
-        if (data != null) {
-          biosDataIn["hpqBData"] = data;
-          biosDataIn["Size"] = (uint)data.Length;
-        } else {
-          biosDataIn["Size"] = (uint)0;
-        }
-
-        // Obtain BIOS method class instance
-        if (searcher == null)
-          searcher = new ManagementObjectSearcher(namespaceName, $"SELECT * FROM {className}");
-        if (biosMethods == null)
-          biosMethods = searcher.Get().Cast<ManagementObject>().FirstOrDefault();
-
-        // Make a call to write to the BIOS
-        var inParams = biosMethods.GetMethodParameters(methodName); // Change here
-        inParams["InData"] = biosDataIn;
-
-        var result = biosMethods.InvokeMethod(methodName, inParams, null); // Change here
-        var outData = result["OutData"] as ManagementBaseObject;
-        uint returnCode = (uint)outData["rwReturnCode"];
-
-        if (returnCode == 0) {
-          // If operation completed successfully
-          if (outputSize != 0) {
-            var outputData = (byte[])outData["Data"];
-            // Console.WriteLine("+ OK: " + BitConverter.ToString(outputData));
-            return (byte[])outData["Data"];
+      try {
+        // Prepare the request
+        using (var biosDataIn = new ManagementClass(namespaceName, "hpqBDataIn", null).CreateInstance()) {
+          biosDataIn["Command"] = command;
+          biosDataIn["CommandType"] = commandType;
+          biosDataIn["Sign"] = sign;
+          if (data != null) {
+            biosDataIn["hpqBData"] = data;
+            biosDataIn["Size"] = (uint)data.Length;
           } else {
-            // Console.WriteLine("+ OK");
-            // 写操作成功，无数据返回，用空数组表示成功
-            return Array.Empty<byte>();
+            biosDataIn["Size"] = (uint)0;
           }
-        } else {
-          Console.WriteLine("- Failed: Error " + returnCode);
-          switch (returnCode) {
-            case 0x03:
-              Console.WriteLine(" - Command Not Available");
-              break;
-            case 0x05:
-              Console.WriteLine(" - Input or Output Size Too Small");
-              break;
+
+          // Obtain BIOS method class instance
+          if (searcher == null)
+            searcher = new ManagementObjectSearcher(namespaceName, $"SELECT * FROM {className}");
+          if (biosMethods == null)
+            biosMethods = searcher.Get().Cast<ManagementObject>().FirstOrDefault();
+
+          // Make a call to write to the BIOS
+          var inParams = biosMethods.GetMethodParameters(methodName); // Change here
+          inParams["InData"] = biosDataIn;
+
+          var result = biosMethods.InvokeMethod(methodName, inParams, null); // Change here
+          var outData = result["OutData"] as ManagementBaseObject;
+          uint returnCode = (uint)outData["rwReturnCode"];
+
+          if (returnCode == 0) {
+            // If operation completed successfully
+            if (outputSize != 0) {
+              var outputData = (byte[])outData["Data"];
+              // Console.WriteLine("+ OK: " + BitConverter.ToString(outputData));
+              return (byte[])outData["Data"];
+            } else {
+              // Console.WriteLine("+ OK");
+              // 写操作成功，无数据返回，用空数组表示成功
+              return Array.Empty<byte>();
+            }
+          } else {
+            Console.WriteLine("- Failed: Error " + returnCode);
+            switch (returnCode) {
+              case 0x03:
+                Console.WriteLine(" - Command Not Available");
+                break;
+              case 0x05:
+                Console.WriteLine(" - Input or Output Size Too Small");
+                break;
+            }
           }
         }
+      } catch (ManagementException ex) {
+        // ★ 捕获 WMI 异常，不向上抛出，返回 null 表示失败
+        Console.WriteLine($"- WMI Exception (CommandType=0x{commandType:X2}): {ex.ErrorCode} - {ex.Message}");
+      } catch (Exception ex) {
+        Console.WriteLine($"- Unexpected Exception (CommandType=0x{commandType:X2}): {ex.Message}");
       }
 
       return null;

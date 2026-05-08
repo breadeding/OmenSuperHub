@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using LibreHardwareMonitor.Hardware.Motherboard;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
 using static OmenSuperHub.OmenHardware;
@@ -35,7 +36,8 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static string fanTable = "cool", fanMode = "performance", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
+    static PerformanceModeOnUI fanMode = PerformanceModeOnUI.Performance;
+    static string fanTable = "cool" , fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", gpuPower = "max", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
@@ -79,6 +81,7 @@ namespace OmenSuperHub {
     static bool isSysInfoMenuOpen = false;
     static int? maxCPUTemp = null;
     static int maxGPUTemp = 87;
+    static GraphicsMode NvGraphicsMode;
 
     [STAThread]
     static void Main(string[] args) {
@@ -120,6 +123,7 @@ namespace OmenSuperHub {
         Application.SetCompatibleTextRenderingDefault(false);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
+        NvGraphicsMode = GetGfxMode();
         hasAMDDiscreteGpu = HasAmdDiscreteGpu();
         hasNVIDIAGpu = GetNVIDIAModel() != null;
         if (hasNVIDIAGpu)
@@ -461,7 +465,7 @@ namespace OmenSuperHub {
 
     [HandleProcessCorruptedStateExceptions]
     static void RunHardwareMonitor() {
-      var computer = new LibreComputer() { IsCpuEnabled = true, IsGpuEnabled = true };
+      var computer = new LibreComputer() { IsCpuEnabled = true };
 
       try {
         computer.Open();
@@ -880,12 +884,12 @@ namespace OmenSuperHub {
         fanTable = "silent";
         LoadFanConfig("silent.txt");
         SaveConfig("FanTable");
-      }, false));
+      }, false, "安静模式下风扇转速较低，对应 silent.txt 文件，可以通过修改文件改变转速曲线。"));
       fanConfigMenu.DropDownItems.Add(CreateMenuItem("降温模式", "fanTableGroup", (s, e) => {
         fanTable = "cool";
         LoadFanConfig("cool.txt");
         SaveConfig("FanTable");
-      }, true));
+      }, true, "降温模式下风扇转速较低，对应 cool.txt 文件，可以通过修改文件改变转速曲线。"));
       fanConfigMenu.DropDownItems.Add(new ToolStripSeparator());
       ToolStripMenuItem respondSpeedMenu = new ToolStripMenuItem("风扇响应速度");
       respondSpeedMenu.DropDownItems.Add(CreateMenuItem("实时", "tempSensitivityGroup", (s, e) => {
@@ -937,33 +941,38 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(fanControlMenu);
 
       ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem("性能控制");
-      if (platformSettings != null && platformSettings.UnleashedModeSupport) {
-        performanceControlMenu.DropDownItems.Add(CreateMenuItem("大师模式", "fanModeGroup", (s, e) => {
-          fanMode = "extreme";
-          SetFanMode(0x04);
+
+      var supportedModes = GetSupportedPerformanceModes();
+      foreach (var mode in supportedModes) {
+        string name = ModeNames.TryGetValue(mode, out var text) ? text : mode.ToString();
+        string description = ModeDescriptions.TryGetValue(mode, out var desc) ? desc : "";
+
+        performanceControlMenu.DropDownItems.Add(CreateMenuItem(name, "fanModeGroup", (s, e) =>
+        {
+          fanMode = mode;
+          SetFanMode(mode);
           SaveConfig("FanMode");
-          // 恢复CPU功耗设定
-          RestoreCPUPower();
-        }, false));
+          if (mode == PerformanceModeOnUI.Performance || mode == PerformanceModeOnUI.Extreme || mode == PerformanceModeOnUI.Unleash) {
+            System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+              RestoreTppPower();
+            });
+          }
+        }, false, description));
       }
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("狂暴模式", "fanModeGroup", (s, e) => {
-        fanMode = "performance";
-        SetFanMode(0x31);
-        SaveConfig("FanMode");
-        // 恢复CPU功耗设定
-        RestoreCPUPower();
-      }, true, "提升性能上限，但可能同时改变其它选项的实际生效值。"));
-      performanceControlMenu.DropDownItems.Add(CreateMenuItem("平衡模式", "fanModeGroup", (s, e) => {
-        fanMode = "default";
-        SetFanMode(0x30);
-        SaveConfig("FanMode");
-        // 恢复CPU功耗设定
-        RestoreCPUPower();
-      }, false, "降低性能上限换取更低的噪音和温度，但可能同时改变其它选项的实际生效值。"));
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       // 图形模式
-      ToolStripMenuItem graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
+      if (NvGraphicsMode == GraphicsMode.Optimus || NvGraphicsMode == GraphicsMode.Hybrid) {
+        var hotSwitchItem = CreateMenuItem("热切换", null, (s, e) =>
+        {
+          if (LaunchDDS() != 0)
+            MessageBox.Show($"无法初始化 Advanced Optimus 小程序。请确保所有NVIDIA驱动程序均为最新版本，并将BIOS设置菜单中的“图形模式”设置为\"Nvidia Advanced Optimus\"。", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }, false);
+        hotSwitchItem.CheckOnClick = false;
+        performanceControlMenu.DropDownItems.Add(hotSwitchItem);
+      }
+      ToolStripMenuItem graphicsModeControlMenu = null;
       if (!hasNVIDIAGpu && hasAMDDiscreteGpu) {
+        graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
         var initAmdMode = AmdGpuSwitcher.GetMode();
         bool amdIsDiscrete = initAmdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
         graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("独显直连", "graphicsModeGroup", (s, e) => {
@@ -972,49 +981,80 @@ namespace OmenSuperHub {
         graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("混合模式", "graphicsModeGroup", (s, e) => {
           AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_DISABLED);
         }, !amdIsDiscrete));
-      } else {
-        graphicsModeControlMenu.ToolTipText = "在混合模式下点击混合模式进行热切换。\n部分机型支持通过此设置冷切换（需重启）。";
-        var initNvMode = GetGfxMode();
-        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("混合模式", "graphicsModeGroup", (s, e) => {
-          if (GetGfxMode() != GraphicsMode.Hybrid) {
-            if (SetGfxMode(GraphicsMode.Hybrid))
-              MessageBox.Show($"已切换到混合模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            else
-              MessageBox.Show($"该机器不支持冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-          } else {
-            LaunchDDS();
-          }
-        }, initNvMode == GraphicsMode.Hybrid));
-        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("独显直连", "graphicsModeGroup", (s, e) => {
-          if (SetGfxMode(GraphicsMode.Discrete))
-            MessageBox.Show($"已切换到独显直连模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-          else
-            MessageBox.Show($"该机器不支持冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }, initNvMode == GraphicsMode.Discrete));
-        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("仅核显", "graphicsModeGroup", (s, e) => {
-          if (SetGfxMode(GraphicsMode.UMA))
-            MessageBox.Show($"已切换到仅核显模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-          else
-            MessageBox.Show($"该机器不支持冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }, initNvMode == GraphicsMode.UMA));
       }
-      performanceControlMenu.DropDownItems.Add(graphicsModeControlMenu);
-      graphicsModeControlMenu.DropDownOpening += (s, e) => {
-        if (!hasNVIDIAGpu && hasAMDDiscreteGpu) {
-          var amdMode = AmdGpuSwitcher.GetMode();
-          bool isDisc = amdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
-          UpdateCheckedState("graphicsModeGroup", isDisc ? "独显直连" : "混合模式");
-        } else {
-          var nvMode = GetGfxMode();
-          string chk;
-          switch (nvMode) {
-            case GraphicsMode.Discrete: chk = "独显直连"; break;
-            case GraphicsMode.UMA: chk = "仅核显"; break;
-            default: chk = "混合模式"; break;
+      else {
+        byte supportedGfxModes = GetSupportedGfxModes();
+        
+        if (supportedGfxModes != 0) {
+          graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
+          bool supportsUMA = (supportedGfxModes & 0x01) != 0;
+          bool supportsHybrid = (supportedGfxModes & 0x02) != 0;
+          bool supportsDiscrete = (supportedGfxModes & 0x04) != 0;
+          bool supportsDDS = (supportedGfxModes & 0x08) != 0;
+          if (supportsDDS || NvGraphicsMode == GraphicsMode.Optimus) {
+            graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("NVIDIA Advanced Optimus", "graphicsModeGroup", (s, e) => {
+              if (SetGfxMode(GraphicsMode.Optimus))
+                MessageBox.Show($"已切换到NVIDIA Advanced Optimus模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+              else {
+                SetGfxMode(NvGraphicsMode);
+                MessageBox.Show($"该机器不支持系统内冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+              }
+            }, NvGraphicsMode == GraphicsMode.Optimus, "混合"));
           }
-          UpdateCheckedState("graphicsModeGroup", chk);
+          if (supportsDiscrete || NvGraphicsMode == GraphicsMode.Discrete) {
+            graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("Discrete", "graphicsModeGroup", (s, e) => {
+              if (SetGfxMode(GraphicsMode.Discrete))
+                MessageBox.Show($"已切换到Discrete模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+              else {
+                SetGfxMode(NvGraphicsMode);
+                MessageBox.Show($"该机器不支持系统内冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+              }
+            }, NvGraphicsMode == GraphicsMode.Discrete, "仅独显"));
+          }
+          if (supportsUMA || NvGraphicsMode == GraphicsMode.UMA) {
+            graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("UMA", "graphicsModeGroup", (s, e) => {
+              if (MessageBox.Show($"仅集成显卡启用，屏蔽独显，该模式下 HDMI 输出将无法工作。确定切换吗?", "切换到UMA模式", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+                if (SetGfxMode(GraphicsMode.UMA))
+                  MessageBox.Show($"已切换到UMA模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                else {
+                  SetGfxMode(NvGraphicsMode);
+                  MessageBox.Show($"该机器不支持系统内冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+              }
+            }, NvGraphicsMode == GraphicsMode.UMA, "关闭独立 GPU 并仅使用板载 GPU 以最大限度地延长电池续航时间。"));
+          }
+          if (supportsHybrid || NvGraphicsMode == GraphicsMode.Hybrid) {
+            graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("Hybrid", "graphicsModeGroup", (s, e) => {
+              if (SetGfxMode(GraphicsMode.Hybrid))
+                MessageBox.Show($"已切换到Hybrid模式，重启生效。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+              else {
+                SetGfxMode(NvGraphicsMode);
+                MessageBox.Show($"该机器不支持系统内冷切！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+              }
+            }, NvGraphicsMode == GraphicsMode.Hybrid, "混合"));
+          }
         }
-      };
+      }
+      if (graphicsModeControlMenu != null) {
+        performanceControlMenu.DropDownItems.Add(graphicsModeControlMenu);
+        graphicsModeControlMenu.DropDownOpening += (s, e) => {
+          if (!hasNVIDIAGpu && hasAMDDiscreteGpu) {
+            var amdMode = AmdGpuSwitcher.GetMode();
+            bool isDisc = amdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
+            UpdateCheckedState("graphicsModeGroup", isDisc ? "独显直连" : "混合模式");
+          } else {
+            var nvMode = GetGfxMode();
+            string chk;
+            switch (nvMode) {
+              case GraphicsMode.Discrete: chk = "Discrete"; break;
+              case GraphicsMode.Optimus: chk = "NVIDIA Advanced Optimus"; break;
+              case GraphicsMode.UMA: chk = "UMA"; break;
+              default: chk = "Hybrid"; break;
+            }
+            UpdateCheckedState("graphicsModeGroup", chk);
+          }
+        };
+      }
       if (hasNVIDIAGpu) {
         ToolStripMenuItem gpuAppsMenu = new ToolStripMenuItem("占用GPU的程序");
         gpuAppsMenu.DropDownOpening += (s, e) => {
@@ -1041,15 +1081,18 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(gpuAppsMenu);
 
         ToolStripMenuItem restartGpuMenu = new ToolStripMenuItem("重启显卡");
-        restartGpuMenu.ToolTipText = "可能会导致应用崩溃，请尽可能通过手动关闭占用进程来解除独立显卡占用。";
+        restartGpuMenu.ToolTipText = "通过重启独立 GPU 减少不必要的占用 GPU 情况。";
         restartGpuMenu.Click += (s, e) => {
-          GpuAppManager.RestartGpu();
+          if (MessageBox.Show($"可能会导致应用崩溃，请尽可能通过手动关闭占用进程来解除独立显卡占用，建议只在混合模式下操作。确定重启显卡吗?", "重启显卡", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+            GpuAppManager.RestartGpu();
+          }
         };
         performanceControlMenu.DropDownItems.Add(restartGpuMenu);
       }
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       if (platformSettings != null && platformSettings.TppSupport) {
         ToolStripMenuItem tppMenu = new ToolStripMenuItem("Tpp");
+        tppMenu.ToolTipText = "改变DB增益点，即 GPU 功率在 CPU 功率低于多少时获得额外的DB功耗。";
         tppMenu.DropDownItems.Add(CreateMenuItem("不设置", "tppPowerGroup", (s, e) => {
           tppPower = "null";
           SaveConfig("TppPower");
@@ -1138,7 +1181,7 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
       }
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
-      cpuPowerMenu.ToolTipText = "最大或过高的数值不一定生效，优先选择合适的数值而不是无脑最大。";
+      cpuPowerMenu.ToolTipText = "同时控制PL1与PL2，选择最大或过高的数值不一定生效，建议优先选择合适的数值而不是无脑最大。";
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem("不设置", "cpuPowerGroup", (s, e) => {
         cpuPower = "null";
         SaveConfig("CpuPower");
@@ -1174,77 +1217,81 @@ namespace OmenSuperHub {
         SaveConfig("GpuPower");
       }, false));
       performanceControlMenu.DropDownItems.Add(gpuPowerMenu);
-      ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem("GPU频率限制");
-      gpuClockMenu.DropDownItems.Add(CreateMenuItem("还原", "gpuClockGroup", (s, e) => {
-        gpuClock = 0;
-        SetGPUClockLimit(gpuClock);
-        SaveConfig("GpuClock");
-      }, true));
-      for (int clock = 600; clock <= 1400; clock += 400) {
-        int currentclock = clock;
-        gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
-          gpuClock = currentclock;
+      if (hasNVIDIAGpu) {
+        ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem("GPU频率限制");
+        gpuClockMenu.DropDownItems.Add(CreateMenuItem("还原", "gpuClockGroup", (s, e) => {
+          gpuClock = 0;
           SetGPUClockLimit(gpuClock);
           SaveConfig("GpuClock");
-        }, false));
-      }
-      for (int clock = 1550; clock <= 2000; clock += 150) {
-        int currentclock = clock;
-        gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
-          gpuClock = currentclock;
-          SetGPUClockLimit(gpuClock);
-          SaveConfig("GpuClock");
-        }, false));
-      }
-      for (int clock = 2100; clock <= 2500; clock += 100) {
-        int currentclock = clock;
-        gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
-          gpuClock = currentclock;
-          SetGPUClockLimit(gpuClock);
-          SaveConfig("GpuClock");
-        }, false));
-      }
-      performanceControlMenu.DropDownItems.Add(gpuClockMenu);
-      ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
-      if (platformSettings != null && platformSettings.TppSupport)
-        DBMenu.ToolTipText = "你的设备拥有Tpp支持，请优先选择增大Tpp而不是更改DB版本，两者效果相同。";
-      DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
-        string gpuModel = GetNVIDIAModel();
-        if (gpuModel != null) {
-          var match = Regex.Match(gpuModel, @"^\d+");
-          if (match.Success && int.TryParse(match.Value, out int modelNum)) {
-            if (modelNum >= 5000) {
-              MessageBox.Show($"不支持英伟达50系及以后的显卡解锁DB！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-              DBVersion = 2;
-              countDB = 0;
-              SaveConfig("DBVersion");
-              UpdateCheckedState("DBGroup", "普通版本");
-              return;
+        }, true));
+        for (int clock = 600; clock <= 1400; clock += 400) {
+          int currentclock = clock;
+          gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
+            gpuClock = currentclock;
+            SetGPUClockLimit(gpuClock);
+            SaveConfig("GpuClock");
+          }, false));
+        }
+        for (int clock = 1550; clock <= 2000; clock += 150) {
+          int currentclock = clock;
+          gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
+            gpuClock = currentclock;
+            SetGPUClockLimit(gpuClock);
+            SaveConfig("GpuClock");
+          }, false));
+        }
+        for (int clock = 2100; clock <= 2500; clock += 100) {
+          int currentclock = clock;
+          gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
+            gpuClock = currentclock;
+            SetGPUClockLimit(gpuClock);
+            SaveConfig("GpuClock");
+          }, false));
+        }
+        performanceControlMenu.DropDownItems.Add(gpuClockMenu);
+        ToolStripMenuItem DBMenu = new ToolStripMenuItem("切换DB版本");
+        if (platformSettings != null && platformSettings.TppSupport)
+          DBMenu.ToolTipText = "你的设备拥有Tpp支持，请优先选择增大Tpp而不是更改DB版本，两者效果相同。";
+        DBMenu.DropDownItems.Add(CreateMenuItem("解锁版本", "DBGroup", (s, e) => {
+          string gpuModel = GetNVIDIAModel();
+          if (gpuModel != null) {
+            var match = Regex.Match(gpuModel, @"^\d+");
+            if (match.Success && int.TryParse(match.Value, out int modelNum)) {
+              if (modelNum >= 5000) {
+                MessageBox.Show($"不支持英伟达50系及以后的显卡解锁DB！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                DBVersion = 2;
+                countDB = 0;
+                SaveConfig("DBVersion");
+                UpdateCheckedState("DBGroup", "普通版本");
+                return;
+              }
             }
           }
-        }
-        if (platformSettings != null && platformSettings.UnleashedModeSupport)
-          SetFanMode(0x04);
-        else
-          SetFanMode(0x31);
-        SetMaxGpuPower();
-        SetCpuPowerLimit((byte)CPULimitDB);
-        DBVersion = 1;
-        ChangeDBVersion(DBVersion);
-        countDB = countDBInit;
-        SaveConfig("DBVersion");
-      }, false));
-      DBMenu.DropDownItems.Add(CreateMenuItem("普通版本", "DBGroup", (s, e) => {
-        DBVersion = 2;
-        countDB = 0;
-        //ChangeDBVersion(DBVersion);
+          if (MessageBox.Show($"\n警告：一旦解锁DB，只能通过安装一次显卡驱动恢复到原始状态，确认继续吗？", "解锁DB", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+            if (platformSettings != null && platformSettings.UnleashedModeSupport)
+              SetFanMode(PerformanceModeOnUI.Unleash);
+            else
+              SetFanMode(PerformanceModeOnUI.Performance);
+            SetMaxGpuPower();
+            SetCpuPowerLimit((byte)CPULimitDB);
+            DBVersion = 1;
+            ChangeDBVersion(DBVersion);
+            countDB = countDBInit;
+            SaveConfig("DBVersion");
+          }
+        }, false, "解锁DB可以在CPU功率较高时避免GPU功率降低。"));
+        DBMenu.DropDownItems.Add(CreateMenuItem("普通版本", "DBGroup", (s, e) => {
+          DBVersion = 2;
+          countDB = 0;
+          //ChangeDBVersion(DBVersion);
 
-        string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
-        string command = $"pnputil /enable-device {deviceId}";
-        ExecuteCommand(command);
-        SaveConfig("DBVersion");
-      }, true));
-      performanceControlMenu.DropDownItems.Add(DBMenu);
+          string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
+          string command = $"pnputil /enable-device {deviceId}";
+          ExecuteCommand(command);
+          SaveConfig("DBVersion");
+        }, true, "该选项可以重新恢复系统分配功耗的状态，但若在不支持的显卡（例如50系）上解锁过则必须通过安装一次显卡驱动来完全恢复。"));
+        performanceControlMenu.DropDownItems.Add(DBMenu);
+      }
       trayIcon.ContextMenuStrip.Items.Add(performanceControlMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
@@ -1287,55 +1334,57 @@ namespace OmenSuperHub {
         // 手动更新勾选状态（因为提前 return 会跳过 CreateMenuItem 的自动勾选）
       }, false));
       hardwareMonitorMenu.DropDownItems.Add(monitorCPUMenu);
-      ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem("GPU");
-      monitorGPUMenu.DropDownItems.Add(CreateMenuItem("开启GPU监控", "monitorGPUGroup", (s, e) => {
-        bool wasAllOff = !monitorCPU && !monitorGPU;
-        monitorGPU = true;
-        gpuTempReady = false; // 等待获取到温度后再参与风扇控制
-        rawPowerGPU = 0f;     // 清除可能残留的脏功率值
-        GPUPower = 0f;
-        if (hasStopAuto)
-          autoStopMonitorGPU = false;
-        //重置自动开启标志
-        hasStartAuto = false;
-        autoStartMonitorGPU = true;
-        if (wasAllOff) {
-          // 从全关状态重启监控进程
-          tempReady = false;
-          cpuTempReady = false;
-          rawPowerCPU = 0f;
-          CPUPower = 0f;
-          StartHardwareMonitor();
-        } else {
-          SetGpuMonitorState(true);
-        }
-        SaveConfig("MonitorGPU");
-      }, true));
-      monitorGPUMenu.DropDownItems.Add(CreateMenuItem("关闭GPU监控", "monitorGPUGroup", (s, e) => {
-        // 自动转速模式下禁止彻底关闭监控
-        if (!monitorCPU && fanControl == "auto") {
-          MessageBox.Show("当前为自动转速模式，若要关闭监控需切换为其他转速控制模式。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-          UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
-          skipCheckedUpdate = true;
-          return;
-        }
-        monitorGPU = false;
-        gpuTempReady = false;
-        rawPowerGPU = 0f;  // 关闭时清零，避免重新开启时读到旧值
-        GPUPower = 0f;
-        if (hasStartAuto)
-          autoStartMonitorGPU = false;
-        //重置自动关闭标志
-        hasStopAuto = false;
-        autoStopMonitorGPU = true;
-        SetGpuMonitorState(false);
-        // 若CPU和GPU均已关闭，停止监控进程
-        if (!monitorCPU && !monitorGPU) {
-          StopHardwareMonitor();
-        }
-        SaveConfig("MonitorGPU");
-      }, false));
-      hardwareMonitorMenu.DropDownItems.Add(monitorGPUMenu);
+      if (hasNVIDIAGpu || hasAMDDiscreteGpu) {
+        ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem("GPU");
+        monitorGPUMenu.DropDownItems.Add(CreateMenuItem("开启GPU监控", "monitorGPUGroup", (s, e) => {
+          bool wasAllOff = !monitorCPU && !monitorGPU;
+          monitorGPU = true;
+          gpuTempReady = false; // 等待获取到温度后再参与风扇控制
+          rawPowerGPU = 0f;     // 清除可能残留的脏功率值
+          GPUPower = 0f;
+          if (hasStopAuto)
+            autoStopMonitorGPU = false;
+          //重置自动开启标志
+          hasStartAuto = false;
+          autoStartMonitorGPU = true;
+          if (wasAllOff) {
+            // 从全关状态重启监控进程
+            tempReady = false;
+            cpuTempReady = false;
+            rawPowerCPU = 0f;
+            CPUPower = 0f;
+            StartHardwareMonitor();
+          } else {
+            SetGpuMonitorState(true);
+          }
+          SaveConfig("MonitorGPU");
+        }, true));
+        monitorGPUMenu.DropDownItems.Add(CreateMenuItem("关闭GPU监控", "monitorGPUGroup", (s, e) => {
+          // 自动转速模式下禁止彻底关闭监控
+          if (!monitorCPU && fanControl == "auto") {
+            MessageBox.Show("当前为自动转速模式，若要关闭监控需切换为其他转速控制模式。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
+            skipCheckedUpdate = true;
+            return;
+          }
+          monitorGPU = false;
+          gpuTempReady = false;
+          rawPowerGPU = 0f;  // 关闭时清零，避免重新开启时读到旧值
+          GPUPower = 0f;
+          if (hasStartAuto)
+            autoStartMonitorGPU = false;
+          //重置自动关闭标志
+          hasStopAuto = false;
+          autoStopMonitorGPU = true;
+          SetGpuMonitorState(false);
+          // 若CPU和GPU均已关闭，停止监控进程
+          if (!monitorCPU && !monitorGPU) {
+            StopHardwareMonitor();
+          }
+          SaveConfig("MonitorGPU");
+        }, false));
+        hardwareMonitorMenu.DropDownItems.Add(monitorGPUMenu);
+      }
       ToolStripMenuItem monitorFanMenu = new ToolStripMenuItem("风扇");
       monitorFanMenu.DropDownItems.Add(CreateMenuItem("开启风扇监控", "monitorFanGroup", (s, e) => {
         monitorFan = true;
@@ -1497,6 +1546,18 @@ namespace OmenSuperHub {
         int value = int.Parse(cpuPower.Replace(" W", "").Trim());
         if (value > 10 && value <= 254) {
           SetCpuPowerLimit((byte)value);
+        }
+      }
+    }
+
+    static void RestoreTppPower() {
+      // 恢复TPP功耗设定
+      if (tppPower == "max") {
+        SetConcurrentTdp(254);
+      } else if (tppPower.Contains(" W")) {
+        int value = int.Parse(tppPower.Replace(" W", "").Trim());
+        if (value > 10 && value <= 254) {
+          SetConcurrentTdp((byte)value);
         }
       }
     }
@@ -2000,10 +2061,10 @@ namespace OmenSuperHub {
           vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
           adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
           if (hasNVIDIAGpu) {
-              var limits = GpuAppManager.GetGpuPowerLimits();
-              string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-              ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("显卡功率限制"));
-              if (limitsMenu != null) limitsMenu.Text = $"显卡功率限制: {limitsText}";
+            var limits = GpuAppManager.GetGpuPowerLimits();
+            string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+            ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("显卡功率限制"));
+            if (limitsMenu != null) limitsMenu.Text = $"显卡功率限制: {limitsText}";
           }
         }
       }
@@ -2035,9 +2096,9 @@ namespace OmenSuperHub {
               UpdateCheckedState("DBGroup", "普通版本");
             } else {
               if (platformSettings != null && platformSettings.UnleashedModeSupport)
-                SetFanMode(0x04);
+                SetFanMode(PerformanceModeOnUI.Unleash);
               else
-                SetFanMode(0x31);
+                SetFanMode(PerformanceModeOnUI.Performance);
               SetMaxGpuPower();
               SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
@@ -2051,16 +2112,9 @@ namespace OmenSuperHub {
           }
           if (tryTimes == 0) {
             // 恢复模式设定
-            if (fanMode.Contains("performance")) {
-              SetFanMode(0x31);
-            } else if (fanMode.Contains("default")) {
-              SetFanMode(0x30);
-            } else if (fanMode.Contains("unleashed")) {
-              SetFanMode(0x04);
-            }
-
+            SetFanMode(fanMode);
             // 恢复CPU功耗设定
-            RestoreCPUPower();
+            //RestoreCPUPower();
           }
         } else if (countDB == countDBInit - 1) {
           // 启用DB驱动
@@ -2213,32 +2267,32 @@ namespace OmenSuperHub {
         // 如果是NVIDIAGpu平台，进一步检查是否有程序占用GPU
         bool isGpuIdle = true;
         if (hasNVIDIAGpu) {
-            var gpuApps = GpuAppManager.GetGpuApps();
-            if (gpuApps != null && gpuApps.Count > 0) {
-                isGpuIdle = false;
-            }
+          var gpuApps = GpuAppManager.GetGpuApps();
+          if (gpuApps != null && gpuApps.Count > 0) {
+            isGpuIdle = false;
+          }
         }
 
         if (isGpuIdle) {
-            GPUPower = 0;
-            rawPowerGPU = 0f;
-            getGPU = false;
-            hasStopAuto = true;
-            countQuery = 0;
-            monitorGPU = false;
-            gpuTempReady = false; // 关闭后温度不再有效
-            //重置自动开启标志
-            hasStartAuto = false;
-            autoStartMonitorGPU = true;
-            SetGpuMonitorState(false);
-            UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
-            SaveConfig("MonitorGPU");
+          GPUPower = 0;
+          rawPowerGPU = 0f;
+          getGPU = false;
+          hasStopAuto = true;
+          countQuery = 0;
+          monitorGPU = false;
+          gpuTempReady = false; // 关闭后温度不再有效
+                                //重置自动开启标志
+          hasStartAuto = false;
+          autoStartMonitorGPU = true;
+          SetGpuMonitorState(false);
+          UpdateCheckedState("monitorGPUGroup", "关闭GPU监控");
+          SaveConfig("MonitorGPU");
 
-            // 设置通知的文本和标题
-            trayIcon.BalloonTipTitle = "状态更改提示";
-            trayIcon.BalloonTipText = "检测到显卡进入低功耗状态，OSH已停止监控GPU以节约能源。\n手动打开GPU监控后，本次将不再自动停止监控GPU。";
-            trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
-            trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
+          // 设置通知的文本和标题
+          trayIcon.BalloonTipTitle = "状态更改提示";
+          trayIcon.BalloonTipText = "检测到显卡进入低功耗状态，OSH已停止监控GPU以节约能源。\n手动打开GPU监控后，本次将不再自动停止监控GPU。";
+          trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
+          trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
         }
       }
       //自动开启GPU监控：需从"未连接显示器"切换为"已连接"时才触发
@@ -2562,13 +2616,16 @@ namespace OmenSuperHub {
               key.SetValue("TempSensitivity", tempSensitivity);
               key.SetValue("CpuPower", cpuPower);
               key.SetValue("GpuPower", gpuPower);
-              key.SetValue("GpuClock", gpuClock);
-              key.SetValue("DBVersion", DBVersion);
+              if (hasNVIDIAGpu) {
+                key.SetValue("GpuClock", gpuClock);
+                key.SetValue("DBVersion", DBVersion);
+              }
               key.SetValue("AutoStart", autoStart);
               key.SetValue("AlreadyRead", alreadyRead);
               key.SetValue("CustomIcon", customIcon);
               key.SetValue("OmenKey", omenKey);
-              key.SetValue("MonitorGPU", monitorGPU);
+              if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+                key.SetValue("MonitorGPU", monitorGPU);
               key.SetValue("MonitorCPU", monitorCPU);
               key.SetValue("MonitorFan", monitorFan);
               key.SetValue("MonitorRefreshRate", monitorRefreshRate);
@@ -2679,16 +2736,16 @@ namespace OmenSuperHub {
               UpdateCheckedState("fanTableGroup", "安静模式");
             }
 
-            fanMode = (string)key.GetValue("FanMode", "performance");
-            if (fanMode.Contains("extreme")) {
-              SetFanMode(0x04);
-              UpdateCheckedState("fanModeGroup", "大师模式");
-            } else if (fanMode.Contains("performance")) {
-              SetFanMode(0x31);
-              UpdateCheckedState("fanModeGroup", "狂暴模式");
-            } else if (fanMode.Contains("default")) {
-              SetFanMode(0x30);
-              UpdateCheckedState("fanModeGroup", "平衡模式");
+            string fanModeStr = key.GetValue("FanMode", "") as string;
+            if (!string.IsNullOrEmpty(fanModeStr) &&
+                Enum.TryParse<PerformanceModeOnUI>(fanModeStr, out var savedMode)) {
+              SetFanMode(savedMode);
+              UpdateCheckedState("fanModeGroup",
+                  ModeNames.TryGetValue(savedMode, out var text) ? text : savedMode.ToString());
+            } else {
+              // 如果读取失败，使用默认值
+              SetFanMode(PerformanceModeOnUI.Performance);
+              UpdateCheckedState("fanModeGroup", ModeNames[PerformanceModeOnUI.Performance]);
             }
 
             fanControl = (string)key.GetValue("FanControl", "auto");
@@ -2820,47 +2877,49 @@ namespace OmenSuperHub {
                 break;
             }
 
-            gpuClock = (int)key.GetValue("GpuClock", 0);
-            if (SetGPUClockLimit(gpuClock)) {
-              UpdateCheckedState("gpuClockGroup", gpuClock + " MHz");
-            } else {
-              UpdateCheckedState("gpuClockGroup", "还原");
-            }
+            if (hasNVIDIAGpu) {
+              gpuClock = (int)key.GetValue("GpuClock", 0);
+              if (SetGPUClockLimit(gpuClock)) {
+                UpdateCheckedState("gpuClockGroup", gpuClock + " MHz");
+              } else {
+                UpdateCheckedState("gpuClockGroup", "还原");
+              }
 
-            DBVersion = (int)key.GetValue("DBVersion", 2);
-            switch (DBVersion) {
-              case 1:
-                string gpuModel = GetNVIDIAModel();
-                if (gpuModel != null) {
-                  var match = Regex.Match(gpuModel, @"^\d+");
-                  if (match.Success && int.TryParse(match.Value, out int modelNum)) {
-                    if (modelNum >= 5000) {
-                      DBVersion = 2;
-                      string deviceId50 = "\"ACPI\\NVDA0820\\NPCF\"";
-                      string command50 = $"pnputil /enable-device {deviceId50}";
-                      ExecuteCommand(command50);
-                      UpdateCheckedState("DBGroup", "普通版本");
-                      break;
+              DBVersion = (int)key.GetValue("DBVersion", 2);
+              switch (DBVersion) {
+                case 1:
+                  string gpuModel = GetNVIDIAModel();
+                  if (gpuModel != null) {
+                    var match = Regex.Match(gpuModel, @"^\d+");
+                    if (match.Success && int.TryParse(match.Value, out int modelNum)) {
+                      if (modelNum >= 5000) {
+                        DBVersion = 2;
+                        string deviceId50 = "\"ACPI\\NVDA0820\\NPCF\"";
+                        string command50 = $"pnputil /enable-device {deviceId50}";
+                        ExecuteCommand(command50);
+                        UpdateCheckedState("DBGroup", "普通版本");
+                        break;
+                      }
                     }
                   }
-                }
-                DBVersion = 1;
-                if (platformSettings != null && platformSettings.UnleashedModeSupport)
-                  SetFanMode(0x04);
-                else
-                  SetFanMode(0x31);
-                SetMaxGpuPower();
-                SetCpuPowerLimit((byte)CPULimitDB);
-                countDB = countDBInit;
-                UpdateCheckedState("DBGroup", "解锁版本");
-                break;
-              case 2:
-                string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
-                string command = $"pnputil /enable-device {deviceId}";
-                ExecuteCommand(command);
-                DBVersion = 2;
-                UpdateCheckedState("DBGroup", "普通版本");
-                break;
+                  DBVersion = 1;
+                  if (platformSettings != null && platformSettings.UnleashedModeSupport)
+                    SetFanMode(PerformanceModeOnUI.Unleash);
+                  else
+                    SetFanMode(PerformanceModeOnUI.Performance);
+                  SetMaxGpuPower();
+                  SetCpuPowerLimit((byte)CPULimitDB);
+                  countDB = countDBInit;
+                  UpdateCheckedState("DBGroup", "解锁版本");
+                  break;
+                case 2:
+                  string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
+                  string command = $"pnputil /enable-device {deviceId}";
+                  ExecuteCommand(command);
+                  DBVersion = 2;
+                  UpdateCheckedState("DBGroup", "普通版本");
+                  break;
+              }
             }
 
             autoStart = (string)key.GetValue("AutoStart", "off");
@@ -2917,9 +2976,14 @@ namespace OmenSuperHub {
             monitorCPU = monitorCPUCache;
             UpdateCheckedState("monitorCPUGroup", monitorCPU ? "开启CPU监控" : "关闭CPU监控");
 
-            bool monitorGPUCache = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
-            monitorGPU = monitorGPUCache;
-            UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
+            if (hasNVIDIAGpu || hasAMDDiscreteGpu) {
+              bool monitorGPUCache = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
+              monitorGPU = monitorGPUCache;
+              UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
+            } else {
+              monitorGPU = false;
+              UpdateCheckedState("monitorGPUGroup", monitorGPU ? "开启GPU监控" : "关闭GPU监控");
+            }
 
             // 仅当至少一个监控开启时才启动 libre 进程；进程启动后再发送 CPU/GPU 状态
             if (monitorCPU || monitorGPU) {
@@ -3000,9 +3064,9 @@ namespace OmenSuperHub {
             // 如果注册表键不存在，可以使用默认值
             LoadFanConfig("silent.txt");
             if (platformSettings != null && platformSettings.UnleashedModeSupport)
-              SetFanMode(0x04);
+              SetFanMode(PerformanceModeOnUI.Unleash);
             else
-              SetFanMode(0x31);
+              SetFanMode(PerformanceModeOnUI.Performance);
             SetMaxFanSpeedOff();
             SetMaxGpuPower();
             // 首次运行：默认开启 CPU/GPU 监控，启动进程
