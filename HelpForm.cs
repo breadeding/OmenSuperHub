@@ -45,10 +45,10 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）功能：重构GPU功率控制，新增dState功耗状态设置，Tpp改名为Ppab条件；\n" +
-         "（2）功能：将GPU温度阈值固定改为尝试从英伟达指令获取。；\n" +
-         "（3）功能：优化菜单提示，避免遮挡；\n" +
-         "（4）修复：。\n\n" +
+         "（1）功能：添加部分灯光控制接口，在本机信息中添加键盘灯光类型；\n" +
+         "（2）功能：重构GPU功率控制，新增dState功耗状态设置，Tpp改名为Ppab条件；\n" +
+         "（3）功能：将GPU温度阈值固定改为尝试从英伟达指令获取；\n" +
+         "（4）功能：优化菜单提示，避免遮挡。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +

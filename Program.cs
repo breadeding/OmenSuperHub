@@ -16,6 +16,8 @@ using System.Windows.Forms;
 using LibreHardwareMonitor.Hardware.Motherboard;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
+using OmenSuperHub.App;
+using static OmenSuperHub.App.OmenLighting;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
@@ -194,7 +196,7 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
-        
+
         Application.Run();
       }
     }
@@ -866,12 +868,13 @@ namespace OmenSuperHub {
       ambientSensorMenu = new ToolStripMenuItem("环境传感器: --°C") { Enabled = false };
       pchSensorMenu = new ToolStripMenuItem("PCH传感器: --°C") { Enabled = false };
       vrSensorMenu = new ToolStripMenuItem("VR传感器: --°C") { Enabled = false };
-      adapterPowerMenu = new ToolStripMenuItem("适配器功率: --W") { Enabled = false };
+      NbKeyboardLightingType kbType = GetKeyboardType();
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"键盘灯光类型: {GetKeyboardTypeName(kbType)}") { Enabled = false });
       sysInfoMenu.DropDownItems.Add(irSensorMenu);
       sysInfoMenu.DropDownItems.Add(ambientSensorMenu);
       sysInfoMenu.DropDownItems.Add(pchSensorMenu);
       sysInfoMenu.DropDownItems.Add(vrSensorMenu);
-      sysInfoMenu.DropDownItems.Add(adapterPowerMenu);
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"原装适配器功率: {GetAdapterPower()}W") { Enabled = false });
 
       // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
       sysInfoMenu.DropDownOpening += (s, e) => { isSysInfoMenuOpen = true; };
@@ -1829,7 +1832,6 @@ namespace OmenSuperHub {
             ambientSensorMenu.Text = $"环境传感器: {GetSensorTemperature(1)}°C";
             pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
             vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
-            adapterPowerMenu.Text = $"原装适配器功率: {GetAdapterPower()}W";
             if (hasNVIDIAGpu) {
               var limits = GetGpuPowerLimits();
               string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
@@ -1842,7 +1844,6 @@ namespace OmenSuperHub {
           ambientSensorMenu.Text = $"环境传感器: {GetSensorTemperature(1)}°C";
           pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
           vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
-          adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
           if (hasNVIDIAGpu) {
             var limits = GetGpuPowerLimits();
             string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
