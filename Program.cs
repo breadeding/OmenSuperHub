@@ -952,14 +952,14 @@ namespace OmenSuperHub {
         SaveConfig("FanMode");
         // 恢复CPU功耗设定
         RestoreCPUPower();
-      }, true));
+      }, true, "提升性能上限，但可能同时改变其它选项的实际生效值。"));
       performanceControlMenu.DropDownItems.Add(CreateMenuItem("平衡模式", "fanModeGroup", (s, e) => {
         fanMode = "default";
         SetFanMode(0x30);
         SaveConfig("FanMode");
         // 恢复CPU功耗设定
         RestoreCPUPower();
-      }, false));
+      }, false, "降低性能上限换取更低的噪音和温度，但可能同时改变其它选项的实际生效值。"));
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       // 图形模式
       ToolStripMenuItem graphicsModeControlMenu = new ToolStripMenuItem("图形模式");
@@ -1138,6 +1138,7 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
       }
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem("CPU功率");
+      cpuPowerMenu.ToolTipText = "最大或过高的数值不一定生效，优先选择合适的数值而不是无脑最大。";
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem("不设置", "cpuPowerGroup", (s, e) => {
         cpuPower = "null";
         SaveConfig("CpuPower");
@@ -1831,10 +1832,11 @@ namespace OmenSuperHub {
       public string Error { get; set; }
     }
 
-    static ToolStripMenuItem CreateMenuItem(string text, string group, EventHandler action, bool isChecked) {
+    static ToolStripMenuItem CreateMenuItem(string text, string group, EventHandler action, bool isChecked, string toolTip = null) {
       var item = new ToolStripMenuItem(text) {
         Tag = group,
-        Checked = isChecked // Set initial checked state
+        Checked = isChecked, // Set initial checked state
+        ToolTipText = toolTip   // 设置提示文本
       };
       item.Click += (s, e) => {
         if (item.Text == "解锁版本") {
@@ -1983,7 +1985,7 @@ namespace OmenSuperHub {
             ambientSensorMenu.Text = $"环境传感器: {GetSensorTemperature(1)}°C";
             pchSensorMenu.Text = $"PCH传感器: {GetSensorTemperature(2)}°C";
             vrSensorMenu.Text = $"VR传感器: {GetSensorTemperature(3)}°C";
-            adapterPowerMenu.Text = $"适配器功率: {GetAdapterPower()}W";
+            adapterPowerMenu.Text = $"原装适配器功率: {GetAdapterPower()}W";
             if (hasNVIDIAGpu) {
               var limits = GpuAppManager.GetGpuPowerLimits();
               string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";

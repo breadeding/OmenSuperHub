@@ -485,12 +485,145 @@ namespace OmenSuperHub {
       SendOmenBiosWmi(0x05, new byte[] { 0x64 }, 0, 0x20009);
     }
 
-    public static void SetlightColor() {
-      byte[] dataIn = new byte[128];
-      dataIn[0] = 0x03;
-      for (int i = 25; i <= 36; i++)
-        dataIn[i] = 0x80;
-      SendOmenBiosWmi(0x03, dataIn, 0, 0x20009);
+    public static byte[] GetLightColor() {
+      // commandType = 2，无额外输入，读取128字节，前3字节为RGB
+      return SendOmenBiosWmi(0x02, new byte[1] { 0 }, 128, 0x20009);
+    }
+
+    /// <summary>
+    /// 设置灯效颜色（inputData 通常为 3 字节 RGB 或 4 字节包含亮度）
+    /// </summary>
+    /// <returns>true 表示命令执行成功，false 表示失败</returns>
+    public static bool SetLightColor(byte[] inputData) {
+      // commandType = 3，写操作，期望返回4字节（实际不关心数据，只判断成功与否）
+      byte[] result = SendOmenBiosWmi(0x03, inputData, 4, 0x20009);
+      return result != null; // 成功时返回非空字节数组（哪怕全0），失败返回null
+    }
+
+    /// <summary>
+    /// 设置亮度（0～100）
+    /// </summary>
+    /// <returns>true 表示成功，false 表示失败</returns>
+    public static bool SetBrightness(byte value) {
+      byte[] inputData = new byte[128];
+      inputData[0] = value;
+      byte[] result = SendOmenBiosWmi(0x05, inputData, 4, 0x20009);
+      return result != null;
+    }
+
+    /// <summary>
+    /// 获取当前 LED 动画效果编号
+    /// </summary>
+    public static int? GetLedAnimation() {
+      byte[] result = SendOmenBiosWmi(0x06, new byte[1] { 0 }, 128, 0x20009);
+      if (result != null && result.Length > 0)
+        return result[0];
+      return null;
+    }
+
+    /// <summary>
+    /// 设置 LED 动画效果（inputData 格式取决于 EC 期望，通常为效果编号+参数）
+    /// </summary>
+    /// <returns>true 表示成功，false 表示失败</returns>
+    public static bool SetLedAnimation(byte[] inputData) {
+      byte[] result = SendOmenBiosWmi(0x07, inputData, 4, 0x20009);
+      return result != null;
+    }
+
+    [Flags]
+    public enum OmenKeyboardLightingSupport {
+      None = 0,
+      FourZoneStatic = 1,   // 基本四区静态颜色
+      FourZoneAnimated = 2, // 四区动画（如 Dojo 的四区键盘）
+      LightBar = 4,         // 侧边灯条（如 Dojo、Vibrance 的 Dojo Light Bar）
+      PerKeyRGB = 8         // 每键 RGB（MCU HID，无法通过 WMI 查询，需额外检测）
+    }
+
+    /// <summary>
+    /// 获取当前机型支持的键盘灯光类型（基于 WMI BIOS 查询）。
+    /// 注意：PerKeyRGB 无法通过 WMI 确认，建议结合 USB 设备列表或 SSID 判断。
+    /// </summary>
+    public static OmenKeyboardLightingSupport GetSupportedKeyboardLighting() {
+      OmenKeyboardLightingSupport support = OmenKeyboardLightingSupport.None;
+
+      // ----- 1. 检测 LightBar（侧边灯条） -----
+      // 源码：NbPerKeyRgbLightingControl.Initialize 中调用
+      // OmenHsaClient.BiosLightBarWmiCmd_GetPlatformSupport()
+      // 内部是 BiosWmiCmd_Get(131080, 1, null, 0, 4)，检查返回值的 bit1
+      try {
+        // command = 131080, commandType = 1, 无输入数据，期望返回 4 字节
+        byte[] result = SendOmenBiosWmi(
+            commandType: 1,
+            data: null,
+            outputSize: 4,
+            command: 131080);
+
+        if (result != null && result.Length >= 1) {
+          // 检查 bit1 (Platform Support)
+          if ((result[0] & 0x02) != 0)
+            support |= OmenKeyboardLightingSupport.LightBar;
+        }
+      } catch {
+        // 忽略错误，可能不支持该命令
+      }
+
+      // ----- 2. 检测四区动画键盘 -----
+      // 源码：DojoLightingWmiHelperV2.BiosFourZoneAniEffectWmiCmd_Get()
+      // 调用 BiosWmiCmd_Get(131081, 12, new byte[4], 4, 4)，读取当前动画效果ID
+      // 如果返回有效值（不为null且不为0xFF等），则认为支持四区动画键盘
+      try {
+        byte[] input = new byte[4]; // 全零
+        byte[] result = SendOmenBiosWmi(
+            commandType: 12,
+            data: input,
+            outputSize: 4,
+            command: 131081); // 读命令 131081
+
+        if (result != null && result.Length > 0 && result[0] != 0xFF) {
+          // 效果 ID 有效，说明有四区动画硬件
+          support |= OmenKeyboardLightingSupport.FourZoneAnimated;
+        }
+      } catch {
+        // 忽略
+      }
+
+      // ----- 3. 四区静态颜色是所有四区动画键盘都具备的，直接添加 -----
+      if (support.HasFlag(OmenKeyboardLightingSupport.FourZoneAnimated))
+        support |= OmenKeyboardLightingSupport.FourZoneStatic;
+
+      // ----- 4. PerKeyRGB 需通过其它方式（如 USB 设备检测），此处不实现 -----
+      // 可提供单独方法检测 USB 设备 VID/PID
+
+      return support;
+    }
+
+    public static bool HasPerKeyRGBKeyboard() {
+      // 常见 OMEN 笔记本每键 RGB 键盘的 VID/PID
+      var knownVidPid = new List<(int Vid, int Pid)>
+      {
+        (0x0461, 0x4E99), // Ralph (20123)
+        (0x0461, 0x4E9A), // Cybug (20122)
+        (0x0461, 0x4F03), // Hendricks (20227)
+        (0x0461, 0x4F11), // Brunobear (20241)
+        (0x0461, 0x4F1E), // Brunobear 2 (20254)
+        (0x0D62, 0x1A32), // Voco (6706)
+        (0x0D62, 0x36BA), // Voco 2 (14010)
+        (0x0D62, 0x54BF), // Dojo (21695)
+        (0x0D62, 0x30BF), // Dojo 2 (12479)
+    };
+
+      using (var searcher = new System.Management.ManagementObjectSearcher(
+          "root\\CIMV2", "SELECT DeviceID FROM Win32_PnPEntity WHERE PNPClass='HIDClass'")) {
+        foreach (var obj in searcher.Get()) {
+          string deviceId = obj["DeviceID"]?.ToString() ?? "";
+          // 解析 VID 和 PID 简单判断
+          foreach (var (vid, pid) in knownVidPid) {
+            if (deviceId.Contains($"VID_{vid:X4}") && deviceId.Contains($"PID_{pid:X4}"))
+              return true;
+          }
+        }
+      }
+      return false;
     }
 
     /// <summary>读取指定分区的灯光颜色</summary>

@@ -31,8 +31,20 @@ namespace OmenSuperHub {
     }
 
     private void ApplySupersampling(string text, int textSize) {
+      // 参数校验，防止 textSize 无效导致 ArgumentException
+      if (string.IsNullOrEmpty(text) || textSize <= 0)
+        return;
+
       string[] lines = text.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-      Bitmap newBitmap = new Bitmap(700, 300);
+
+      Bitmap newBitmap;
+      try {
+        newBitmap = new Bitmap(700, 300);
+      } catch (ArgumentException ex) {
+        System.Diagnostics.Debug.WriteLine($"Bitmap 创建失败: {ex.Message}");
+        return;
+      }
+
       using (Graphics graphics = Graphics.FromImage(newBitmap)) {
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         graphics.Clear(Color.Transparent);
@@ -48,7 +60,6 @@ namespace OmenSuperHub {
             string[] parts = lines[i].Split(':');
             if (parts.Length > 1) {
               string title = parts[0].Trim();
-
               customColor = GetColorForTitle(title);
               using (Brush brush = new SolidBrush(customColor)) {
                 for (int j = 1; j <= i; j++)
@@ -60,9 +71,11 @@ namespace OmenSuperHub {
         }
       }
 
-      displayPictureBox.Image?.Dispose();
+      // 先释放旧图像，再赋新值
+      var oldImage = displayPictureBox.Image;
       displayPictureBox.Image = newBitmap;
       displayPictureBox.Size = newBitmap.Size;
+      oldImage?.Dispose();   // Dispose 放在赋值之后，避免控件引用悬空
 
       if (IsHandleCreated)
         RenderLayered(newBitmap);
@@ -84,6 +97,7 @@ namespace OmenSuperHub {
         BeginInvoke(new Action(() => SetText(text, textSize, loc)));
         return;
       }
+      if (textSize <= 0) return;
       ApplySupersampling(text, textSize);
       AdjustFormSize();
       if (loc == "left") {
