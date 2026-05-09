@@ -516,6 +516,10 @@ namespace OmenSuperHub {
       SendOmenBiosWmi(0x1A, new byte[] { 0xFF, ecCommand }, 0);
     }
 
+    public static byte[] SetFanMode(PerformanceMode mode) {
+      return SendOmenBiosWmi(0x1A, new byte[] { 0xFF, (byte)mode }, 0);
+    }
+
     /// <summary>
     /// 设置 GPU 实时功耗状态（对应 commandType=34）
     /// </summary>

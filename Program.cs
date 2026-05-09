@@ -39,7 +39,6 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static PerformanceModeOnUI fanMode = PerformanceModeOnUI.Performance;
     static string fanTable = "cool" , fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off";
     static volatile bool monitorFan = true;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
@@ -79,7 +78,6 @@ namespace OmenSuperHub {
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
-    static ToolStripMenuItem adapterPowerMenu;
 
     static bool isSysInfoMenuOpen = false;
     static int? maxCPUTemp = null;
@@ -131,6 +129,8 @@ namespace OmenSuperHub {
         hasNVIDIAGpu = GetNVIDIAModel() != null;
         if (hasNVIDIAGpu && (NvGraphicsMode == GraphicsMode.Hybrid || NvGraphicsMode == GraphicsMode.Optimus))
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
+        // 固定为释放全部性能模式
+        SetFanMode(PerformanceMode.L7);
 
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
@@ -945,25 +945,6 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(fanControlMenu);
 
       ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem("性能控制");
-
-      var supportedModes = GetSupportedPerformanceModes();
-      foreach (var mode in supportedModes) {
-        string name = ModeNames.TryGetValue(mode, out var text) ? text : mode.ToString();
-        string description = ModeDescriptions.TryGetValue(mode, out var desc) ? desc : "";
-
-        performanceControlMenu.DropDownItems.Add(CreateMenuItem(name, "fanModeGroup", (s, e) =>
-        {
-          fanMode = mode;
-          SetFanMode(mode);
-          SaveConfig("FanMode");
-          if (mode == PerformanceModeOnUI.Performance || mode == PerformanceModeOnUI.Extreme || mode == PerformanceModeOnUI.Unleash) {
-            System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
-              RestoreTppPower();
-            });
-          }
-        }, false, description));
-      }
-      performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       // 图形模式
       if (NvGraphicsMode == GraphicsMode.Optimus || NvGraphicsMode == GraphicsMode.Hybrid) {
         var hotSwitchItem = CreateMenuItem("热切换", null, (s, e) =>
@@ -1311,10 +1292,6 @@ namespace OmenSuperHub {
             }
           }
           if (MessageBox.Show($"\n警告：一旦解锁DB，只能通过安装一次显卡驱动恢复到原始状态，确认继续吗？", "解锁DB", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-            if (platformSettings != null && platformSettings.UnleashedModeSupport)
-              SetFanMode(PerformanceModeOnUI.Unleash);
-            else
-              SetFanMode(PerformanceModeOnUI.Performance);
             SetGpuPowerState(true, true);
             SetCpuPowerLimit((byte)CPULimitDB);
             DBVersion = 1;
@@ -1879,10 +1856,6 @@ namespace OmenSuperHub {
               SaveConfig("DBVersion");
               UpdateCheckedState("DBGroup", "普通版本");
             } else {
-              if (platformSettings != null && platformSettings.UnleashedModeSupport)
-                SetFanMode(PerformanceModeOnUI.Unleash);
-              else
-                SetFanMode(PerformanceModeOnUI.Performance);
               SetGpuPowerState(true, true);
               SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
@@ -1895,17 +1868,10 @@ namespace OmenSuperHub {
             //MessageBox.Show($"解锁成功！\n当前最大显卡功耗锁定为：{-powerLimits:F2} W ！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
           }
           if (tryTimes == 0) {
-            // 恢复模式设定
-            SetFanMode(fanMode);
             // 恢复CPU功耗设定
             RestoreCPUPower();
             // 恢复GPU功耗设定
             SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
-            if (fanMode == PerformanceModeOnUI.Performance || fanMode == PerformanceModeOnUI.Extreme || fanMode == PerformanceModeOnUI.Unleash) {
-              System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
-                RestoreTppPower();
-              });
-            }
           }
         } else if (countDB == countDBInit - 1) {
           // 启用DB驱动
@@ -2407,7 +2373,6 @@ namespace OmenSuperHub {
           if (key != null) {
             if (configName == null) {
               key.SetValue("FanTable", fanTable);
-              key.SetValue("FanMode", fanMode);
               key.SetValue("FanControl", fanControl);
               key.SetValue("TempSensitivity", tempSensitivity);
               key.SetValue("CpuPower", cpuPower);
@@ -2439,9 +2404,6 @@ namespace OmenSuperHub {
               switch (configName) {
                 case "FanTable":
                   key.SetValue("FanTable", fanTable);
-                  break;
-                case "FanMode":
-                  key.SetValue("FanMode", fanMode);
                   break;
                 case "FanControl":
                   key.SetValue("FanControl", fanControl);
@@ -2538,18 +2500,6 @@ namespace OmenSuperHub {
             } else if (fanTable.Contains("silent")) {
               LoadFanConfig("silent.txt");
               UpdateCheckedState("fanTableGroup", "安静模式");
-            }
-
-            string fanModeStr = key.GetValue("FanMode", "") as string;
-            if (!string.IsNullOrEmpty(fanModeStr) &&
-                Enum.TryParse<PerformanceModeOnUI>(fanModeStr, out var savedMode)) {
-              SetFanMode(savedMode);
-              UpdateCheckedState("fanModeGroup",
-                  ModeNames.TryGetValue(savedMode, out var text) ? text : savedMode.ToString());
-            } else {
-              // 如果读取失败，使用默认值
-              SetFanMode(PerformanceModeOnUI.Performance);
-              UpdateCheckedState("fanModeGroup", ModeNames[PerformanceModeOnUI.Performance]);
             }
 
             fanControl = (string)key.GetValue("FanControl", "auto");
@@ -2700,10 +2650,6 @@ namespace OmenSuperHub {
                     }
                   }
                   DBVersion = 1;
-                  if (platformSettings != null && platformSettings.UnleashedModeSupport)
-                    SetFanMode(PerformanceModeOnUI.Unleash);
-                  else
-                    SetFanMode(PerformanceModeOnUI.Performance);
                   SetGpuPowerState(true, true); // fallback for db state
                   SetCpuPowerLimit((byte)CPULimitDB);
                   countDB = countDBInit;
@@ -2859,11 +2805,7 @@ namespace OmenSuperHub {
             }
           } else {
             // 如果注册表键不存在，可以使用默认值
-            LoadFanConfig("silent.txt");
-            if (platformSettings != null && platformSettings.UnleashedModeSupport)
-              SetFanMode(PerformanceModeOnUI.Unleash);
-            else
-              SetFanMode(PerformanceModeOnUI.Performance);
+            LoadFanConfig("cool.txt");
             SetMaxFanSpeedOff();
             SetGpuPowerState(true, true); // fallback for default state
             // 首次运行：默认开启 CPU/GPU 监控，启动进程
