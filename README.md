@@ -1,6 +1,6 @@
 关于OmenSuperHub
 =
-本程序主要功能包括伪装OGH，风扇控制，CPU和GPU功率控制，Tpp（DB增益点）控制，DB版本切换，Omen键自定义以及温度/功率监控。
+本程序主要功能包括伪装OGH，风扇控制，CPU和GPU功率控制，DB版本自动切换，Omen键自定义以及温度/功率监控。
 OmenSuperHub实现了惠普暗夜精灵（HP OMEN）系列的控制软件Omen Gaming Hub的大多数有用功能，但不连接网络，且没有广告、壁纸等无用功能。
 
 * 程序设计主要基于暗影精灵9 Intel笔记本（i9-13900HX + 4060），不保证能在所有平台正常运行
@@ -18,6 +18,8 @@ OmenSuperHub实现了惠普暗夜精灵（HP OMEN）系列的控制软件Omen Ga
 * 要长时间使用本程序替代OGH，请关闭OGH自启动并开启OSH自启
 
 * 在右键菜单“关于OSH”中可查看更多说明
+
+* 运行“OmenSuperHub清理脚本.bat”可清空OmenSuperHub的所有配置
 
 链接
 =
