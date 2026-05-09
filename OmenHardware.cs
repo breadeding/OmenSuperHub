@@ -845,17 +845,16 @@ namespace OmenSuperHub {
     //  Console.WriteLine("+ OK: " + outputData);
     //}
 
-    public static ManagementObjectSearcher searcher;
-    public static ManagementObject biosMethods;
     public static byte[] SendOmenBiosWmi(uint commandType, byte[] data, int outputSize, uint command = 0x20008) {
       const string namespaceName = @"root\wmi";
       const string className = "hpqBIntM";
-      string methodName = "hpqBIOSInt" + outputSize.ToString(); // Change here
+      string methodName = "hpqBIOSInt" + outputSize.ToString();
       byte[] sign = { 0x53, 0x45, 0x43, 0x55 };
 
       try {
-        // Prepare the request
-        using (var biosDataIn = new ManagementClass(namespaceName, "hpqBDataIn", null).CreateInstance()) {
+        // ① ManagementClass 本身也必须 Dispose
+        using (var biosDataInClass = new ManagementClass(namespaceName, "hpqBDataIn", null))
+        using (var biosDataIn = biosDataInClass.CreateInstance()) {
           biosDataIn["Command"] = command;
           biosDataIn["CommandType"] = commandType;
           biosDataIn["Sign"] = sign;
@@ -866,45 +865,37 @@ namespace OmenSuperHub {
             biosDataIn["Size"] = (uint)0;
           }
 
-          // Obtain BIOS method class instance
-          if (searcher == null)
-            searcher = new ManagementObjectSearcher(namespaceName, $"SELECT * FROM {className}");
-          if (biosMethods == null)
-            biosMethods = searcher.Get().Cast<ManagementObject>().FirstOrDefault();
+          // ② searcher、collection、biosMethods 全部局部化并 Dispose
+          using (var localSearcher = new ManagementObjectSearcher(namespaceName, $"SELECT * FROM {className}"))
+          using (var collection = localSearcher.Get()) {
+            ManagementObject biosMethods = collection.Cast<ManagementObject>().FirstOrDefault();
+            if (biosMethods == null) return null;
 
-          // Make a call to write to the BIOS
-          var inParams = biosMethods.GetMethodParameters(methodName); // Change here
-          inParams["InData"] = biosDataIn;
+            using (biosMethods)
+            using (var inParams = biosMethods.GetMethodParameters(methodName)) {
+              inParams["InData"] = biosDataIn;
 
-          var result = biosMethods.InvokeMethod(methodName, inParams, null); // Change here
-          var outData = result["OutData"] as ManagementBaseObject;
-          uint returnCode = (uint)outData["rwReturnCode"];
+              using (var result = biosMethods.InvokeMethod(methodName, inParams, null)) {
+                var outData = result["OutData"] as ManagementBaseObject;
+                uint returnCode = (uint)outData["rwReturnCode"];
 
-          if (returnCode == 0) {
-            // If operation completed successfully
-            if (outputSize != 0) {
-              var outputData = (byte[])outData["Data"];
-              // Console.WriteLine("+ OK: " + BitConverter.ToString(outputData));
-              return (byte[])outData["Data"];
-            } else {
-              // Console.WriteLine("+ OK");
-              // 写操作成功，无数据返回，用空数组表示成功
-              return Array.Empty<byte>();
-            }
-          } else {
-            Console.WriteLine("- Failed: Error " + returnCode);
-            switch (returnCode) {
-              case 0x03:
-                Console.WriteLine(" - Command Not Available");
-                break;
-              case 0x05:
-                Console.WriteLine(" - Input or Output Size Too Small");
-                break;
+                if (returnCode == 0) {
+                  if (outputSize != 0)
+                    return (byte[])outData["Data"];
+                  else
+                    return Array.Empty<byte>();
+                } else {
+                  Console.WriteLine("- Failed: Error " + returnCode);
+                  switch (returnCode) {
+                    case 0x03: Console.WriteLine(" - Command Not Available"); break;
+                    case 0x05: Console.WriteLine(" - Input or Output Size Too Small"); break;
+                  }
+                }
+              }
             }
           }
         }
       } catch (ManagementException ex) {
-        // ★ 捕获 WMI 异常，不向上抛出，返回 null 表示失败
         Console.WriteLine($"- WMI Exception (CommandType=0x{commandType:X2}): {ex.ErrorCode} - {ex.Message}");
       } catch (Exception ex) {
         Console.WriteLine($"- Unexpected Exception (CommandType=0x{commandType:X2}): {ex.Message}");

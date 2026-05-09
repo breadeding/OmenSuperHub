@@ -12,7 +12,7 @@ using Hp.Bridge.Client.SDKs.McuSDK2.General.Enums.Lighting;
 using Hp.Bridge.Client.SDKs.McuSDK2.Keyboard;
 using static OmenSuperHub.OmenHardware;
 
-namespace OmenSuperHub.App {
+namespace OmenSuperHub {
   /// <summary>
   /// 提供 OMEN 笔记本键盘灯光控制的全部功能。
   /// 支持四区/单区键盘（通过 WMI 命令 0x20009/0x0B）以及每键 RGB 键盘（通过 HID/MCU）。

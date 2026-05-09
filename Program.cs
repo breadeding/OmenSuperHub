@@ -13,11 +13,9 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using LibreHardwareMonitor.Hardware.Motherboard;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
-using OmenSuperHub.App;
-using static OmenSuperHub.App.OmenLighting;
+using static OmenSuperHub.OmenLighting;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 using LibreComputer = LibreHardwareMonitor.Hardware.Computer;
@@ -66,8 +64,8 @@ namespace OmenSuperHub {
     static string lastFanText = null;
     static string tempDisplayMode = "smoothed"; // 温度显示方式：smoothed=平滑值, raw=原始值
     static int? platformMaxFanSpeed = null; // 平台最大转速（RPM），由LoadDefaultFanConfig获取后缓存
-    static Dictionary<float, List<int>> CPUTempFanMap = new Dictionary<float, List<int>>();
-    static Dictionary<float, List<int>> GPUTempFanMap = new Dictionary<float, List<int>>();
+    static SortedDictionary<float, List<int>> CPUTempFanMap = new SortedDictionary<float, List<int>>();
+    static SortedDictionary<float, List<int>> GPUTempFanMap = new SortedDictionary<float, List<int>>();
     static System.Threading.Timer fanControlTimer;
     static System.Timers.Timer tooltipUpdateTimer; // Timer for updating tooltip
     static System.Windows.Forms.Timer checkFloatingTimer, optimiseTimer;
@@ -657,7 +655,6 @@ namespace OmenSuperHub {
       }
       //更新显示器连接到显卡状态
       monitorQuery();
-      GC.Collect();
     }
 
     static void OnPowerChange(object s, PowerModeChangedEventArgs e) {
@@ -2341,30 +2338,24 @@ namespace OmenSuperHub {
     }
 
     // Helper function to calculate fan speed for a specific temperature map
-    static int GetFanSpeedForSpecificTemperature(float temperature, Dictionary<float, List<int>> tempFanMap, int fanIndex) {
-      var lowerBound = tempFanMap.Keys
-                      .OrderBy(k => k)
-                      .Where(t => t <= temperature)
-                      .DefaultIfEmpty(tempFanMap.Keys.Min())
-                      .LastOrDefault();
+    static int GetFanSpeedForSpecificTemperature(float temperature, SortedDictionary<float, List<int>> tempFanMap, int fanIndex) {
+      // 字典已按键升序排列，直接线性扫描，O(n) 但 n 极小（通常 3~6 个点）
+      float lowerKey = tempFanMap.Keys.First();
+      float upperKey = lowerKey;
 
-      var upperBound = tempFanMap.Keys
-                      .OrderBy(k => k)
-                      .Where(t => t > temperature)
-                      .DefaultIfEmpty(tempFanMap.Keys.Max())
-                      .FirstOrDefault();
-
-      if (lowerBound == upperBound) {
-        return tempFanMap[lowerBound][fanIndex];
+      foreach (float key in tempFanMap.Keys) {
+        if (key <= temperature) lowerKey = key;
+        else { upperKey = key; break; }
+        upperKey = key; // 如果循环完也没 break，upper == lower == 最大键
       }
 
-      int lowerSpeed = tempFanMap[lowerBound][fanIndex];
-      int upperSpeed = tempFanMap[upperBound][fanIndex];
-      float lowerTemp = lowerBound;
-      float upperTemp = upperBound;
+      if (lowerKey == upperKey)
+        return tempFanMap[lowerKey][fanIndex];
 
-      float interpolatedSpeed = lowerSpeed + (upperSpeed - lowerSpeed) * (temperature - lowerTemp) / (upperTemp - lowerTemp);
-      return (int)interpolatedSpeed;
+      int lowerSpeed = tempFanMap[lowerKey][fanIndex];
+      int upperSpeed = tempFanMap[upperKey][fanIndex];
+      float interpolated = lowerSpeed + (upperSpeed - lowerSpeed) * (temperature - lowerKey) / (upperKey - lowerKey);
+      return (int)interpolated;
     }
 
     static void SaveConfig(string configName = null) {
