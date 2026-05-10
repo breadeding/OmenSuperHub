@@ -504,6 +504,14 @@ namespace OmenSuperHub {
       return SendOmenBiosWmi(0x1A, new byte[] { 0xFF, (byte)mode }, 0);
     }
 
+    public static void SetUnleashMode() {
+      SetFanMode(PerformanceMode.L7);
+    }
+
+    public static void SetBalanceMode() {
+      SetFanMode(PerformanceMode.L2);
+    }
+
     /// <summary>
     /// 设置 GPU 实时功耗状态（对应 commandType=34）
     /// </summary>

@@ -594,6 +594,124 @@ namespace OmenSuperHub {
       public List<string> Modes { get; set; }
       public int? SPG { get; set; }
     }
+
+    private const string DeviceListResourceSuffix = "HP.Omen.Core.Model.Device.JSON.DeviceList.json";
+
+    private static List<DeviceListPlatform> LoadDeviceList() {
+      // 复用已有的 DLL 加载逻辑
+      var assembly = LoadEmbeddedAssembly("HP.Omen.Core.Model.Device.dll");
+
+      var resourceName = FindResourceName(assembly, DeviceListResourceSuffix);
+      if (resourceName == null)
+        return new List<DeviceListPlatform>();
+
+      var json = ReadEmbeddedResource(assembly, resourceName);
+      if (string.IsNullOrWhiteSpace(json))
+        return new List<DeviceListPlatform>();
+
+      return JsonConvert.DeserializeObject<List<DeviceListPlatform>>(json) ?? new List<DeviceListPlatform>();
+    }
+
+    private static DeviceListPlatform FindPlatformBySSID(string systemId, List<DeviceListPlatform> platforms) {
+      // 直接通过 ProductNum 中的 SSID 匹配
+      var platform = platforms.FirstOrDefault(p =>
+          p.ProductNum != null &&
+          p.ProductNum.Any(n => string.Equals(n.SSID, systemId, StringComparison.OrdinalIgnoreCase)));
+
+      if (platform != null)
+        return platform;
+
+      // 如果未找到，尝试通过 Family 名称匹配（SsidToPlatformFamily 已经定义了大部分映射）
+      if (SsidToPlatformFamily.TryGetValue(systemId, out var family)) {
+        platform = platforms.FirstOrDefault(p =>
+            string.Equals(p.Name, family, StringComparison.OrdinalIgnoreCase));
+      }
+
+      return platform;
+    }
+
+    /// <summary>
+    /// 根据系统 ID（SSID）获取该平台的灯光控制能力及硬件连接参数。
+    /// </summary>
+    public static LightingCapability GetLightingCapability(string systemId) {
+      var capability = new LightingCapability();
+
+      if (string.IsNullOrWhiteSpace(systemId))
+        return capability;
+
+      var platforms = LoadDeviceList();
+      var platform = FindPlatformBySSID(systemId.Trim(), platforms);
+
+      if (platform?.Feature == null)
+        return capability;
+
+      // 检查特性字符串
+      capability.SupportsFourZone = platform.Feature.Contains("FourZone", StringComparer.OrdinalIgnoreCase);
+      capability.SupportsPerKeyRGB = platform.Feature.Contains("DraxLighting", StringComparer.OrdinalIgnoreCase);
+      capability.SupportsLightBar = platform.Feature.Contains("DojoLighting", StringComparer.OrdinalIgnoreCase);
+
+      // 若支持 Per-Key RGB，则附加硬件连接参数
+      if (capability.SupportsPerKeyRGB) {
+        // 获取 Family 名称（优先使用映射表，保证与硬件参数表一致）
+        string family = null;
+        if (!SsidToPlatformFamily.TryGetValue(systemId.Trim(), out family)) {
+          // 备选：使用 platform.Name
+          family = platform.Name;
+        }
+
+        if (family != null && PerKeyParams.TryGetValue(family, out var param)) {
+          capability.KeyboardVid = param.Vid;
+          capability.KeyboardPids = param.Pids.ToList();
+          capability.KeyboardInterfaceString = param.Interface;
+        } else {
+          // 某些平台可能使用旧的 DraxKBLightingControl，但仍提供默认参数
+          // 可在此处扩展
+        }
+      }
+
+      return capability;
+    }
+
+    // 从 Family 到键盘 USB 参数的映射
+    private static readonly Dictionary<string, (int Vid, List<int> Pids, string Interface)> PerKeyParams =
+        new Dictionary<string, (int, List<int>, string)>(StringComparer.OrdinalIgnoreCase) {
+          ["Ralph"] = (0x0461, new List<int> { 0x4E9B }, "mi_02"),
+          ["Cybug"] = (0x0461, new List<int> { 0x4E9A }, "mi_02"),
+          ["Hendricks"] = (0x0461, new List<int> { 0x4F03 }, "mi_02"),
+          ["Brunobear"] = (0x0461, new List<int> { 0x4F11, 0x4F1E }, "mi_02"),
+          ["Quaker"] = (0x0461, new List<int> { 0x4F11, 0x4F1E }, "mi_02"),
+          ["Starmade"] = (0x0461, new List<int> { 0x4ECB }, "mi_02"),  // PID = 20171
+          ["Modena"] = (0x1FC9, new List<int> { 0x2238 }, "mi_02"),  // VID=8137, PID=8760
+          ["Voco"] = (0x0D62, new List<int> { 0x1A32, 0x36BA }, "mi_03"), // 24C1 / 25C1
+          ["Dojo"] = (0x0D62, new List<int> { 0x54BF, 0x30BF }, "mi_03"),
+          ["Vibrance"] = (0x0D62, new List<int> { 0x54BF, 0x30BF }, "mi_03"),
+          ["DRX"] = (0x8E2A, new List<int> { 0x0D62 }, "mi_03"), // 旧接口，但同属 Per-Key RGB
+        };
+
+    // 新增：灯光控制接口能力描述
+    public sealed class LightingCapability {
+      // 是否支持 Per-Key RGB 键盘（对应 Feature: "DraxLighting"）
+      public bool SupportsPerKeyRGB { get; set; }
+      // 是否支持独立灯带 / Light Bar（对应 Feature: "DojoLighting"）
+      public bool SupportsLightBar { get; set; }
+      // 是否支持四区键盘模式（对应 Feature: "FourZone"）
+      public bool SupportsFourZone { get; set; }
+      // Per-Key RGB 键盘的 USB 连接参数（仅当 SupportsPerKeyRGB 为 true 时有效）
+      public int? KeyboardVid { get; set; }
+      public List<int> KeyboardPids { get; set; }
+      public string KeyboardInterfaceString { get; set; }
+    }
+
+    // 内部使用的轻量 DeviceList 数据结构
+    internal sealed class DeviceListPlatform {
+      public string Name { get; set; }
+      public List<string> Feature { get; set; }
+      public List<DeviceListProductNum> ProductNum { get; set; }
+    }
+
+    internal sealed class DeviceListProductNum {
+      public string SSID { get; set; }
+    }
   }
 
   internal sealed class GpuConsts {

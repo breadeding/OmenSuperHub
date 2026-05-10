@@ -286,7 +286,7 @@ namespace OmenSuperHub {
           using (FileStream fileStream = new FileStream(outputFilePath, FileMode.Create)) {
             resourceStream.CopyTo(fileStream);
           }
-          Logger.Info($"资源文件已提取到: {outputFilePath}");
+          //Logger.Info($"资源文件已提取到: {outputFilePath}");
         } else {
           Logger.Error($"无法找到资源: {resourceName}");
         }
