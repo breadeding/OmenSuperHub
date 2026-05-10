@@ -45,9 +45,8 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）功能：新增四分区灯光控制菜单（仅供测试）；\n" +
-         "（2）功能：去除多余的模式选择（平衡、狂暴等），要限制性能直接使用性能控制菜单即可；\n" +
-         "（3）修复：优化WMI调用过程的内存管理，优化转速查表复杂度。\n\n" +
+         "（1）功能：灯光控制测试菜单开放给更多机型；\n" +
+         "（2）功能：优化日志记录。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
          "一.   “风扇配置”菜单说明：\n" +

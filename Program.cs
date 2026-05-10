@@ -130,7 +130,7 @@ namespace OmenSuperHub {
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
         // 固定为释放全部性能模式
         SetFanMode(PerformanceMode.L7);
-
+        
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
 
@@ -141,7 +141,7 @@ namespace OmenSuperHub {
         isTwoBytePL4 = IsTwoBytePL4Supported();
 
         // Initialize tray icon
-        platformSettings = LoadPlatformSettingsFromDll();
+        platformSettings = PlatformSettingsResolver.LoadFromCurrentSystem();
         InitMaxTemp();
         InitPlatformMaxFanSpeed();
         InitTrayIcon();
@@ -195,7 +195,8 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
-        
+
+        Logger.Info($"version: {version}");
         Application.Run();
       }
     }
@@ -472,7 +473,7 @@ namespace OmenSuperHub {
       try {
         computer.Open();
       } catch (Exception ex) {
-        Console.WriteLine("CRASH: Open failed - " + ex.Message);
+        Console.Error.WriteLine("CRASH: Open failed - " + ex.Message);
         Environment.Exit(1);
       }
 
@@ -506,7 +507,7 @@ namespace OmenSuperHub {
             try {
               hw.Update();
             } catch (Exception ex) {
-              Console.WriteLine("CRASH: Update failed - " + ex.Message);
+              Console.Error.WriteLine("CRASH: Update failed - " + ex.Message);
               Environment.Exit(1);
             }
 
@@ -530,7 +531,7 @@ namespace OmenSuperHub {
           }
           Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F2};{1:F2};{2:F2};{3:F2};{4}", tCpu, pCpu, tGpu, pGpu, gGpu ? 1 : 0));
         } catch (Exception ex) {
-          Console.WriteLine("CRASH: " + ex.Message);
+          Console.Error.WriteLine("CRASH: " + ex.Message);
           Environment.Exit(1);
         }
         Thread.Sleep(sleepMs);
@@ -581,7 +582,7 @@ namespace OmenSuperHub {
 
       hwMonitorProcess.ErrorDataReceived += (s, e) => {
         if (string.IsNullOrEmpty(e.Data)) return;
-        Debug.WriteLine("[HWMonitor ERR] " + e.Data);
+        Logger.Error("HardwareMonitor [HWMonitor ERR] " + e.Data);
       };
 
       hwMonitorProcess.EnableRaisingEvents = true;
@@ -590,7 +591,7 @@ namespace OmenSuperHub {
           hwMonitorStopping = false;
           return;
         }
-        Debug.WriteLine("[HWMonitor] 进程退出，准备重启...");
+        //Logger.Info("StartHardwareMonitor [HWMonitor] 进程退出，准备重启...");
         System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ => {
           try { StartHardwareMonitor(); } catch { }
         });
@@ -649,10 +650,10 @@ namespace OmenSuperHub {
       //定时通信避免功耗锁定
       if (GetFanCount(out bool ocp, out bool otp)) {
         if (ocp || otp) {
-          Console.WriteLine($"BIOS 保护状态 - 过流: {ocp}, 过温: {otp}");
+          Logger.Info($"BIOS 保护状态 - 过流: {ocp}, 过温: {otp}");
         }
       } else {
-        Console.WriteLine("无法读取 BIOS 保护状态");
+        Logger.Error("无法读取 BIOS 保护状态");
       }
       //更新显示器连接到显卡状态
       monitorQuery();
@@ -673,10 +674,10 @@ namespace OmenSuperHub {
         // 获取当前电源连接状态
         var powerStatus = SystemInformation.PowerStatus;
         if (powerStatus.PowerLineStatus == PowerLineStatus.Online) {
-          Console.WriteLine("笔记本已连接到电源。");
+          //Logger.Info("笔记本已连接到电源。");
           powerOnline = true;
         } else {
-          Console.WriteLine("笔记本未连接到电源。");
+          //Logger.Info("笔记本未连接到电源。");
           powerOnline = false;
         }
       }
@@ -708,7 +709,7 @@ namespace OmenSuperHub {
         tdBoot.Settings.AllowHardTerminate = false;
 
         ts.RootFolder.RegisterTaskDefinition(@"OmenSuperHub", tdBoot);
-        Console.WriteLine("任务一已创建：系统启动时运行。");
+        //Console.WriteLine("任务一已创建：系统启动时运行。");
 
         // ── 任务二：用户登录时重启────────────────────────
         TaskDefinition tdLogon = ts.NewTask();
@@ -731,7 +732,7 @@ namespace OmenSuperHub {
         tdLogon.Settings.AllowHardTerminate = false;
 
         ts.RootFolder.RegisterTaskDefinition(@"OmenSuperHub_Logon", tdLogon);
-        Console.WriteLine("任务二已创建：用户登录时重启。");
+        //Console.WriteLine("任务二已创建：用户登录时重启。");
       }
 
       CleanUpAndRemoveTasks();
@@ -745,9 +746,9 @@ namespace OmenSuperHub {
           Task existingTask = ts.FindTask(taskName);
           if (existingTask != null) {
             ts.RootFolder.DeleteTask(taskName);
-            Console.WriteLine($"任务 {taskName} 已删除。");
+            //Console.WriteLine($"任务 {taskName} 已删除。");
           } else {
-            Console.WriteLine($"任务 {taskName} 不存在，无需删除。");
+            //Console.WriteLine($"任务 {taskName} 不存在，无需删除。");
           }
         }
       }
@@ -765,29 +766,29 @@ namespace OmenSuperHub {
       if (Directory.Exists(targetFolder)) {
         string command = $"rd /s /q \"{targetFolder}\"";
         var result = ExecuteCommand(command);
-        Console.WriteLine(result.Output);
+        //Console.WriteLine(result.Output);
       } else {
-        Console.WriteLine("旧文件夹不存在");
+        //Console.WriteLine("旧文件夹不存在");
       }
 
       // 删除 file1
       if (File.Exists(file1)) {
         string command = $"del /f /q \"{file1}\"";
         var result = ExecuteCommand(command);
-        Console.WriteLine($"文件已删除: {file1}");
-        Console.WriteLine(result.Output);
+        //Console.WriteLine($"文件已删除: {file1}");
+        //Console.WriteLine(result.Output);
       } else {
-        Console.WriteLine($"文件不存在: {file1}");
+        //Console.WriteLine($"文件不存在: {file1}");
       }
 
       // 删除 file2
       if (File.Exists(file2)) {
         string command = $"del /f /q \"{file2}\"";
         var result = ExecuteCommand(command);
-        Console.WriteLine($"文件已删除: {file2}");
-        Console.WriteLine(result.Output);
+        //Console.WriteLine($"文件已删除: {file2}");
+        //Console.WriteLine(result.Output);
       } else {
-        Console.WriteLine($"文件不存在: {file2}");
+        //Console.WriteLine($"文件不存在: {file2}");
       }
 
       // 检查并删除计划任务
@@ -796,17 +797,17 @@ namespace OmenSuperHub {
       if (taskQueryResult.ExitCode == 0) {
         string deleteTaskCommand = $"schtasks /delete /tn \"{taskName}\" /f";
         var deleteTaskResult = ExecuteCommand(deleteTaskCommand);
-        Console.WriteLine("已成功删除计划任务 \"Omen Boot\"。");
-        Console.WriteLine(deleteTaskResult.Output);
+        //Console.WriteLine("已成功删除计划任务 \"Omen Boot\"。");
+        //Console.WriteLine(deleteTaskResult.Output);
       } else {
-        Console.WriteLine($"计划任务 \"{taskName}\" 不存在。");
+        //Console.WriteLine($"计划任务 \"{taskName}\" 不存在。");
       }
 
       // 从注册表中删除开机自启项
       string regDeleteCommand = @"reg delete ""HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run"" /v ""OmenSuperHub"" /f";
       var regDeleteResult = ExecuteCommand(regDeleteCommand);
-      Console.WriteLine("成功取消开机自启");
-      Console.WriteLine(regDeleteResult.Output);
+      //Console.WriteLine("成功取消开机自启");
+      //Console.WriteLine(regDeleteResult.Output);
     }
 
     // Initialize tray icon
@@ -834,7 +835,7 @@ namespace OmenSuperHub {
           }
         }
       } catch (Exception ex) {
-        Console.WriteLine($"Error restoring configuration: {ex.Message}");
+        Logger.Error($"Error restoring configuration: {ex.Message}");
       }
 
       switch (customIcon) {
@@ -1312,8 +1313,8 @@ namespace OmenSuperHub {
       }
       trayIcon.ContextMenuStrip.Items.Add(performanceControlMenu);
 
-      var lightingCaps = GetLightingCapabilities();
-      if (lightingCaps.KeyboardType == NbKeyboardLightingType.FourZoneWithNumpad) {
+      if (GetKeyboardType() != NbKeyboardLightingType.OneZoneWithoutNumpad) {
+        var lightingCaps = GetLightingCapabilities();
         ToolStripMenuItem lightingControlMenu = new ToolStripMenuItem("灯光控制（测试）");
         lightingControlMenu.DropDownOpening += (s, e) => {
           lightingControlMenu.DropDownItems.Clear();
@@ -1322,6 +1323,8 @@ namespace OmenSuperHub {
           int currentAnimation = GetCurrentAnimationEffect();
           var colors = GetZoneStaticColor();
 
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem("💡若只有单分区，则使用分区1进行测试。") { Enabled = false });
+          lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
           lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"当前亮度: {brightness}%") { Enabled = false });
           lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"当前动画: {(currentAnimation != -1 ? "开启 (ID: " + currentAnimation + ")" : "无")}") { Enabled = false });
           if (colors != null && colors.Length == 4) {
@@ -1603,18 +1606,6 @@ namespace OmenSuperHub {
       }
     }
 
-    static void RestoreTppPower() {
-      // 恢复TPP功耗设定
-      if (tppPower == "max") {
-        SetConcurrentTdp(254);
-      } else if (tppPower.Contains(" W")) {
-        int value = int.Parse(tppPower.Replace(" W", "").Trim());
-        if (value > 10 && value <= 254) {
-          SetConcurrentTdp((byte)value);
-        }
-      }
-    }
-
     static void TrayIcon_MouseClick(object sender, MouseEventArgs e) {
       if (e.Button == MouseButtons.Left) {
         //MainForm.Instance.Show();
@@ -1816,13 +1807,13 @@ namespace OmenSuperHub {
       try {
         QueryHardware();
       } catch (Exception ex) {
-        Console.WriteLine($"[UpdateTooltip] QueryHardware 异常: {ex.Message}");
+        Logger.Error($"[UpdateTooltip] QueryHardware 异常: {ex.Message}");
       }
 
       if (monitorFan)
         fanSpeedNow = GetFanLevel();
       trayIcon.Text = monitorText();
-      // Console.WriteLine("UpdateTooltip");
+      //Console.WriteLine("UpdateTooltip");
 
       // 同步数据到本地txt
       SyncDataToTxt();
@@ -1946,7 +1937,7 @@ namespace OmenSuperHub {
               lastCpuText = cpuText;
             }
           } catch (Exception ex) {
-            Console.WriteLine($"Sync error when writing cpu_temp.txt: {ex.Message}");
+            Logger.Error($"Sync error when writing cpu_temp.txt: {ex.Message}");
           }
 
           try {
@@ -1955,7 +1946,7 @@ namespace OmenSuperHub {
               lastGpuText = gpuText;
             }
           } catch (Exception ex) {
-            Console.WriteLine($"Sync error when writing gpu_temp.txt: {ex.Message}");
+            Logger.Error($"Sync error when writing gpu_temp.txt: {ex.Message}");
           }
 
           try {
@@ -1964,12 +1955,12 @@ namespace OmenSuperHub {
               lastFanText = fanText;
             }
           } catch (Exception ex) {
-            Console.WriteLine($"Sync error when writing fan_rpm.txt: {ex.Message}");
+            Logger.Error($"Sync error when writing fan_rpm.txt: {ex.Message}");
           }
 
         } catch (Exception ex) {
           // 忽略文件被占用的偶发错误，或者在这里记录日志
-          Console.WriteLine("Sync error: " + ex.Message);
+          Logger.Error("Sync error: " + ex.Message);
         }
       });
     }
@@ -2210,7 +2201,7 @@ namespace OmenSuperHub {
     static void LoadFanConfig(string filePath) {
       string absoluteFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
       if (!File.Exists(absoluteFilePath)) {
-        Console.WriteLine($"{absoluteFilePath} not found.");
+        //Logger.Info($"{absoluteFilePath} not found.");
         LoadDefaultFanConfig(absoluteFilePath);
         return;
       }
@@ -2261,7 +2252,7 @@ namespace OmenSuperHub {
             gpuTempList.Count == 0 || gpuSpeedList.Count == 0 ||
             cpuTempList.Count != cpuSpeedList.Count ||
             gpuTempList.Count != gpuSpeedList.Count) {
-          Console.WriteLine($"{absoluteFilePath} invalid new format, regenerating.");
+          Logger.Error($"{absoluteFilePath} invalid new format, regenerating.");
           LoadDefaultFanConfig(absoluteFilePath);
           return;
         }
@@ -2290,7 +2281,7 @@ namespace OmenSuperHub {
             gpuSpeedList.Add(gpuFan1);
           }
         } catch {
-          Console.WriteLine($"{absoluteFilePath} parse error, regenerating.");
+          Logger.Error($"{absoluteFilePath} parse error, regenerating.");
           LoadDefaultFanConfig(absoluteFilePath);
           return;
         }
@@ -2512,7 +2503,7 @@ namespace OmenSuperHub {
           }
         }
       } catch (Exception ex) {
-        Console.WriteLine($"Error saving configuration: {ex.Message}");
+        Logger.Error($"Error saving configuration: {ex.Message}");
       }
     }
 
@@ -2840,7 +2831,7 @@ namespace OmenSuperHub {
           }
         }
       } catch (Exception ex) {
-        Console.WriteLine($"Error restoring configuration: {ex.Message}");
+        Logger.Error($"Error restoring configuration: {ex.Message}");
       }
 
       // 保证应用启动时如果不包含 DataLocalize 键（第一次运行或旧版升级），菜单项UI依然能被初始化选中
@@ -2870,7 +2861,7 @@ namespace OmenSuperHub {
             }
           }
         } catch (Exception ex) {
-          Console.WriteLine($"Error restoring configuration: {ex.Message}");
+          Logger.Error($"Error restoring configuration: {ex.Message}");
         }
       }
     }
@@ -2893,7 +2884,7 @@ namespace OmenSuperHub {
           } catch (Exception) when (token.IsCancellationRequested) {
             break;
           } catch (Exception ex) {
-            Console.WriteLine("Pipe error: " + ex.Message);
+            Logger.Error("Pipe error: " + ex.Message);
           }
         }
       }, token);
@@ -3087,20 +3078,13 @@ namespace OmenSuperHub {
     }
 
     static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) {
-      Exception ex = (Exception)e.ExceptionObject;
-      LogError(ex);
+      Logger.Error($"CurrentDomain_UnhandledException: {e.ExceptionObject}");
+      MessageBox.Show($"OSH出现意外错误，详细信息请查看{Logger.logFileName}，报告问题时请附带此日志。");
     }
 
     static void Application_ThreadException(object sender, ThreadExceptionEventArgs e) {
-      Exception ex = e.Exception;
-      LogError(ex);
-    }
-
-    static void LogError(Exception ex) {
-      // Write exception details to a log file or other logging mechanism
-      string absoluteFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "error.log");
-      File.AppendAllText(absoluteFilePath, DateTime.Now + ": " + ex.ToString() + Environment.NewLine);
-      MessageBox.Show("OSH出现意外错误，详细信息请查看error.log。");
+      Logger.Error($"Application_ThreadException: {e.Exception}");
+      MessageBox.Show($"OSH出现意外错误，详细信息请查看{Logger.logFileName}，报告问题时请附带此日志。");
     }
   }
 }

@@ -288,6 +288,7 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="App\Logger.cs" />
     <Compile Include="App\OmenLighting.cs" />
     <Compile Include="FloatingForm.cs">
       <SubType>Form</SubType>
