@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Management;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Documents;
-using System.Windows.Media;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
@@ -25,24 +19,9 @@ namespace OmenSuperHub {
           }
         }
       } catch (Exception ex) {
-        Console.WriteLine($"[ERROR] GetSystemID: {ex.Message}");
+        Logger.Error($"[ERROR] GetSystemID: {ex.Message}");
       }
       return string.Empty;
-    }
-
-    /// <summary>
-    /// 从本机系统 ID 直接加载平台能力配置。
-    /// 默认从 C:\Users\fiveb\Desktop\ 下的两个 DLL 中读取资源。
-    /// </summary>
-    public static PlatformSettings LoadPlatformSettingsFromDll() {
-      return PlatformSettingsResolver.LoadFromCurrentSystem();
-    }
-
-    /// <summary>
-    /// 仅返回 HP.Omen.Core.Model.Device.dll 中的 PerformancePlatformList 原始 JSON。
-    /// </summary>
-    public static string ReadPerformancePlatformListJson() {
-      return PlatformSettingsResolver.ReadPerformancePlatformListJson();
     }
 
     // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
@@ -63,7 +42,7 @@ namespace OmenSuperHub {
     public static void PrintSystemDesignData() {
       byte[] data = GetSystemDesignData();
       if (data == null || data.Length < 12) {
-        Console.WriteLine("[ERROR] SystemDesignData 获取失败或长度不足");
+        Logger.Error("[ERROR] SystemDesignData 获取失败或长度不足");
         return;
       }
 
@@ -343,9 +322,14 @@ namespace OmenSuperHub {
       List<int> fanSpeedNow = new List<int> { 0, 0 };
       byte[] fanLevel = SendOmenBiosWmi(0x2D, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
       if (fanLevel != null) {
-        fanSpeedNow[0] = fanLevel[0];
-        fanSpeedNow[1] = fanLevel[1];
-        //Console.WriteLine("GetFanLevel: " + level * 100);
+        if (fanLevel.Length >= 2) {
+          fanSpeedNow[0] = fanLevel[0];
+          fanSpeedNow[1] = fanLevel[1];
+          //Console.WriteLine("GetFanLevel: " + level * 100);
+        }
+        else {
+          Logger.Error($": GetFanLevel:- Failed: Error  length={fanLevel.Length}");
+        }
       }
       return fanSpeedNow;
     }
@@ -557,7 +541,7 @@ namespace OmenSuperHub {
     public static bool IsTwoBytePL4Supported() {
       byte[] data = GetSystemDesignData();
       if (data == null || data.Length < 5) {
-        Console.WriteLine("[ERROR] 无法获取 SystemDesignData");
+        Logger.Error("[ERROR] 无法获取 SystemDesignData");
         return false;
       }
 
@@ -696,22 +680,24 @@ namespace OmenSuperHub {
                   else
                     return Array.Empty<byte>();
                 } else {
-                  Console.WriteLine("- Failed: Error " + returnCode);
+                  string errorMessage = "";
                   switch (returnCode) {
-                    case 0x03: Console.WriteLine(" - Command Not Available"); break;
-                    case 0x05: Console.WriteLine(" - Input or Output Size Too Small"); break;
+                    case 0x03: errorMessage = " - Command Not Available"; break;
+                    case 0x05: errorMessage = " - Input or Output Size Too Small"; break;
                   }
+                  Logger.Error(": SendOmenBiosWmi: " + $"(CommandType=0x{commandType:X2})" + " - Failed: Error " + errorMessage);
                 }
               }
             }
           }
         }
       } catch (ManagementException ex) {
-        Console.WriteLine($"- WMI Exception (CommandType=0x{commandType:X2}): {ex.ErrorCode} - {ex.Message}");
+        string errorMessage = $"- WMI Exception (CommandType=0x{commandType:X2}): {ex.ErrorCode} - {ex.Message}";
+        Logger.Error(": SendOmenBiosWmi:- Failed: Error " + errorMessage);
       } catch (Exception ex) {
-        Console.WriteLine($"- Unexpected Exception (CommandType=0x{commandType:X2}): {ex.Message}");
+        string errorMessage = $"- Unexpected Exception (CommandType=0x{commandType:X2}): {ex.Message}";
+        Logger.Error(": SendOmenBiosWmi:- Failed: Error " + errorMessage);
       }
-
       return null;
     }
 
@@ -742,7 +728,7 @@ namespace OmenSuperHub {
 
         //Console.WriteLine("Omen Key Off completed successfully.");
       } catch (Exception ex) {
-        Console.WriteLine("Error: " + ex.Message);
+        Logger.Error("Error: " + ex.Message);
       }
     }
 
@@ -783,7 +769,7 @@ namespace OmenSuperHub {
 
         //Console.WriteLine("Omen Key On completed successfully.");
       } catch (Exception ex) {
-        Console.WriteLine("Error: " + ex.Message);
+        Logger.Error("Error: " + ex.Message);
       }
     }
   }

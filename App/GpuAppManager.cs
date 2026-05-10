@@ -98,13 +98,13 @@ namespace OmenSuperHub {
           gpuModel = match.Groups[1].Value; // 返回匹配到的代号部分
           //if(modelName != null)
           //  MessageBox.Show($"显卡型号为：{gpuModel}", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-          Console.WriteLine($"First GPU Model Code: {gpuModel}");
+          //Console.WriteLine($"First GPU Model Code: {gpuModel}");
           return gpuModel;
         } else {
-          Console.WriteLine("GPU model code not found.");
+          Logger.Error("GPU model code not found.");
         }
       } else {
-        Console.WriteLine($"Error executing command: {result.Error}");
+        Logger.Error($"Error executing command: {result.Error}");
       }
 
       return null;
@@ -243,11 +243,11 @@ namespace OmenSuperHub {
               string driverVersion = lines[i + 4].Split(':')[1].Trim();
 
               if (driverVersion != targetVersion) {
-                Console.WriteLine("发现其他版本: " + driverVersion);
+                //Console.WriteLine("发现其他版本: " + driverVersion);
                 namesToDelete.Add(publishedName);
               } else {
                 hasVersion = true;
-                Console.WriteLine("已经存在所需版本!");
+                //Console.WriteLine("已经存在所需版本!");
               }
             }
           }
@@ -256,17 +256,17 @@ namespace OmenSuperHub {
 
       if (!hasVersion) {
         ExecuteCommand($"pnputil /add-driver \"{driverFile}\" /install /force");
-        Console.WriteLine("成功更改DB版本!");
+        //Console.WriteLine("成功更改DB版本!");
       }
 
       if (namesToDelete.Count > 0) {
-        Console.WriteLine("找到需要删除的驱动程序包:");
+        //Console.WriteLine("找到需要删除的驱动程序包:");
         foreach (var name in namesToDelete) {
-          Console.WriteLine($"删除驱动程序包: {name}");
+          //Console.WriteLine($"删除驱动程序包: {name}");
           ExecuteCommand($"pnputil /delete-driver \"{name}\" /uninstall /force");
         }
       } else {
-        Console.WriteLine("没有需要删除的驱动程序包.");
+        //Console.WriteLine("没有需要删除的驱动程序包.");
       }
 
       // 清理临时文件
@@ -277,7 +277,7 @@ namespace OmenSuperHub {
       DeleteExtractedFiles(extractedSysFilePath);
       DeleteExtractedFiles(extractedCatFilePath);
 
-      Console.WriteLine("操作完成.");
+      //Console.WriteLine("操作完成.");
     }
 
     static void ExtractResourceToFile(string resourceName, string outputFilePath) {
@@ -286,9 +286,9 @@ namespace OmenSuperHub {
           using (FileStream fileStream = new FileStream(outputFilePath, FileMode.Create)) {
             resourceStream.CopyTo(fileStream);
           }
-          Console.WriteLine($"资源文件已提取到: {outputFilePath}");
+          Logger.Info($"资源文件已提取到: {outputFilePath}");
         } else {
-          Console.WriteLine($"无法找到资源: {resourceName}");
+          Logger.Error($"无法找到资源: {resourceName}");
         }
       }
     }
@@ -297,7 +297,7 @@ namespace OmenSuperHub {
       // 删除提取的文件
       if (File.Exists(filePath)) {
         File.Delete(filePath);
-        Console.WriteLine($"删除临时文件:{filePath}");
+        //Console.WriteLine($"删除临时文件:{filePath}");
       }
     }
 
