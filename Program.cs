@@ -42,6 +42,9 @@ namespace OmenSuperHub {
     static string zoneGlobalColorSel_LightBar = null;
     static string[] zoneColorSel_Keyboard = new string[4];
     static string[] zoneColorSel_LightBar = new string[4];
+    // 四分区/灯条 WMI 协议选择（默认 BasicFourZone；用户可在菜单中切换并持久化）
+    static LightingControlInterface kbControlInterface = LightingControlInterface.BasicFourZone;
+    static LightingControlInterface lbControlInterface = LightingControlInterface.Dojo;
     static float CPUPower = 0;
     static float GPUPower = 0;
     static int DBVersion = 2, countDB = 0, countDBInit = 5, tryTimes = 0, CPULimitDB = 25;
@@ -205,7 +208,7 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
-        
+
         Logger.Info($"version: {version}");
         Application.Run();
       }
@@ -1327,56 +1330,46 @@ namespace OmenSuperHub {
       }
       trayIcon.ContextMenuStrip.Items.Add(performanceControlMenu);
 
-      // ---- 灯光控制（根据平台能力动态生成） ----
-      var lightingCaps = GetLightingCapabilities();  // 来自 OmenLighting
-      if (lightingCaps.HasKeyboard && lightingCaps.KeyboardType != NbKeyboardLightingType.OneZoneWithoutNumpad) {
-        ToolStripMenuItem lightingControlMenu = new ToolStripMenuItem("灯光控制（测试功能）");
-        lightingControlMenu.DropDownOpening += (s, e) => {
-          lightingControlMenu.DropDownItems.Clear();
+      // ---- 灯光控制 ----
+      ToolStripMenuItem lightingControlMenu = new ToolStripMenuItem("灯光控制（测试功能）");
+      lightingControlMenu.DropDownOpening += (s, e) => {
+        lightingControlMenu.DropDownItems.Clear();
 
-          // ---------- 通用提示 ----------
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem("💡 当前平台支持以下灯光设备") { Enabled = false });
-          lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
+        // ---------- 四分区键盘 ----------
+        ToolStripMenuItem kbMenu = new ToolStripMenuItem("四分区/单分区键盘");
+        kbMenu.DropDownItems.Add(new ToolStripMenuItem("💡 亮度范围可能为0~100，也可能为100~228") { Enabled = false });
+        kbMenu.DropDownItems.Add(new ToolStripSeparator());
+        AddLightingUI(kbMenu, LightingDevice.Keyboard, true, true);
+        lightingControlMenu.DropDownItems.Add(kbMenu);
 
-          // ---------- 四分区键盘（含单区） ----------
-          if (lightingCaps.HasFourZone) {
-            ToolStripMenuItem kbMenu = new ToolStripMenuItem("四分区键盘");
-            AddLightingUI(kbMenu, LightingDevice.Keyboard, true, lightingCaps.HasFourZoneAnimation);
-            lightingControlMenu.DropDownItems.Add(kbMenu);
-          }
+        // ---------- 侧面灯条 ----------
+        ToolStripMenuItem lbMenu = new ToolStripMenuItem("侧面灯条");
+        lbMenu.DropDownItems.Add(new ToolStripMenuItem("💡 亮度范围可能为0~100，也可能为100~228") { Enabled = false });
+        lbMenu.DropDownItems.Add(new ToolStripSeparator());
+        AddLightingUI(lbMenu, LightingDevice.LightBar, false, true);
+        lightingControlMenu.DropDownItems.Add(lbMenu);
 
-          // ---------- 灯条（LightBar） ----------
-          if (lightingCaps.HasLightBar) {
-            ToolStripMenuItem lbMenu = new ToolStripMenuItem("侧面灯条");
-            AddLightingUI(lbMenu, LightingDevice.LightBar, false, true);   // 灯条默认支持动画
-            lightingControlMenu.DropDownItems.Add(lbMenu);
-          }
+        // ---------- 单键 RGB ----------
+        ToolStripMenuItem perKeyMenu = new ToolStripMenuItem("单键 RGB");
+        AddPerKeyLightingUI(perKeyMenu);
+        lightingControlMenu.DropDownItems.Add(perKeyMenu);
 
-          // ---------- 单键 RGB（PerKey） ----------
-          if (lightingCaps.HasPerKeyRgb) {
-            ToolStripMenuItem perKeyMenu = new ToolStripMenuItem("单键 RGB");
-            AddPerKeyLightingUI(perKeyMenu);   // 新方法，见下方
-            lightingControlMenu.DropDownItems.Add(perKeyMenu);
-          }
+        // ---------- 状态显示 ----------
+        lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
+        byte brightness = GetZoneBrightness();
+        int currentAnimation = GetCurrentAnimationEffect();
+        var colors = GetZoneStaticColor();
+        lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"全局亮度: {brightness}%") { Enabled = false });
+        lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"动画效果: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
+        if (colors != null && colors.Length == 4) {
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
+        }
+      };
 
-          // ---------- 状态显示 ----------
-          lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
-          byte brightness = GetZoneBrightness();
-          int currentAnimation = GetCurrentAnimationEffect();
-          var colors = GetZoneStaticColor();
-
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"全局亮度: {brightness}%") { Enabled = false });
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"动画效果: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
-          if (colors != null && colors.Length == 4) {
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
-          }
-        };
-
-        trayIcon.ContextMenuStrip.Items.Add(lightingControlMenu);
-      }
+      trayIcon.ContextMenuStrip.Items.Add(lightingControlMenu);
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
       ToolStripMenuItem hardwareMonitorMenu = new ToolStripMenuItem("硬件监控");
@@ -2990,38 +2983,82 @@ namespace OmenSuperHub {
     }
 
     static void AddLightingUI(ToolStripMenuItem parentMenu, LightingDevice device, bool isKeyboard, bool supportAnim) {
-      // 为当前 device 生成唯一的 group 前缀，避免不同设备菜单的勾选状态互相干扰
-      string devTag = device.ToString();
+      // 当前设备使用的协议（从模块级变量读取）
+      LightingControlInterface iface = isKeyboard ? kbControlInterface : lbControlInterface;
 
+      // ── 协议选择 ───────────────────────────────────────────────────
+      ToolStripMenuItem protocolMenu = new ToolStripMenuItem("WMI 协议");
+      var protocols = new (string label, LightingControlInterface val)[] {
+        ("四分区", LightingControlInterface.BasicFourZone),
+        ("四分区动画",               LightingControlInterface.Dojo),
+        ("Drax",                LightingControlInterface.Drax),
+        ("Noctali",    LightingControlInterface.Noctali),
+      };
+      foreach (var proto in protocols) {
+        var localProto = proto;
+        var protoItem = new ToolStripMenuItem(localProto.label) {
+          Checked = (iface == localProto.val)
+        };
+        protoItem.Click += (sender, args) => {
+          if (isKeyboard) kbControlInterface = localProto.val;
+          else lbControlInterface = localProto.val;
+          SaveConfig("ZoneInterface");
+          foreach (ToolStripMenuItem mi in protocolMenu.DropDownItems.OfType<ToolStripMenuItem>())
+            mi.Checked = (mi == protoItem);
+        };
+        protocolMenu.DropDownItems.Add(protoItem);
+      }
+      parentMenu.DropDownItems.Add(protocolMenu);
+      parentMenu.DropDownItems.Add(new ToolStripSeparator());
+
+      // ── 亮度 ────────────────────────────────────────────────────────
       ToolStripMenuItem brightnessMenu = new ToolStripMenuItem("亮度");
       byte currentBrightness = GetZoneBrightness();
       for (int b = 0; b <= 100; b += 25) {
         byte curB = (byte)b;
-        string brightnessGroup = $"lightBrightness_{devTag}";
         var brightnessItem = new ToolStripMenuItem($"{b}%") {
-          Tag = brightnessGroup,
           Checked = (curB == currentBrightness)
         };
         brightnessItem.Click += (sender, args) => {
-          SetZoneBrightness(device, curB);
-          // 手动更新同组勾选
+          LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+          SetZoneBrightness(device, curB, ci);
           foreach (ToolStripMenuItem mi in brightnessMenu.DropDownItems.OfType<ToolStripMenuItem>())
             mi.Checked = (mi == brightnessItem);
         };
         brightnessMenu.DropDownItems.Add(brightnessItem);
       }
+      var brightnessItem1 = new ToolStripMenuItem($"{125}%") {
+        Checked = (currentBrightness == 125)
+      };
+      brightnessItem1.Click += (sender, args) => {
+        LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+        SetZoneBrightness(device, 125, ci);
+        foreach (ToolStripMenuItem mi in brightnessMenu.DropDownItems.OfType<ToolStripMenuItem>())
+          mi.Checked = (mi == brightnessItem1);
+      };
+      var brightnessItem2 = new ToolStripMenuItem($"{228}%") {
+        Checked = (currentBrightness == 228)
+      };
+      brightnessItem2.Click += (sender, args) => {
+        LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+        SetZoneBrightness(device, 228, ci);
+        foreach (ToolStripMenuItem mi in brightnessMenu.DropDownItems.OfType<ToolStripMenuItem>())
+          mi.Checked = (mi == brightnessItem2);
+      };
+      brightnessMenu.DropDownItems.Add(brightnessItem2);
       parentMenu.DropDownItems.Add(brightnessMenu);
 
+      // ── 静态颜色 ────────────────────────────────────────────────────
       ToolStripMenuItem staticColorMenu = new ToolStripMenuItem("静态颜色");
       var staticColors = new (string name, byte r, byte g, byte b)[] {
         ("红色", 255, 0, 0), ("绿色", 0, 255, 0), ("蓝色", 0, 0, 255),
         ("白色", 255, 255, 255), ("冰蓝", 0, 255, 255), ("粉色", 255, 0, 255), ("黄色", 255, 255, 0)
       };
 
-      // 从模块级状态变量读取当前颜色选择，不依赖 WMI
-      string[] zoneColorSel = device == LightingDevice.Keyboard ? zoneColorSel_Keyboard : zoneColorSel_LightBar;
-      string globalColorSel = device == LightingDevice.Keyboard ? zoneGlobalColorSel_Keyboard : zoneGlobalColorSel_LightBar;
+      string[] zoneColorSel = isKeyboard ? zoneColorSel_Keyboard : zoneColorSel_LightBar;
+      string globalColorSel = isKeyboard ? zoneGlobalColorSel_Keyboard : zoneGlobalColorSel_LightBar;
 
+      // 全局颜色（四区同色）
       ToolStripMenuItem allZonesMenu = new ToolStripMenuItem("全局颜色");
       foreach (var color in staticColors) {
         var localColor = color;
@@ -3029,18 +3066,11 @@ namespace OmenSuperHub {
           Checked = (globalColorSel == localColor.name)
         };
         colorItem.Click += (sender, args) => {
+          LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
           var c = System.Windows.Media.Color.FromRgb(localColor.r, localColor.g, localColor.b);
-          byte brightness = GetZoneBrightness();
-          if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-          SetZoneStaticColor(device, new List<System.Windows.Media.Color> { c, c, c, c }, brightness);
-          // 更新模块级状态
-          if (device == LightingDevice.Keyboard) {
-            zoneGlobalColorSel_Keyboard = localColor.name;
-            for (int z = 0; z < 4; z++) zoneColorSel_Keyboard[z] = localColor.name;
-          } else {
-            zoneGlobalColorSel_LightBar = localColor.name;
-            for (int z = 0; z < 4; z++) zoneColorSel_LightBar[z] = localColor.name;
-          }
+          SetZoneStaticColor(device, new List<System.Windows.Media.Color> { c, c, c, c }, GetZoneBrightness(), ci);
+          if (isKeyboard) { zoneGlobalColorSel_Keyboard = localColor.name; for (int z = 0; z < 4; z++) zoneColorSel_Keyboard[z] = localColor.name; } else { zoneGlobalColorSel_LightBar = localColor.name; for (int z = 0; z < 4; z++) zoneColorSel_LightBar[z] = localColor.name; }
+          SaveConfig("ZoneColor");
           foreach (ToolStripMenuItem mi in allZonesMenu.DropDownItems.OfType<ToolStripMenuItem>())
             mi.Checked = (mi == colorItem);
         };
@@ -3050,11 +3080,11 @@ namespace OmenSuperHub {
       customGlobalColor.Click += (sender, args) => {
         using (ColorDialog cd = new ColorDialog { FullOpen = true }) {
           if (cd.ShowDialog() == DialogResult.OK) {
+            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
             var c = System.Windows.Media.Color.FromRgb(cd.Color.R, cd.Color.G, cd.Color.B);
-            byte brightness = GetZoneBrightness();
-            if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-            SetZoneStaticColor(device, new List<System.Windows.Media.Color> { c, c, c, c }, brightness);
-            if (device == LightingDevice.Keyboard) { zoneGlobalColorSel_Keyboard = null; for (int z = 0; z < 4; z++) zoneColorSel_Keyboard[z] = null; } else { zoneGlobalColorSel_LightBar = null; for (int z = 0; z < 4; z++) zoneColorSel_LightBar[z] = null; }
+            SetZoneStaticColor(device, new List<System.Windows.Media.Color> { c, c, c, c }, GetZoneBrightness(), ci);
+            if (isKeyboard) { zoneGlobalColorSel_Keyboard = null; for (int z = 0; z < 4; z++) zoneColorSel_Keyboard[z] = null; } else { zoneGlobalColorSel_LightBar = null; for (int z = 0; z < 4; z++) zoneColorSel_LightBar[z] = null; }
+            SaveConfig("ZoneColor");
             foreach (ToolStripMenuItem mi in allZonesMenu.DropDownItems.OfType<ToolStripMenuItem>())
               mi.Checked = false;
           }
@@ -3064,6 +3094,7 @@ namespace OmenSuperHub {
       allZonesMenu.DropDownItems.Add(customGlobalColor);
       staticColorMenu.DropDownItems.Add(allZonesMenu);
 
+      // 各分区单独颜色
       for (int i = 0; i < 4; i++) {
         int zoneIndex = i;
         ToolStripMenuItem zoneMenu = new ToolStripMenuItem($"分区 {zoneIndex + 1}");
@@ -3073,21 +3104,14 @@ namespace OmenSuperHub {
             Checked = (zoneColorSel[zoneIndex] == localColor.name)
           };
           zoneColorItem.Click += (sender, args) => {
+            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
             var currentColors = GetZoneStaticColor()?.ToList();
             if (currentColors == null || currentColors.Count != 4)
               currentColors = Enumerable.Repeat(System.Windows.Media.Color.FromRgb(0, 0, 0), 4).ToList();
             currentColors[zoneIndex] = System.Windows.Media.Color.FromRgb(localColor.r, localColor.g, localColor.b);
-            byte brightness = GetZoneBrightness();
-            if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-            SetZoneStaticColor(device, currentColors, brightness);
-            // 更新模块级状态
-            if (device == LightingDevice.Keyboard) {
-              zoneColorSel_Keyboard[zoneIndex] = localColor.name;
-              zoneGlobalColorSel_Keyboard = null; // 分区不同，全局颜色不再一致
-            } else {
-              zoneColorSel_LightBar[zoneIndex] = localColor.name;
-              zoneGlobalColorSel_LightBar = null;
-            }
+            SetZoneStaticColor(device, currentColors, GetZoneBrightness(), ci);
+            if (isKeyboard) { zoneColorSel_Keyboard[zoneIndex] = localColor.name; zoneGlobalColorSel_Keyboard = null; } else { zoneColorSel_LightBar[zoneIndex] = localColor.name; zoneGlobalColorSel_LightBar = null; }
+            SaveConfig("ZoneColor");
             foreach (ToolStripMenuItem mi in zoneMenu.DropDownItems.OfType<ToolStripMenuItem>())
               mi.Checked = (mi == zoneColorItem);
           };
@@ -3097,14 +3121,14 @@ namespace OmenSuperHub {
         customZoneColor.Click += (sender, args) => {
           using (ColorDialog cd = new ColorDialog { FullOpen = true }) {
             if (cd.ShowDialog() == DialogResult.OK) {
+              LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
               var currentColors = GetZoneStaticColor()?.ToList();
               if (currentColors == null || currentColors.Count != 4)
                 currentColors = Enumerable.Repeat(System.Windows.Media.Color.FromRgb(0, 0, 0), 4).ToList();
               currentColors[zoneIndex] = System.Windows.Media.Color.FromRgb(cd.Color.R, cd.Color.G, cd.Color.B);
-              byte brightness = GetZoneBrightness();
-              if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-              SetZoneStaticColor(device, currentColors, brightness);
-              if (device == LightingDevice.Keyboard) { zoneColorSel_Keyboard[zoneIndex] = null; zoneGlobalColorSel_Keyboard = null; } else { zoneColorSel_LightBar[zoneIndex] = null; zoneGlobalColorSel_LightBar = null; }
+              SetZoneStaticColor(device, currentColors, GetZoneBrightness(), ci);
+              if (isKeyboard) { zoneColorSel_Keyboard[zoneIndex] = null; zoneGlobalColorSel_Keyboard = null; } else { zoneColorSel_LightBar[zoneIndex] = null; zoneGlobalColorSel_LightBar = null; }
+              SaveConfig("ZoneColor");
               foreach (ToolStripMenuItem mi in zoneMenu.DropDownItems.OfType<ToolStripMenuItem>())
                 mi.Checked = false;
             }
@@ -3116,6 +3140,7 @@ namespace OmenSuperHub {
       }
       parentMenu.DropDownItems.Add(staticColorMenu);
 
+      // ── 动画效果 ─────────────────────────────────────────────────────
       if (supportAnim) {
         ToolStripMenuItem animMenu = new ToolStripMenuItem("动画效果");
 
@@ -3125,15 +3150,15 @@ namespace OmenSuperHub {
           ("雨滴", 7), ("音频脉冲", 8), ("五彩纸屑", 9), ("太阳", 10), ("划过", 11)
         };
         foreach (var anim in anims) {
-          var localAnim = anim; // 避免闭包捕获循环变量
+          var localAnim = anim;
           var animItem = new ToolStripMenuItem(localAnim.name) {
             Checked = (localAnim.id == currentAnimEffect)
           };
           animItem.Click += (sender, args) => {
             currentAnimEffect = localAnim.id;
-            byte brightness = GetZoneBrightness();
-            if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme, currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, brightness);
+            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
+                currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
             foreach (ToolStripMenuItem mi in effectMenu.DropDownItems.OfType<ToolStripMenuItem>())
               mi.Checked = (mi == animItem);
           };
@@ -3150,9 +3175,9 @@ namespace OmenSuperHub {
           };
           speedItem.Click += (sender, args) => {
             currentAnimSpeed = localSp.val;
-            byte brightness = GetZoneBrightness();
-            if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme, currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, brightness);
+            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
+                currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
             foreach (ToolStripMenuItem mi in speedMenu.DropDownItems.OfType<ToolStripMenuItem>())
               mi.Checked = (mi == speedItem);
           };
@@ -3169,9 +3194,9 @@ namespace OmenSuperHub {
           };
           dirItem.Click += (sender, args) => {
             currentAnimDirection = localD.val;
-            byte brightness = GetZoneBrightness();
-            if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme, currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, brightness);
+            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
+                currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
             foreach (ToolStripMenuItem mi in dirMenu.DropDownItems.OfType<ToolStripMenuItem>())
               mi.Checked = (mi == dirItem);
           };
@@ -3190,9 +3215,9 @@ namespace OmenSuperHub {
           };
           themeItem.Click += (sender, args) => {
             currentAnimTheme = localT.val;
-            byte brightness = GetZoneBrightness();
-            if (brightness == 0) brightness = 100; // 避免亮度为0时设置颜色无效
-            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme, currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, brightness);
+            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
+                currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
             foreach (ToolStripMenuItem mi in themeMenu.DropDownItems.OfType<ToolStripMenuItem>())
               mi.Checked = (mi == themeItem);
           };
