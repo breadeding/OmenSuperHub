@@ -101,6 +101,24 @@
     <TargetZone>Custom</TargetZone>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="HP.Omen.Core.Common">
+      <HintPath>Resources\HP.Omen.Core.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="HP.Omen.Core.Model.Device">
+      <HintPath>Resources\HP.Omen.Core.Model.Device.dll</HintPath>
+    </Reference>
+    <Reference Include="McuSDK2">
+      <HintPath>Resources\McuSDK2.dll</HintPath>
+    </Reference>
+    <Reference Include="NvidiaApi">
+      <HintPath>Resources\NvidiaApi.dll</HintPath>
+    </Reference>
+    <Reference Include="PerformanceControl">
+      <HintPath>Resources\PerformanceControl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions">
+      <HintPath>Resources\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="BlackSharp.Core, Version=1.0.7.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\BlackSharp.Core.1.0.7\lib\net472\BlackSharp.Core.dll</HintPath>
     </Reference>
@@ -115,9 +133,6 @@
     </Reference>
     <Reference Include="LibreHardwareMonitorLib">
       <HintPath>packages\LibreHardwareMonitorLib.0.9.6\runtimes\win-x64\lib\net472\LibreHardwareMonitorLib.dll</HintPath>
-    </Reference>
-    <Reference Include="McuSDK2">
-      <HintPath>Libs\McuSDK2.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Win32.Primitives, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -300,7 +315,6 @@
     <Compile Include="HelpForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="PlatformSettings.cs" />
     <Compile Include="Properties\AssemblyVersion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
@@ -352,11 +366,19 @@
     <EmbeddedResource Include="Resources\nvpcf_inf.inf" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Resources\AMDRyzenSDK.dll" />
     <EmbeddedResource Include="Resources\HP.Omen.Core.Common.dll" />
+    <EmbeddedResource Include="Resources\HP.Omen.Core.Model.DataStructure.dll" />
     <EmbeddedResource Include="Resources\HP.Omen.Core.Model.Device.dll" />
-  </ItemGroup>
-  <ItemGroup>
+    <EmbeddedResource Include="Resources\HP.Omen.Core.Utilities.dll" />
+    <EmbeddedResource Include="Resources\IntelXTUSDK.dll" />
+    <EmbeddedResource Include="Resources\McuSDK2.dll" />
+    <EmbeddedResource Include="Resources\Microsoft.Extensions.ObjectPool.dll" />
     <EmbeddedResource Include="Resources\NvidiaApi.dll" />
+    <EmbeddedResource Include="Resources\PerformanceControl.dll" />
+    <EmbeddedResource Include="Resources\SMBiosSDK.dll" />
+    <EmbeddedResource Include="Resources\System.Threading.Tasks.Extensions.dll" />
+    <EmbeddedResource Include="Resources\Utf8Json.dll" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\HP.Omen.Core.Logger.dll" />

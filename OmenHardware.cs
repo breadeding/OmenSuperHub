@@ -5,25 +5,6 @@ using System.Management;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
-    // 获取系统 ID (SystemID)，即主板产品号 (Win32_BaseBoard.Product)
-    public static string GetSystemID() {
-      try {
-        using (var searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT Product FROM Win32_BaseBoard")) {
-          using (ManagementObjectCollection results = searcher.Get()) {
-            foreach (ManagementObject obj in results) {
-              // 直接返回第一个非空的 Product 值
-              object product = obj["Product"];
-              if (product != null)
-                return product.ToString().Trim();
-            }
-          }
-        }
-      } catch (Exception ex) {
-        Logger.Error($"[ERROR] GetSystemID: {ex.Message}");
-      }
-      return string.Empty;
-    }
-
     // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
     public static byte[] GetSystemDesignData() {
       return SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);

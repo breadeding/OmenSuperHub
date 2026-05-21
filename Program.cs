@@ -13,7 +13,11 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using HidSharp;
 using Hp.Bridge.Client.SDKs.McuSDK2.Common.DataStructure;
+using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
+using HP.Omen.Core.Model.Device.Enums;
+using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
 using static OmenSuperHub.GpuAppManager;
@@ -85,7 +89,6 @@ namespace OmenSuperHub {
     static System.Windows.Forms.Timer checkFloatingTimer, optimiseTimer;
     static NotifyIcon trayIcon;
     static FloatingForm floatingForm;
-    static PlatformSettings platformSettings;
     static ToolStripMenuItem irSensorMenu;
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
@@ -94,7 +97,14 @@ namespace OmenSuperHub {
     static bool isSysInfoMenuOpen = false;
     static int? maxCPUTemp = null;
     static int maxGPUTemp = 87;
+    static string systemSSID;
+    static bool supportAni = false;
+    static bool supportDojo = false;
+    static bool supportLightbar = false;
+    static DeviceEnums.DeviceType deviceType;
+    static PlatformSettings platformSettings;
     static GraphicsMode NvGraphicsMode;
+    static NbKeyboardLightingType kbType;
 
     [STAThread]
     static void Main(string[] args) {
@@ -136,6 +146,20 @@ namespace OmenSuperHub {
         Application.SetCompatibleTextRenderingDefault(false);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
+        kbType = GetKeyboardType();
+        systemSSID = DeviceModel.ThisSystemID; // DeviceModel.OmenPlatform.Name
+        deviceType = DeviceModel.DeviceType;
+        string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
+        platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
+        if (FourZoneHelper.IsAnimationSupported) {
+          supportAni = true;
+        }
+        if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
+          supportDojo = true;
+          if (IsLightBarPlatform())
+            supportLightbar = true;
+        }
+
         NvGraphicsMode = GetGfxMode();
         hasAMDDiscreteGpu = HasAmdDiscreteGpu();
         hasNVIDIAGpu = GetNVIDIAModel() != null;
@@ -154,7 +178,6 @@ namespace OmenSuperHub {
         isTwoBytePL4 = IsTwoBytePL4Supported();
 
         // Initialize tray icon
-        platformSettings = PlatformSettingsResolver.LoadFromCurrentSystem();
         InitMaxTemp();
         InitPlatformMaxFanSpeed();
         InitTrayIcon();
@@ -208,6 +231,21 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
+
+        //Console.WriteLine($"DeviceType: {WindowsLightingUtility.IsLightBarPlatform()}");
+        //Console.WriteLine($"DeviceType: {deviceType}");
+        //Console.WriteLine($"PlatformSku: {sku}");
+        //Console.WriteLine($"TppMaxValue: {platformSettings.TppMaxValue}");
+
+        //Platform omenPlatform = DeviceModel.OmenPlatform;
+        //Console.WriteLine($"Platform Name: {omenPlatform.Name}");
+        //Console.WriteLine($"Display Name: {omenPlatform.DisplayName}");
+        //Console.WriteLine($"Features: {string.Join(", ", omenPlatform.Feature ?? new List<string>())}");
+        //Console.WriteLine($"Background Features: {string.Join(", ", omenPlatform.BackgroundFeature ?? new List<string>())}");
+        //if (omenPlatform.ProductNum != null) {
+        //  foreach (var info in omenPlatform.ProductNum)
+        //    Console.WriteLine($"  SSID: {info.SSID}, Cycle: {info.Cycle}");
+        //}
 
         Logger.Info($"version: {version}");
         Application.Run();
@@ -646,7 +684,7 @@ namespace OmenSuperHub {
       }
     }
 
-    static int flagStart = 0, countTimer = 0;
+    static int flagStart = 0;
     static void optimiseSchedule() {
       // 延时等待风扇恢复响应
       if (flagStart < 5) {
@@ -668,12 +706,7 @@ namespace OmenSuperHub {
       } else {
         Logger.Error("无法读取 BIOS 保护状态");
       }
-      countTimer++;
-      //定时每5分钟恢复功耗设置
-      if (countTimer >= 10) {
-        countTimer = 0;
-        RestorePowerConfig();
-      }
+      
       //更新显示器连接到显卡状态
       monitorQuery();
     }
@@ -870,7 +903,7 @@ namespace OmenSuperHub {
       }
 
       ToolStripMenuItem sysInfoMenu = new ToolStripMenuItem("本机信息");
-      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"主板产品号: {GetSystemID()}") { Enabled = false });
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"主板产品号: {systemSSID}") { Enabled = false });
       if (platformMaxFanSpeed.HasValue) {
         sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"CPU温度墙: {(maxCPUTemp.HasValue ? maxCPUTemp.Value.ToString() : "未知")}°C") { Enabled = false });
       }
@@ -886,7 +919,6 @@ namespace OmenSuperHub {
       ambientSensorMenu = new ToolStripMenuItem("环境传感器: --°C") { Enabled = false };
       pchSensorMenu = new ToolStripMenuItem("PCH传感器: --°C") { Enabled = false };
       vrSensorMenu = new ToolStripMenuItem("VR传感器: --°C") { Enabled = false };
-      NbKeyboardLightingType kbType = GetKeyboardType();
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"键盘灯光类型: {GetKeyboardTypeName(kbType)}") { Enabled = false });
       sysInfoMenu.DropDownItems.Add(irSensorMenu);
       sysInfoMenu.DropDownItems.Add(ambientSensorMenu);
@@ -1331,45 +1363,72 @@ namespace OmenSuperHub {
       trayIcon.ContextMenuStrip.Items.Add(performanceControlMenu);
 
       // ---- 灯光控制 ----
-      ToolStripMenuItem lightingControlMenu = new ToolStripMenuItem("灯光控制（测试功能）");
-      lightingControlMenu.DropDownOpening += (s, e) => {
-        lightingControlMenu.DropDownItems.Clear();
+      if (kbType >= 0) {
+        ToolStripMenuItem lightingControlMenu = new ToolStripMenuItem("灯光控制");
+        lightingControlMenu.DropDownOpening += (s, e) => {
+          lightingControlMenu.DropDownItems.Clear();
 
-        // ---------- 四分区键盘 ----------
-        ToolStripMenuItem kbMenu = new ToolStripMenuItem("四分区/单分区键盘");
-        kbMenu.DropDownItems.Add(new ToolStripMenuItem("💡 亮度范围可能为0~100，也可能为100~228") { Enabled = false });
-        kbMenu.DropDownItems.Add(new ToolStripSeparator());
-        AddLightingUI(kbMenu, LightingDevice.Keyboard, true, true);
-        lightingControlMenu.DropDownItems.Add(kbMenu);
+          if (supportDojo)
+            kbControlInterface = LightingControlInterface.Dojo;
 
-        // ---------- 侧面灯条 ----------
-        ToolStripMenuItem lbMenu = new ToolStripMenuItem("侧面灯条");
-        lbMenu.DropDownItems.Add(new ToolStripMenuItem("💡 亮度范围可能为0~100，也可能为100~228") { Enabled = false });
-        lbMenu.DropDownItems.Add(new ToolStripSeparator());
-        AddLightingUI(lbMenu, LightingDevice.LightBar, false, true);
-        lightingControlMenu.DropDownItems.Add(lbMenu);
+          // ---------- 四分区/单分区键盘 ----------
+          if (kbType > 0) {
+            ToolStripMenuItem kbMenu = new ToolStripMenuItem("四分区/单分区键盘");
+            kbMenu.DropDownItems.Add(new ToolStripMenuItem("💡 亮度范围可能为0~100，也可能为100关228开") { Enabled = false });
+            kbMenu.DropDownItems.Add(new ToolStripSeparator());
+            AddLightingUI(kbMenu, LightingDevice.Keyboard, true);
+            lightingControlMenu.DropDownItems.Add(kbMenu);
+          }
+          else {
+            lightingControlMenu.DropDownItems.Add(CreateMenuItem("开", "lightSwitch", (s1, e1) => {
+              SetZoneBrightness(LightingDevice.Keyboard, 228);
+            }, GetZoneBrightness() == 228));
+            lightingControlMenu.DropDownItems.Add(CreateMenuItem("关", "lightSwitch", (s1, e1) => {
+              SetZoneBrightness(LightingDevice.Keyboard, 100);
+            }, GetZoneBrightness() == 100));
+          }
 
-        // ---------- 单键 RGB ----------
-        ToolStripMenuItem perKeyMenu = new ToolStripMenuItem("单键 RGB");
-        AddPerKeyLightingUI(perKeyMenu);
-        lightingControlMenu.DropDownItems.Add(perKeyMenu);
+          // ---------- 灯条 ----------
+          if (supportLightbar) {
+            ToolStripMenuItem lbMenu = new ToolStripMenuItem("灯条（测试功能）");
+            lbMenu.DropDownItems.Add(new ToolStripMenuItem("💡 亮度范围可能为0~100，也可能为100关228开") { Enabled = false });
+            lbMenu.DropDownItems.Add(new ToolStripSeparator());
+            AddLightingUI(lbMenu, LightingDevice.LightBar, false);
+            lightingControlMenu.DropDownItems.Add(lbMenu);
+          }
 
-        // ---------- 状态显示 ----------
-        lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
-        byte brightness = GetZoneBrightness();
-        int currentAnimation = GetCurrentAnimationEffect();
-        var colors = GetZoneStaticColor();
-        lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"全局亮度: {brightness}%") { Enabled = false });
-        lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"动画效果: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
-        if (colors != null && colors.Length == 4) {
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
-        }
-      };
+          // ---------- 单键 RGB ----------
+          if (kbType == NbKeyboardLightingType.RgbPerKey) {
+            ToolStripMenuItem perKeyMenu = new ToolStripMenuItem("单键 RGB（测试功能）");
+            AddPerKeyLightingUI(perKeyMenu);
+            lightingControlMenu.DropDownItems.Add(perKeyMenu);
+          }
 
-      trayIcon.ContextMenuStrip.Items.Add(lightingControlMenu);
+          // ---------- 状态显示 ----------
+          lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
+          byte brightness = GetZoneBrightness();
+          var colors = GetZoneStaticColor();
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"亮度: {brightness}%") { Enabled = false });
+          if (supportAni) {
+            int currentAnimation = GetCurrentAnimationEffect();
+            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"动画效果: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
+          }
+          if (kbType == NbKeyboardLightingType.FourZoneWithNumpad || kbType == NbKeyboardLightingType.FourZoneWithoutNumpad) {
+            if (colors != null && colors.Length == 4) {
+              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
+              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
+              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
+              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"分区4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
+            }
+          } else if (kbType == NbKeyboardLightingType.OneZoneWithNumpad || kbType == NbKeyboardLightingType.OneZoneWithoutNumpad) {
+            if (colors != null && colors.Length == 4) {
+              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"颜色: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
+            }
+          }
+        };
+
+        trayIcon.ContextMenuStrip.Items.Add(lightingControlMenu);
+      }
 
       trayIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator()); // Separator between groups
       ToolStripMenuItem hardwareMonitorMenu = new ToolStripMenuItem("硬件监控");
@@ -2982,17 +3041,16 @@ namespace OmenSuperHub {
       return str;
     }
 
-    static void AddLightingUI(ToolStripMenuItem parentMenu, LightingDevice device, bool isKeyboard, bool supportAnim) {
+    static void AddLightingUI(ToolStripMenuItem parentMenu, LightingDevice device, bool isKeyboard) {
       // 当前设备使用的协议（从模块级变量读取）
       LightingControlInterface iface = isKeyboard ? kbControlInterface : lbControlInterface;
 
       // ── 协议选择 ───────────────────────────────────────────────────
       ToolStripMenuItem protocolMenu = new ToolStripMenuItem("WMI 协议");
+      protocolMenu.DropDownItems.Add(new ToolStripMenuItem("💡 仅当灯光控制无效时，可尝试更改此设置。") { Enabled = false });
       var protocols = new (string label, LightingControlInterface val)[] {
         ("四分区", LightingControlInterface.BasicFourZone),
-        ("四分区动画",               LightingControlInterface.Dojo),
-        ("Drax",                LightingControlInterface.Drax),
-        ("Noctali",    LightingControlInterface.Noctali),
+        ("Dojo四分区",               LightingControlInterface.Dojo),
       };
       foreach (var proto in protocols) {
         var localProto = proto;
@@ -3027,15 +3085,16 @@ namespace OmenSuperHub {
         };
         brightnessMenu.DropDownItems.Add(brightnessItem);
       }
-      var brightnessItem1 = new ToolStripMenuItem($"{125}%") {
-        Checked = (currentBrightness == 125)
+      var brightnessItem1 = new ToolStripMenuItem($"{128}%") {
+        Checked = (currentBrightness == 128)
       };
       brightnessItem1.Click += (sender, args) => {
         LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
-        SetZoneBrightness(device, 125, ci);
+        SetZoneBrightness(device, 128, ci);
         foreach (ToolStripMenuItem mi in brightnessMenu.DropDownItems.OfType<ToolStripMenuItem>())
           mi.Checked = (mi == brightnessItem1);
       };
+      brightnessMenu.DropDownItems.Add(brightnessItem1);
       var brightnessItem2 = new ToolStripMenuItem($"{228}%") {
         Checked = (currentBrightness == 228)
       };
@@ -3141,14 +3200,24 @@ namespace OmenSuperHub {
       parentMenu.DropDownItems.Add(staticColorMenu);
 
       // ── 动画效果 ─────────────────────────────────────────────────────
-      if (supportAnim) {
+      if (supportAni) {
         ToolStripMenuItem animMenu = new ToolStripMenuItem("动画效果");
+        // 在菜单打开时判断协议，决定展示完整版还是简化版
+        // 注意：iface 在 DropDownOpening 时已捕获，但协议可能被用户在同次打开中切换，
+        // 所以动画菜单的内容在此次 AddLightingUI 调用时固定。协议切换后需重新打开菜单。
+        bool isDojo = iface == LightingControlInterface.Dojo;
 
+        // ── 效果 ──────────────────────────────────────────────────────
         ToolStripMenuItem effectMenu = new ToolStripMenuItem("效果");
-        var anims = new (string name, byte id)[] {
-          ("色彩循环", 2), ("星光", 3), ("呼吸", 4), ("波浪", 6),
-          ("雨滴", 7), ("音频脉冲", 8), ("五彩纸屑", 9), ("太阳", 10), ("划过", 11)
-        };
+        // Dojo 支持全部效果；其余协议只支持颜色循环(id=2)和呼吸(id=4)
+        var anims = isDojo
+          ? new (string name, byte id)[] {
+              ("色彩循环", 2), ("星光", 3), ("呼吸", 4), ("波浪", 6),
+              ("雨滴", 7), ("音频脉冲", 8), ("五彩纸屑", 9), ("太阳", 10), ("划过", 11)
+            }
+          : new (string name, byte id)[] {
+              ("颜色循环", 2), ("呼吸", 4)
+            };
         foreach (var anim in anims) {
           var localAnim = anim;
           var animItem = new ToolStripMenuItem(localAnim.name) {
@@ -3166,6 +3235,8 @@ namespace OmenSuperHub {
         }
         animMenu.DropDownItems.Add(effectMenu);
 
+        // ── 速度 ──────────────────────────────────────────────────────
+        // Dojo：0/1/2 直接传给硬件；非 Dojo：转换为间隔 10/5/2（在 SetZoneAnimation 内完成）
         ToolStripMenuItem speedMenu = new ToolStripMenuItem("速度");
         var speeds = new (string name, byte val)[] { ("慢", 0), ("中", 1), ("快", 2) };
         foreach (var sp in speeds) {
@@ -3185,45 +3256,48 @@ namespace OmenSuperHub {
         }
         animMenu.DropDownItems.Add(speedMenu);
 
-        ToolStripMenuItem dirMenu = new ToolStripMenuItem("方向");
-        var dirs = new (string name, byte val)[] { ("左/逆时针", 0), ("右/顺时针", 1) };
-        foreach (var d in dirs) {
-          var localD = d;
-          var dirItem = new ToolStripMenuItem(localD.name) {
-            Checked = (localD.val == currentAnimDirection)
-          };
-          dirItem.Click += (sender, args) => {
-            currentAnimDirection = localD.val;
-            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
-            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
-                currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
-            foreach (ToolStripMenuItem mi in dirMenu.DropDownItems.OfType<ToolStripMenuItem>())
-              mi.Checked = (mi == dirItem);
-          };
-          dirMenu.DropDownItems.Add(dirItem);
-        }
-        animMenu.DropDownItems.Add(dirMenu);
+        // ── 方向・主题（仅 Dojo 协议支持） ───────────────────────────
+        if (isDojo) {
+          ToolStripMenuItem dirMenu = new ToolStripMenuItem("方向");
+          var dirs = new (string name, byte val)[] { ("左/逆时针", 0), ("右/顺时针", 1) };
+          foreach (var d in dirs) {
+            var localD = d;
+            var dirItem = new ToolStripMenuItem(localD.name) {
+              Checked = (localD.val == currentAnimDirection)
+            };
+            dirItem.Click += (sender, args) => {
+              currentAnimDirection = localD.val;
+              LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+              SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
+                  currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
+              foreach (ToolStripMenuItem mi in dirMenu.DropDownItems.OfType<ToolStripMenuItem>())
+                mi.Checked = (mi == dirItem);
+            };
+            dirMenu.DropDownItems.Add(dirItem);
+          }
+          animMenu.DropDownItems.Add(dirMenu);
 
-        ToolStripMenuItem themeMenu = new ToolStripMenuItem("主题");
-        var themes = new (string name, byte val)[] {
-          ("银河", 0), ("火山", 1), ("丛林", 2), ("海洋", 3), ("自定义", 4)
-        };
-        foreach (var t in themes) {
-          var localT = t;
-          var themeItem = new ToolStripMenuItem(localT.name) {
-            Checked = (localT.val == currentAnimTheme)
+          ToolStripMenuItem themeMenu = new ToolStripMenuItem("主题");
+          var themes = new (string name, byte val)[] {
+            ("银河", 0), ("火山", 1), ("丛林", 2), ("海洋", 3), ("自定义", 4)
           };
-          themeItem.Click += (sender, args) => {
-            currentAnimTheme = localT.val;
-            LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
-            SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
-                currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
-            foreach (ToolStripMenuItem mi in themeMenu.DropDownItems.OfType<ToolStripMenuItem>())
-              mi.Checked = (mi == themeItem);
-          };
-          themeMenu.DropDownItems.Add(themeItem);
+          foreach (var t in themes) {
+            var localT = t;
+            var themeItem = new ToolStripMenuItem(localT.name) {
+              Checked = (localT.val == currentAnimTheme)
+            };
+            themeItem.Click += (sender, args) => {
+              currentAnimTheme = localT.val;
+              LightingControlInterface ci = isKeyboard ? kbControlInterface : lbControlInterface;
+              SetZoneAnimation(device, currentAnimEffect, currentAnimSpeed, currentAnimDirection, currentAnimTheme,
+                  currentAnimTheme == 4 ? GetZoneStaticColor()?.ToList() : null, GetZoneBrightness(), ci);
+              foreach (ToolStripMenuItem mi in themeMenu.DropDownItems.OfType<ToolStripMenuItem>())
+                mi.Checked = (mi == themeItem);
+            };
+            themeMenu.DropDownItems.Add(themeItem);
+          }
+          animMenu.DropDownItems.Add(themeMenu);
         }
-        animMenu.DropDownItems.Add(themeMenu);
 
         parentMenu.DropDownItems.Add(animMenu);
       }

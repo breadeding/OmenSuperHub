@@ -10,6 +10,8 @@ using Hp.Bridge.Client.SDKs.McuSDK2.Common.Enums;
 using Hp.Bridge.Client.SDKs.McuSDK2.General.Enums;
 using Hp.Bridge.Client.SDKs.McuSDK2.General.Enums.Lighting;
 using Hp.Bridge.Client.SDKs.McuSDK2.Keyboard;
+using HP.Omen.Core.Model.Device.Enums;
+using HP.Omen.Core.Model.Device.Models;
 using static OmenSuperHub.OmenHardware;
 
 namespace OmenSuperHub {
@@ -25,36 +27,16 @@ namespace OmenSuperHub {
       };
     }
 
-    // ─── 键盘类型枚举 ─────────────────────────────────────────────
-    public enum NbKeyboardLightingType : byte {
-      OneZoneWithoutNumpad = 0,
-      OneZoneWithNumpad = 1,
-      FourZoneWithoutNumpad = 2,
-      FourZoneWithNumpad = 3,
-      RgbPerKey = 4,
-      NotSupported = 255
-    }
-
     public static string GetKeyboardTypeName(NbKeyboardLightingType type) {
       switch (type) {
-        case NbKeyboardLightingType.OneZoneWithoutNumpad: return "单分区无小键盘";
-        case NbKeyboardLightingType.OneZoneWithNumpad: return "单分区带小键盘";
-        case NbKeyboardLightingType.FourZoneWithoutNumpad: return "四分区无小键盘";
+        case NbKeyboardLightingType.Normal: return "普通";
         case NbKeyboardLightingType.FourZoneWithNumpad: return "四分区带小键盘";
+        case NbKeyboardLightingType.FourZoneWithoutNumpad: return "四分区无小键盘";
         case NbKeyboardLightingType.RgbPerKey: return "单键 RGB";
+        case NbKeyboardLightingType.OneZoneWithNumpad: return "单分区带小键盘";
+        case NbKeyboardLightingType.OneZoneWithoutNumpad: return "单分区无小键盘";
         default: return "未知或不支持";
       }
-    }
-
-    public static NbKeyboardLightingType GetKeyboardType() {
-      byte[] result = SendOmenBiosWmi(
-          commandType: 0x2B,
-          data: new byte[4] { 0, 0, 0, 0 },
-          outputSize: 4,
-          command: 0x20008);
-      if (result != null && result.Length > 0)
-        return (NbKeyboardLightingType)result[0];
-      return NbKeyboardLightingType.NotSupported;
     }
 
     // ─── 灯具、接口枚举 ─────────────────────────────────────────────
@@ -67,8 +49,6 @@ namespace OmenSuperHub {
       None = 0,
       BasicFourZone,  // WMI CommandType 2/3/4/5
       Dojo,           // WMI CommandType 11
-      Drax,           // WMI CommandType 7（Drax 协议）
-      Noctali,        // WMI CommandType 7（Noctali 协议，关灯命令特殊）
       PerKeyRGB       // HID / MCU 直通
     }
 
@@ -81,16 +61,6 @@ namespace OmenSuperHub {
 
     private static readonly Dictionary<LightingDevice, List<System.Windows.Media.Color>> _lastDeviceColors =
         new Dictionary<LightingDevice, List<System.Windows.Media.Color>>();
-
-    // ─── 平台信息读取（仅用于获取 PerKey 键盘 PID/VID，非硬件探测） ───
-    private static string GetSystemId() => OmenHardware.GetSystemID()?.Trim() ?? string.Empty;
-
-    private static PlatformSettingsResolver.LightingCapability _cachedCapability;
-    private static PlatformSettingsResolver.LightingCapability GetPlatformCapability() {
-      if (_cachedCapability == null)
-        _cachedCapability = PlatformSettingsResolver.GetLightingCapability(GetSystemId());
-      return _cachedCapability;
-    }
 
     // ════════════ HID / MCU 设备操作 ═════════════════════════════════
     public static int OpenHidDevice(int pid, int vid, string interfaceString = "") {
@@ -112,14 +82,44 @@ namespace OmenSuperHub {
 
     /// <summary>打开 Per‑Key RGB 键盘（需要平台配置提供 VID/PID）</summary>
     public static int OpenPerKeyKeyboard() {
-      var cap = GetPlatformCapability();
-      if (!cap.SupportsPerKeyRGB || cap.KeyboardPids == null || cap.KeyboardVid == null)
-        return -1;
+      // 1. 获取所有可能的键盘附件类型（OGH 中通过 AccessoryList.json 定义）
+      var keyboardTypes = new[]
+      {
+                AccessoryEnums.AccessoryType.Keyboard_Woodstock,
+                AccessoryEnums.AccessoryType.Keyboard_Woody2,
+                AccessoryEnums.AccessoryType.Keyboard_Winston
+            };
 
-      foreach (int pid in cap.KeyboardPids) {
-        int handle = OpenHidDevice(pid, cap.KeyboardVid.Value, cap.KeyboardInterfaceString ?? "");
+      // 2. 遍历尝试打开当前已连接的键盘设备
+      foreach (var type in keyboardTypes) {
+        var hwid = DeviceModel.GetCurrentlyUsingHWID(type);
+        if (hwid == null) continue;
+
+        // 解析 VID/PID（十六进制字符串 → int）
+        if (!int.TryParse(hwid.VID, System.Globalization.NumberStyles.HexNumber, null, out int vid))
+          continue;
+        if (!int.TryParse(hwid.PID, System.Globalization.NumberStyles.HexNumber, null, out int pid))
+          continue;
+
+        string interfaceStr = hwid.InterfaceString ?? "";
+        int handle = OpenHidDevice(pid, vid, interfaceStr);
         if (handle > 0) return handle;
       }
+
+      // 3. 若上述未找到，回退到从附件列表中获取第一个支持 DraxLighting 的键盘（OGH 备选方案）
+      var keyboardAccessory = DeviceModel.OmenAccessoryInfo
+          .FirstOrDefault(a => a.Type.ToString().StartsWith("Keyboard") &&
+                              (a.Feature?.Contains("DraxLighting") == true ||
+                               a.Feature?.Contains("PerKeyRGB") == true));
+      if (keyboardAccessory.Type != AccessoryEnums.AccessoryType.Unsupported &&
+                keyboardAccessory.VID != null && keyboardAccessory.VID.Count > 0 &&
+                keyboardAccessory.PID != null && keyboardAccessory.PID.Count > 0) {
+        int vid = Convert.ToInt32(keyboardAccessory.VID[0], 16);
+        int pid = Convert.ToInt32(keyboardAccessory.PID[0], 16);
+        string interfaceStr = keyboardAccessory.InterfaceString?.FirstOrDefault() ?? "";
+        return OpenHidDevice(pid, vid, interfaceStr);
+      }
+
       return -1;
     }
 
@@ -171,6 +171,31 @@ namespace OmenSuperHub {
       } catch { return 0; }
     }
 
+    /// <summary>
+    /// 获取键盘灯光类型（返回 BIOS 原始字节值）
+    /// 值对应 OGH 的 NbKeyboardLightingType：
+    /// </summary>
+    public static NbKeyboardLightingType GetKeyboardType() {
+      // command = 0x20008, commandType = 43, outputSize = 4
+      byte[] result = SendOmenBiosWmi(43, new byte[0], 4, 0x20008);
+      if (result != null && result.Length > 0)
+        return (NbKeyboardLightingType)result[0];
+      return NbKeyboardLightingType.None;
+    }
+
+    /// <summary>
+    /// 检测当前平台是否支持 LightBar（Dojo 灯条）
+    /// 参考 OGH 的 WindowsLightingUtility.IsLightBarPlatform 内部实现
+    /// </summary>
+    public static bool IsLightBarPlatform() {
+      byte[] result = SendOmenBiosWmi(1, null, 4);
+      if (result != null && result.Length > 0) {
+        // 检查 bit1（右移1位后与1按位与）
+        return ((result[0] >> 1) & 1) == 1;
+      }
+      return false;
+    }
+
     // ════════════ 四区 / 灯条 WMI 控制 ═══════════════════════════════
     public static void SetZoneStaticColor(LightingDevice device, List<System.Windows.Media.Color> colors,
         byte brightness, LightingControlInterface controlInterface) {
@@ -205,13 +230,6 @@ namespace OmenSuperHub {
               table[idx + 2] = colors[i].B;
             }
             SendOmenBiosWmi(3, table, 0, WMI_COMMAND_ID);
-            break;
-          }
-        case LightingControlInterface.Drax:
-        case LightingControlInterface.Noctali: {
-            var c = colors[0];
-            byte[] data = new byte[8] { 0, 0, 0, brightness, 1, c.R, c.G, c.B };
-            SendOmenBiosWmi(7, data, 0, WMI_COMMAND_ID);
             break;
           }
         default:
@@ -286,7 +304,7 @@ namespace OmenSuperHub {
     }
 
     public static void SetZoneBrightness(LightingDevice device, byte brightness,
-        LightingControlInterface controlInterface) {
+        LightingControlInterface controlInterface = LightingControlInterface.BasicFourZone) {
       switch (controlInterface) {
         case LightingControlInterface.Dojo: {
             byte target = device == LightingDevice.LightBar ? (byte)TargetDevice.LightBar : (byte)TargetDevice.FourZoneAni;
@@ -301,26 +319,11 @@ namespace OmenSuperHub {
             SendOmenBiosWmi(5, data, 0, WMI_COMMAND_ID);
             break;
           }
-        case LightingControlInterface.Drax:
-        case LightingControlInterface.Noctali:
-          if (_lastDeviceColors.TryGetValue(device, out var colors) && colors.Count > 0)
-            SetZoneStaticColor(device, colors, brightness, controlInterface);
-          break;
       }
     }
 
     public static void SetZoneOff(LightingDevice device, LightingControlInterface controlInterface) {
       switch (controlInterface) {
-        case LightingControlInterface.Noctali:
-          SendOmenBiosWmi(7, new byte[2] { 0, 0xFF }, 0, WMI_COMMAND_ID);
-          break;
-        case LightingControlInterface.Drax:
-          SetZoneStaticColor(device,
-              new List<System.Windows.Media.Color> {
-                            System.Windows.Media.Color.FromRgb(0,0,0), System.Windows.Media.Color.FromRgb(0,0,0),
-                            System.Windows.Media.Color.FromRgb(0,0,0), System.Windows.Media.Color.FromRgb(0,0,0)
-              }, 0, LightingControlInterface.Drax);
-          break;
         default:
           SetZoneBrightness(device, 0, controlInterface);
           break;
