@@ -96,7 +96,7 @@ namespace OmenSuperHub {
 
     static bool isSysInfoMenuOpen = false;
     static int? maxCPUTemp = null;
-    static int maxGPUTemp = 87;
+    static int? maxGPUTemp = null;
     static string systemSSID;
     static bool supportAni = false;
     static bool supportDojo = false;
@@ -268,6 +268,22 @@ namespace OmenSuperHub {
       if (proc == IntPtr.Zero) return -1;
       var fn = (NvidiaAPI_SYS_UIControl_Delegate)Marshal.GetDelegateForFunctionPointer(proc, typeof(NvidiaAPI_SYS_UIControl_Delegate));
       return fn(true);
+    }
+
+    static string GetBiosVersion() {
+      using (var searcher = new ManagementObjectSearcher("SELECT SMBIOSBIOSVersion FROM Win32_BIOS"))
+      using (var collection = searcher.Get())
+        foreach (ManagementObject obj in collection)
+          return obj["SMBIOSBIOSVersion"]?.ToString() ?? "未知";
+      return "未知";
+    }
+
+    static string GetCpuModel() {
+      using (var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor"))
+      using (var collection = searcher.Get())
+        foreach (ManagementObject obj in collection)
+          return obj["Name"]?.ToString()?.Trim() ?? "未知";
+      return "未知";
     }
 
     public static bool HasIntelCpu() {
@@ -903,16 +919,36 @@ namespace OmenSuperHub {
       }
 
       ToolStripMenuItem sysInfoMenu = new ToolStripMenuItem("本机信息");
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"机型名称: {DeviceModel.OmenPlatform.DisplayName}") { Enabled = false });
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"主板产品号: {systemSSID}") { Enabled = false });
-      if (platformMaxFanSpeed.HasValue) {
-        sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"CPU温度墙: {(maxCPUTemp.HasValue ? maxCPUTemp.Value.ToString() : "未知")}°C") { Enabled = false });
+      // BIOS 版本
+      string biosVersion = GetBiosVersion();
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"BIOS 版本: {biosVersion}") { Enabled = false });
+
+      // CPU 完整型号
+      string cpuModel = GetCpuModel();
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"CPU: {cpuModel}") { Enabled = false });
+      if (maxCPUTemp.HasValue) {
+        sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"CPU温度墙: {(maxCPUTemp.Value.ToString())}°C") { Enabled = false });
       }
       ToolStripMenuItem gpuPowerLimitsMenu = null;
       if (hasNVIDIAGpu) {
-        string gpuModel = GetNVIDIAModel() ?? "未知";
-        sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"显卡型号: {gpuModel}") { Enabled = false });
-
-        gpuPowerLimitsMenu = new ToolStripMenuItem("显卡功率限制: --W / --W") { Enabled = false };
+        // 获取所有显卡
+        var allGpuNames = GetAllGpuNamesList();
+        if (allGpuNames.Count == 1) {
+          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"显卡: {allGpuNames[0]}") { Enabled = false });
+        } else if (allGpuNames.Count > 1) {
+          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem("显卡:") { Enabled = false });
+          foreach (var gpuName in allGpuNames) {
+            sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"    {gpuName}") { Enabled = false });
+          }
+        } else {
+          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem("显卡: 未知") { Enabled = false });
+        }
+        if (maxGPUTemp.HasValue) {
+          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"NVIDIA 温度墙: {(maxGPUTemp.Value.ToString())}°C") { Enabled = false });
+        }
+        gpuPowerLimitsMenu = new ToolStripMenuItem("NVIDIA 功率限制: --W / --W") { Enabled = false };
         sysInfoMenu.DropDownItems.Add(gpuPowerLimitsMenu);
       }
       irSensorMenu = new ToolStripMenuItem("IR传感器: --°C") { Enabled = false };
@@ -1932,8 +1968,8 @@ namespace OmenSuperHub {
             if (hasNVIDIAGpu) {
               var limits = GetGpuPowerLimits();
               string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-              ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("显卡功率限制"));
-              if (limitsMenu != null) limitsMenu.Text = $"显卡功率限制: {limitsText}";
+              ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("NVIDIA 功率限制"));
+              if (limitsMenu != null) limitsMenu.Text = $"NVIDIA 功率限制: {limitsText}";
             }
           }));
         } else {
@@ -1944,8 +1980,8 @@ namespace OmenSuperHub {
           if (hasNVIDIAGpu) {
             var limits = GetGpuPowerLimits();
             string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-            ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("显卡功率限制"));
-            if (limitsMenu != null) limitsMenu.Text = $"显卡功率限制: {limitsText}";
+            ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith("NVIDIA 功率限制"));
+            if (limitsMenu != null) limitsMenu.Text = $"NVIDIA 功率限制: {limitsText}";
           }
         }
       }
@@ -2249,8 +2285,12 @@ namespace OmenSuperHub {
     static void LoadDefaultFanConfig(string filePath) {
       // ── 1. 获取 CPU 与 GPU 的允许最高温度差 ─────────────────────
       int? tempDelta = null;
+      int maxGPUT = 87;
+      if (maxGPUTemp.HasValue) {
+        maxGPUT = maxGPUTemp.Value;
+      }
       if (maxCPUTemp.HasValue) {
-        tempDelta = maxCPUTemp.Value - maxGPUTemp;
+        tempDelta = maxCPUTemp.Value - maxGPUT;
       }
 
       // ── 2. 若两个值均获取成功，则生成 silent / cool 转速表 ──────────────
@@ -2267,13 +2307,13 @@ namespace OmenSuperHub {
           // silent: cpu30/gpu20 → 0RPM, 60℃ → maxRpm/3, 87℃ → maxRpm*2/3, maxTemp → maxRpm
           cpuTempList = new List<int> { 30, 60, 87, maxCpu };
           cpuSpeedList = new List<int> { 0, maxRpm / 3, maxRpm * 2 / 3, maxRpm - maxRpm / 10 };
-          gpuTempList = new List<int> { 30 - delta, 60 - delta, 87 - delta, maxGPUTemp };
+          gpuTempList = new List<int> { 30 - delta, 60 - delta, 87 - delta, maxGPUT };
           gpuSpeedList = new List<int> { 0, maxRpm / 3, maxRpm * 2 / 3, maxRpm - maxRpm / 10 };
         } else {
           // cool: cpu45/gpu35 → maxRpm/4, (maxTemp-5)℃ → maxRpm
           cpuTempList = new List<int> { 45, maxCpu - 5, maxCpu };
           cpuSpeedList = new List<int> { maxRpm / 4, maxRpm, maxRpm + maxRpm / 10 };
-          gpuTempList = new List<int> { 45 - delta, maxGPUTemp - 5, maxGPUTemp };
+          gpuTempList = new List<int> { 45 - delta, maxGPUT - 5, maxGPUT };
           gpuSpeedList = new List<int> { maxRpm / 4, maxRpm, maxRpm + maxRpm / 10 };
         }
 

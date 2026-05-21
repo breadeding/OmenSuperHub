@@ -110,9 +110,6 @@
     <Reference Include="McuSDK2">
       <HintPath>Resources\McuSDK2.dll</HintPath>
     </Reference>
-    <Reference Include="NvidiaApi">
-      <HintPath>Resources\NvidiaApi.dll</HintPath>
-    </Reference>
     <Reference Include="PerformanceControl">
       <HintPath>Resources\PerformanceControl.dll</HintPath>
     </Reference>

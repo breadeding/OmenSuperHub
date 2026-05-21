@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -68,6 +69,33 @@ namespace OmenSuperHub {
       } catch {
         MessageBox.Show("重启显卡失败！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
       }
+    }
+
+    /// <summary>
+    /// 获取所有显卡名称列表（跳过 Microsoft 基本显示适配器）
+    /// </summary>
+    public static List<string> GetAllGpuNamesList() {
+      var gpuNames = new List<string>();
+      try {
+        using (var searcher = new ManagementObjectSearcher("SELECT Name, AdapterCompatibility FROM Win32_VideoController"))
+        using (var collection = searcher.Get()) {
+          foreach (ManagementObject obj in collection) {
+            string name = obj["Name"]?.ToString() ?? "";
+            string compatibility = obj["AdapterCompatibility"]?.ToString() ?? "";
+            // 跳过 Microsoft 基本显示适配器
+            if (name.Contains("Microsoft") || compatibility.Contains("Microsoft"))
+              continue;
+            // 跳过显示适配器
+            if (name.Contains("Display"))
+              continue;
+            if (!string.IsNullOrWhiteSpace(name))
+              gpuNames.Add(name.Trim());
+          }
+        }
+      } catch (Exception ex) {
+        Logger.Error($"GetAllGpuNamesList 异常: {ex.Message}");
+      }
+      return gpuNames;
     }
 
     // 获取显卡数字代号

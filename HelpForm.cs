@@ -45,8 +45,8 @@ namespace OmenSuperHub {
         Dock = DockStyle.Fill,
         Text = "版本号：" + version +
          "\n更新说明：\n" +
-         "（1）功能：优化灯光控制测试接口；\n" +
-         "（2）功能：复制OGH DLL接口直接获取机型参数；\n" +
+         "（1）功能：本机信息新增机型名称、BIOS版本、CPU型号、NVIDIA温度墙；\n" +
+         "（2）功能：优化灯光控制测试接口；\n" +
          "（3）修复：删除不必要的定时功耗设定，避免硬件设置时影响性能。\n\n" +
 
          "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
