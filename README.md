@@ -1,3 +1,14 @@
+<div align="center">
+  <img src="./Resources/1.png" width="150" alt="OmenSuperHub Logo">
+  <h1 align="center">OmenSuperHub</h1>
+</div>
+
+<div align="center">
+  <a href="https://github.com/breadeding/OmenSuperHub/releases/latest"><img src="https://img.shields.io/github/release/breadeding/OmenSuperHub?label=latest&logo=github&style=for-the-badge" alt="GitHub Releases"></a>
+  <a href="https://github.com/breadeding/OmenSuperHub"><img src="https://img.shields.io/github/stars/breadeding/OmenSuperHub.svg?logo=github&style=for-the-badge" alt="GitHub stars"></a>
+  <a href="https://github.com/breadeding/OmenSuperHub/releases"><img src="https://img.shields.io/github/downloads/breadeding/OmenSuperHub/total.svg?logo=github&style=for-the-badge" alt="GitHub Releases"></a>
+</div>
+
 关于OmenSuperHub
 =
 本程序主要功能包括伪装OGH，风扇控制，CPU和GPU功率控制，DB版本自动切换，Omen键自定义以及温度/功率监控。
@@ -40,3 +51,11 @@ OmenSuperHub实现了惠普暗夜精灵（HP OMEN）系列的控制软件Omen Ga
 免责声明
 =
 本程序不属于HP或Omen，品牌名称仅供参考，本程序与硬件交互，可能具有潜在危险或破坏性，使用者自行承担使用本程序的所有后果。
+
+<div><br></div>
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=breadeding/OmenSuperHub&type=Date)](https://www.star-history.com/#breadeding/OmenSuperHub&Date)
+
+</div>
