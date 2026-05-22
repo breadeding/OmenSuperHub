@@ -5,7 +5,7 @@
 
 <div align="center">
   <a href="https://github.com/breadeding/OmenSuperHub/releases/latest"><img src="https://img.shields.io/github/release/breadeding/OmenSuperHub?label=latest&logo=github&style=for-the-badge" alt="GitHub Releases"></a>
-  <a href="https://github.com/breadeding/OmenSuperHub"><img src="https://img.shields.io/github/stars/breadeding/OmenSuperHub.svg?logo=github&style=for-the-badge" alt="GitHub stars"></a>
+  <a href="https://github.com/breadeding/OmenSuperHub/stargazers"><img src="https://img.shields.io/github/stars/breadeding/OmenSuperHub.svg?logo=github&style=for-the-badge" alt="GitHub stars"></a>
   <a href="https://github.com/breadeding/OmenSuperHub/releases"><img src="https://img.shields.io/github/downloads/breadeding/OmenSuperHub/total.svg?logo=github&style=for-the-badge" alt="GitHub Releases"></a>
 </div>
 
