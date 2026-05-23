@@ -90,6 +90,7 @@ namespace OmenSuperHub {
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
 
+    static bool Is3FanNb = false;
     static bool isSysInfoMenuOpen = false;
     static int? maxCPUTemp = null;
     static int? maxGPUTemp = null;
@@ -163,6 +164,7 @@ namespace OmenSuperHub {
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
         // 固定为释放全部性能模式
         SetUnleashMode();
+        Is3FanNb = IsThreeFanSupported();
 
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
@@ -197,10 +199,10 @@ namespace OmenSuperHub {
             int s0, s1;
             lock (fanSpeedNow) { s0 = fanSpeedNow[0]; s1 = fanSpeedNow[1]; }
             if (fanSpeed1 != s0 || fanSpeed2 != s1) {
-              SetFanLevel(fanSpeed1, fanSpeed2);
+              SetFanLevel(fanSpeed1, fanSpeed2, Is3FanNb);
             }
           } else
-            SetFanLevel(fanSpeed1, fanSpeed2);
+            SetFanLevel(fanSpeed1, fanSpeed2, Is3FanNb);
         }, null, 100, 1000);
 
         getOmenKeyTask();
@@ -220,7 +222,6 @@ namespace OmenSuperHub {
 
         SystemEvents.PowerModeChanged += new PowerModeChangedEventHandler(OnPowerChange);
         //PrintSystemDesignData();
-        //Console.WriteLine($"GetSystemID: {GetSystemID()}");
 
         //MessageBox.Show($"消息测试", Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
@@ -707,7 +708,7 @@ namespace OmenSuperHub {
         } else if (fanControl.Contains(" RPM")) {
           SetMaxFanSpeedOff();
           int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-          SetFanLevel(rpmValue / 100, rpmValue / 100);
+          SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
         }
       }
 

@@ -320,8 +320,112 @@ namespace OmenSuperHub {
       return SendOmenBiosWmi(0x2F, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
     }
 
-    public static void SetFanLevel(int fanSpeed1, int fanSpeed2) {
-      SendOmenBiosWmi(0x2E, new byte[] { (byte)fanSpeed1, (byte)fanSpeed2 }, 0);
+    /// <summary>
+    /// 风扇类型枚举（参考 OG H 中的定义，实际值由 BIOS 返回）
+    /// </summary>
+    public enum FanType {
+      Unsupported = 0,
+      Cpu = 1,
+      Gpu = 2,
+      Exhaust = 3,          // 排气风扇
+      Pump = 4,             // 水冷泵
+      Intake = 5,           // 进风风扇
+      Vrm = 6,              // VRM 风扇
+      LightingBoard = 100,  // 灯控板风扇，0x00000064
+    }
+
+    /// <summary>
+    /// 获取风扇类型列表和能力位列表（与 OG H 源码逻辑完全一致）
+    /// </summary>
+    /// <param name="types">输出：风扇类型列表，按索引顺序对应物理风扇</param>
+    /// <param name="capabilities">输出：能力位列表，例如是否支持逆转除尘（CleanCreek）</param>
+    public static void GetFanType(out List<FanType> types, out List<bool> capabilities) {
+      // 初始化列表
+      types = new List<FanType>();
+      capabilities = new List<bool>();
+
+      // 输入 4 字节（全是 0）
+      byte[] inputData = new byte[4] { 0, 0, 0, 0 };
+
+      // 调用 WMI: command=0x20008, commandType=44, 输出 128 字节
+      byte[] sync = SendOmenBiosWmi(44, inputData, 128, 0x20008);
+      if (sync == null || sync.Length == 0)
+        return;
+
+      // 解析风扇类型：前 4 个字节，每字节拆分为两个 4-bit 值
+      for (int i = 0; i < 4; i++) {
+        int low = sync[i] & 0x0F;          // 低 4 位
+        int high = (sync[i] & 0xF0) >> 4;  // 高 4 位
+        types.Add((FanType)low);
+        types.Add((FanType)high);
+      }
+      // 移除最后一个多余项
+      if (types.Count > 0)
+        types.RemoveAt(types.Count - 1);
+
+      // 解析能力位：从 sync[8] 和 sync[9] 读取 16 位，依次对应每个风扇的能力
+      // 注：能力位数量可能多于风扇数量，但通常只取前几个
+      for (int bit = 0; bit < 16; bit++) {
+        int byteIndex = 8 + (bit / 8);
+        if (byteIndex >= sync.Length) break;
+        bool hasCapability = ((sync[byteIndex] >> (bit % 8)) & 1) != 0;
+        capabilities.Add(hasCapability);
+      }
+    }
+
+    /// <summary>
+    /// 判断设备是否支持三个风扇（即第三个风扇类型不为 Unsupported）
+    /// </summary>
+    public static bool IsThreeFanSupported() {
+      GetFanType(out var types, out _);
+      return types.Count > 2 && types[2] != FanType.Unsupported;
+    }
+
+    /// <summary>
+    /// 判断是否支持新版 BIOS 清洁功能（逆转除尘）
+    /// </summary>
+    /// <returns>true 表示支持新版清洁</returns>
+    public static bool IsCleanCreekSupported() {
+      GetFanType(out var fanTypes, out var capabilities);
+      // 获取每个风扇是否支持清洁（逆转除尘）的布尔列表，索引顺序与风扇物理顺序一致，true 表示支持清洁。
+      // capabilities 列表可能包含多于风扇数量的位，但通常我们只关心前 fanTypes.Count 个
+      if (capabilities.Count > fanTypes.Count)
+        capabilities = capabilities.Take(fanTypes.Count).ToList();
+      
+      return capabilities.Any(supported => supported);
+    }
+
+    /// <summary>
+    /// 判断是否支持旧版 WMI 清洁功能
+    /// </summary>
+    /// <returns>true 表示支持旧版清洁</returns>
+    public static bool IsLegacyCleanCreekSupported() {
+      // 1. 判断是否为旧版平台（IsLegacyV2Support）
+      //    简化方法：检查是否不支持新版清洁且系统设计数据中无新版温度阈值
+      //    或者根据平台特征（如 Pavilion Gaming 或特定 SSID）判断
+      if (IsCleanCreekSupported()) // 新版支持时通常旧版不可用
+        return false;
+
+      byte[] result = SendOmenBiosWmi(44, null, 4, 1);
+      if (result == null || result.Length < 1)
+        return false;
+
+      // 3. 检查第 0 字节的第 5 位 (0x20)
+      return (result[0] & 0x20) != 0;
+    }
+
+    public static void SetFanLevel(int fanSpeed1, int fanSpeed2, bool fan3 = false) {
+      byte[] data;
+      if (fan3) {
+        data = new byte[3];
+        data[2] = (byte)((fanSpeed1 + fanSpeed2) / 2);
+      } else
+        data = new byte[2];
+      data[0] = (byte)fanSpeed1;
+      data[1] = (byte)fanSpeed2;
+      if (IsThreeFanSupported())
+        
+      SendOmenBiosWmi(0x2E, data, 0);
       //Console.WriteLine("SetFanLevel: " + fanSpeed * 100);
     }
 
