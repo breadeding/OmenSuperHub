@@ -29,13 +29,13 @@ namespace OmenSuperHub {
 
     public static string GetKeyboardTypeName(NbKeyboardLightingType type) {
       switch (type) {
-        case NbKeyboardLightingType.Normal: return "普通";
-        case NbKeyboardLightingType.FourZoneWithNumpad: return "四分区带小键盘";
-        case NbKeyboardLightingType.FourZoneWithoutNumpad: return "四分区无小键盘";
-        case NbKeyboardLightingType.RgbPerKey: return "单键 RGB";
-        case NbKeyboardLightingType.OneZoneWithNumpad: return "单分区带小键盘";
-        case NbKeyboardLightingType.OneZoneWithoutNumpad: return "单分区无小键盘";
-        default: return "未知或不支持";
+        case NbKeyboardLightingType.Normal: return Strings.KbTypeNormal;
+        case NbKeyboardLightingType.FourZoneWithNumpad: return Strings.KbTypeFourZoneWithNumpad;
+        case NbKeyboardLightingType.FourZoneWithoutNumpad: return Strings.KbTypeFourZoneWithoutNumpad;
+        case NbKeyboardLightingType.RgbPerKey: return Strings.KbTypeRgbPerKey;
+        case NbKeyboardLightingType.OneZoneWithNumpad: return Strings.KbTypeOneZoneWithNumpad;
+        case NbKeyboardLightingType.OneZoneWithoutNumpad: return Strings.KbTypeOneZoneWithoutNumpad;
+        default: return Strings.KbTypeUnknown;
       }
     }
 
@@ -80,44 +80,66 @@ namespace OmenSuperHub {
 
     public static async Task<bool> CloseDeviceAsync(int handle) => await McuGeneralHelper.CloseDevice(handle);
 
-    /// <summary>打开 Per‑Key RGB 键盘（需要平台配置提供 VID/PID）</summary>
+    /// <summary>
+    /// 按照 OGH 原生方式打开 Per‑Key RGB 键盘设备
+    /// 直接根据平台类型硬编码 PID/VID 及接口字符串
+    /// </summary>
     public static int OpenPerKeyKeyboard() {
-      // 1. 获取所有可能的键盘附件类型（OGH 中通过 AccessoryList.json 定义）
-      var keyboardTypes = new[]
-      {
-                AccessoryEnums.AccessoryType.Keyboard_Woodstock,
-                AccessoryEnums.AccessoryType.Keyboard_Woody2,
-                AccessoryEnums.AccessoryType.Keyboard_Winston
-            };
+      // 获取当前 OMEN 平台类型
+      DeviceEnums.DeviceType deviceType = DeviceModel.DeviceType;
 
-      // 2. 遍历尝试打开当前已连接的键盘设备
-      foreach (var type in keyboardTypes) {
-        var hwid = DeviceModel.GetCurrentlyUsingHWID(type);
-        if (hwid == null) continue;
+      // 定义 (PID, VID, InterfaceString) 候选列表
+      List<(int pid, int vid, string interfaceString)> candidates = new List<(int, int, string)>();
 
-        // 解析 VID/PID（十六进制字符串 → int）
-        if (!int.TryParse(hwid.VID, System.Globalization.NumberStyles.HexNumber, null, out int vid))
-          continue;
-        if (!int.TryParse(hwid.PID, System.Globalization.NumberStyles.HexNumber, null, out int pid))
-          continue;
+      // 参考 HP.Omen.Background.DraxLightingBg.Starmade.NbPerKeyRgbLightingControl.Initialize
+      switch (deviceType) {
+        case DeviceEnums.DeviceType.Modena:
+          candidates.Add((0x2238, 0x1FC9, ""));   // PID=8760, VID=8137
+          break;
 
-        string interfaceStr = hwid.InterfaceString ?? "";
-        int handle = OpenHidDevice(pid, vid, interfaceStr);
-        if (handle > 0) return handle;
+        case DeviceEnums.DeviceType.Ralph:
+          candidates.Add((0x4E9B, 0x0461, "mi_02")); // 20123, 1121
+          break;
+
+        case DeviceEnums.DeviceType.Cybug:
+          candidates.Add((0x4E9A, 0x0461, "mi_02")); // 20122, 1121
+          break;
+
+        case DeviceEnums.DeviceType.Hendricks:
+          candidates.Add((0x4F03, 0x0461, "mi_02")); // 20227, 1121
+          break;
+
+        case DeviceEnums.DeviceType.Brunobear:
+        case DeviceEnums.DeviceType.Quaker:
+          // 两个可能的 PID
+          candidates.Add((0x4F11, 0x0461, "mi_02")); // 20241
+          candidates.Add((0x4F1E, 0x0461, "mi_02")); // 20254
+          break;
+
+        case DeviceEnums.DeviceType.Voco:
+          // 根据子型号区分 PID
+          if (DeviceModel.ThisSystemID == "8E41") // IsVoco25C1
+            candidates.Add((0x36BA, 0x0D62, "mi_03")); // 14010, 3426
+          else
+            candidates.Add((0x1A32, 0x0D62, "mi_03")); // 6706,  3426
+          break;
+
+        case DeviceEnums.DeviceType.Dojo:
+        case DeviceEnums.DeviceType.Vibrance:
+          candidates.Add((0x54BF, 0x0D62, "mi_03")); // 21695, 3426
+          candidates.Add((0x30BF, 0x0D62, "mi_03")); // 12479, 3426
+          break;
+
+        default:
+          // 非已知支持 Per‑Key RGB 的平台，直接返回失败
+          return -1;
       }
 
-      // 3. 若上述未找到，回退到从附件列表中获取第一个支持 DraxLighting 的键盘（OGH 备选方案）
-      var keyboardAccessory = DeviceModel.OmenAccessoryInfo
-          .FirstOrDefault(a => a.Type.ToString().StartsWith("Keyboard") &&
-                              (a.Feature?.Contains("DraxLighting") == true ||
-                               a.Feature?.Contains("PerKeyRGB") == true));
-      if (keyboardAccessory.Type != AccessoryEnums.AccessoryType.Unsupported &&
-                keyboardAccessory.VID != null && keyboardAccessory.VID.Count > 0 &&
-                keyboardAccessory.PID != null && keyboardAccessory.PID.Count > 0) {
-        int vid = Convert.ToInt32(keyboardAccessory.VID[0], 16);
-        int pid = Convert.ToInt32(keyboardAccessory.PID[0], 16);
-        string interfaceStr = keyboardAccessory.InterfaceString?.FirstOrDefault() ?? "";
-        return OpenHidDevice(pid, vid, interfaceStr);
+      // 依次尝试打开设备，成功后立即返回句柄
+      foreach (var (pid, vid, interfaceStr) in candidates) {
+        int handle = OpenHidDevice(pid, vid, interfaceStr);
+        if (handle > 0)
+          return handle;
       }
 
       return -1;

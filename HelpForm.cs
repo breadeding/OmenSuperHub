@@ -9,7 +9,7 @@ namespace OmenSuperHub {
     private static HelpForm _instance;
     public HelpForm() {
       this.TopMost = true;
-      Text = "OmenSuperHub帮助";
+      Text = Strings.HelpWindowTitle;
 
       // 获取屏幕的大小
       Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
@@ -43,57 +43,7 @@ namespace OmenSuperHub {
 
       var richTextBox = new RichTextBox() {
         Dock = DockStyle.Fill,
-        Text = "版本号：" + version +
-         "\n更新说明：\n" +
-         "（1）功能：本机信息新增机型名称、BIOS版本、CPU型号、NVIDIA温度墙；\n" +
-         "（2）功能：优化灯光控制测试接口；\n" +
-         "（3）修复：删除不必要的定时功耗设定，避免硬件设置时影响性能。\n\n" +
-
-         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
-         "一.   “风扇配置”菜单说明：\n" +
-         "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，可以设置较为保守的风扇调度, 降温模式加载\"cool.txt\"，可以设置较为激进的风扇调度，打开silent和cool文件可自行修改风扇配置，注意使用英文逗号，格式为“60,2000,2300,50,2000,2300”，不能有空缺（可以重复设置来占位），第一列和第四列分别为CPU温度和GPU温度，后面两列为两个风扇的转速，行数不限，程序会自动进行线性插值，精度为1℃。例如，如果设置了50,3000,3400和52,3200,3600两个相邻点，程序会在51℃时设置3200和3400的转速。注意，修改后需要重新点击对应的模式才能生效；\n" +
-         "（2）读取到温度变化后程序将立即设置对应的转速，为了转速变化更加平缓，“实时”，“高”，“中”和“低”分别能以从无到高的强度对温度进行平滑处理。\n\n" +
-
-         "二.   “风扇控制”菜单说明：\n" +
-         "（1）选择“自动”则程序会根据风扇配置和当前温度自动设定风扇转速，转速将被设定为cpu package温度和gpu温度对应转速的较大值；\n" +
-         "（2）“最大风扇”为BIOS控制，不一定是最大转速，手动或自动有可能可以设置更高的转速；\n" +
-         "（3）选择固定转速时，可能出现转速过低又忘记调整而导致温度过高的情况，因此OSH将在CPU温度高于（平台最高温度-2）℃时弹出通知警告并转为自动风扇模式，只在固定转速低于80%最大转速时触发，只在能够识别到最大转速的机型上触发；\n" +
-         "（4）暗9笔记本转速范围0-6400，但是只有BIOS设置中关闭了风扇始终启动，才能低于2000转，请根据自己的机型设置合理的转速。\n\n" +
-
-         "三.   “性能控制”菜单说明：\n" +
-         "（1）“大师模式”、“狂暴模式”和“平衡模式”在不同的机型上作用可能不同。对于暗9，平衡模式会限制CPU PL1为55W（底层PL1，软件无法读取和修改），同时限制GPU（功耗不固定，70-110W均有可能），同时切换狂暴/平衡均会重置CPU功率设定。注意，两种模式仅影响最大性能，对省电几乎没有影响，要省电应开启混合模式避免使用独显，关闭所有监控GPU状态的程序；\n" +
-         "（2）PPab条件（Tpp）的官方说明（来自OGH）：增加在 CPU 和 GPU 之间分配的总功率，为 NVIDIA® Dynamic Boost 提供更大的功率容量，以提升 GPU 性能。在打开后可以调整最大功率增益。\r\n如果系统温度过高，可实现的功率增益可能会受到限制；\n" +
-         "（3）IccMax选项的官方说明（来自OGH）：IccMax 是 CPU 的最大电流限值，用于指定处理器电压调节器可提供的最大电流；\n" +
-         "（4）AC Load Line选项的官方说明（来自OGH）：通过调整为 CPU 提供的电压、补偿在负载条件下的电压降以及确保一致的性能和超频潜力，负载线校准可帮助保持电压稳定性。低电压水平会使 CPU 以最低电压运行，从而优化能效，但会增加系统崩溃或不稳定的风险；\n" +
-         "（5）显卡功耗=BTGP（基础功耗）+CTGP（可配置功耗）+DB/Ppab（动态提升功耗），DB的含义是在CPU功率较低时额外提升GPU功耗，以暗9-i9-4060为例，BTGP=80W，BTGP+CTGP=115W，默认整机功耗为170W，显卡最大功耗140W，因此CPU功耗由60W降至30W时（具体阈值取决于Ppab条件），显卡总功耗将由110W升至140W，即DB功耗由-5W升至25W。在默认状态下，开启CTGP和DB才能获得最大GPU性能；\n" +
-         "（6）DB版本指的是设备管理器-软件设备-NVIDIA Platform Controllers and Framework的驱动版本，解锁版本使用31.0.15.3730（来自537.42显卡驱动），注意旧显卡驱动不支持更新的DB驱动，否则会导致显卡锁定基础功耗，请使用最新显卡驱动；\n" +
-         "（7）点击“解锁版本”，程序会删除解锁版本之外的DB驱动，只使用537.42对应DB驱动，然后自动启用再禁用驱动完成解锁，这会让显卡锁定当前功耗状态（必须为40系及以下显卡），即BTGP、CTGP和DB，利用这一点可以绕开CPU功率较高时DB功率降低的限制。点击“普通版本”会重新启用上述驱动，GPU功耗将取消锁定。注意更新NVIDIA显卡驱动后会更新DB驱动，需要重新解锁；\n" +
-         "（8）由于其锁定功耗的特性，OSH会短暂地设置狂暴+CTGP开+DB开进行自动解锁。同样地，请注意不要在CPU高负载时切换解锁版本，否则也会导致解锁后只有CTGP开+DB关的功耗。系统重启后解锁会失效造成功耗限制为基础功耗，需要由软件自动完成启用再禁用驱动的操作恢复解锁状态，因此使用解锁功能最好打开OSH开机自启；\n" +
-         "（9）如果出现提示GPU功耗异常无法解锁，则是因为当前GPU功耗被异常限制，请尝试重新解锁；\n" +
-         "（10）修改CPU功率会同时修改PL1与PL2，点击一次只设定一次，因此同时使用ThrottleStop控制会导致设置被覆盖；\n" +
-         "（11）修改GPU频率限制能实现限制不同级别的功耗，效果相当于小飞机中拉平曲线，注意该功能不是超频功能。\n\n" +
-
-         "四.   “硬件监控”菜单说明：\n" +
-         "（1）可选择开启或关闭对应的监控信息，注意如果使用混合模式，应关闭GPU监控，否则可能会导致因频繁开启/关闭GPU造成CPU占用高。\n\n" +
-
-         "五.   “浮窗显示”菜单说明：\n" +
-         "（1）开启“浮窗显示”后，屏幕上方将覆盖硬件监控信息，1秒刷新一次。\n\n" +
-
-         "六.   “Omen键”菜单说明：\n" +
-         "（1）若选择“默认”，Omen键绑定的事件为任务计划程序的“Omen Key”任务，修改其启动程序可以自定义想要启动的程序；\n" +
-         "（2）若选择“切换浮窗显示”，Omen键绑定的事件为启动OSH，通过传递特定参数使OSH获得指令并切换浮窗显示；\n" +
-         "（3）注意，Omen键功能可能与某些hp服务有关，禁用某些hp服务可能导致无法使用Omen键；\n" +
-         "（4）若选择“取消绑定”，Omen键将无效。\n\n" +
-
-         "七.   “其他设置”菜单说明：\n" +
-         "（1）“原版”图标为程序自带图标；\n" +
-         "（2）“自定义图标”需要在程序所在文件夹存放custom.ico图标文件才能使用；\n" +
-         "（3）“动态图标”会以当前CPU温度（若无CPU温度则为GPU温度）作为图标，1秒刷新一次；\n" +
-         "（4）“数据本地化”开启后会将CPU、GPU温度数据及风扇转速以Txt文本保存到本地，与程序本地位于相同位置，可用于Macro Deck实现在其他设备上查看电脑状态；\n" +
-         "（5）设置开机自启后，程序会自动创建任务计划程序实现开机自启，如果有自己设定过则应删除。同时，旧版OSH使用的自启方式也会在这一步被自动清除；\n" +
-         "（6）关闭开机自启后，程序会清除任务计划程序。\n\n",
-
-
+        Text = GetHelpText(version),
         BorderStyle = BorderStyle.None,  // 隐藏边框
         Font = new Font("Microsoft YaHei UI", 12, FontStyle.Regular),
         ReadOnly = true,  // 设置为只读模式
@@ -124,6 +74,156 @@ namespace OmenSuperHub {
 
     private void HelpForm_FormClosed(object sender, FormClosedEventArgs e) {
       _instance = null;
+    }
+
+    // ── 帮助正文（按语言返回不同文本）──────────────────────────────────────
+    private static string GetHelpText(Version version) {
+      switch (Strings.Current) {
+        case AppLanguage.TraditionalChinese:
+          return GetHelpText_TW(version);
+        case AppLanguage.English:
+          return GetHelpText_EN(version);
+        default:
+          return GetHelpText_ZH(version);
+      }
+    }
+
+    private static string GetHelpText_ZH(Version version) {
+      return "版本号：" + version +
+        "\n更新说明：\n" +
+        "（1）功能：新增语言切换菜单，支持简体中文、繁体中文和英语；\n" +
+        "（2）功能：优化单键RGB灯光控制接口；\n" +
+        "（3）修复：在重新接入交流适配器后自动恢复功耗设置以避免可能的性能下降。\n\n" +
+        "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
+        "一.   “风扇配置”菜单说明：\n" +
+        "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，格式为“60,2000,2300,50,2000,2300”，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +
+        "（2）读取到温度变化后程序将立即设置对应的转速，“实时”，“高”，“中”和“低”分别能以从无到高的强度对温度进行平滑处理。\n\n" +
+        "二.   “风扇控制”菜单说明：\n" +
+        "（1）选择“自动”则程序会根据风扇配置和当前温度自动设定风扇转速；\n" +
+        "（2）“最大风扇”为BIOS控制，不一定是最大转速；\n" +
+        "（3）选择固定转速时，OSH将在CPU温度高于（平台最高温度-2）℃时弹出通知警告并转为自动风扇模式；\n" +
+        "（4）暗9笔记本转速范围0-6400，但只有BIOS设置中关闭了风扇始终启动才能低于2000转。\n\n" +
+        "三.   “性能控制”菜单说明：\n" +
+        "（1）“大师模式”、“狂暴模式”和“平衡模式”在不同机型上作用可能不同；\n" +
+        "（2）PPab条件（Tpp）增加在CPU和GPU之间分配的总功率，为NVIDIA® Dynamic Boost提供更大的功率容量；\n" +
+        "（3）IccMax是CPU的最大电流限值；\n" +
+        "（4）AC Load Line通过调整CPU电压补偿负载下的电压降；\n" +
+        "（5）显卡功耗=BTGP+CTGP+DB/Ppab，开启CTGP和DB才能获得最大GPU性能；\n" +
+        "（6）DB版本指设备管理器-NVIDIA Platform Controllers and Framework的驱动版本，解锁版本使用31.0.15.3730；\n" +
+        "（7）点击“解锁版本”，程序会删除解锁版本之外的DB驱动并自动启用再禁用驱动完成解锁；\n" +
+        "（8）系统重启后解锁会失效，使用解锁功能最好打开OSH开机自启；\n" +
+        "（9）如果出现提示GPU功耗异常无法解锁，请尝试重新解锁；\n" +
+        "（10）修改CPU功率会同时修改PL1与PL2；\n" +
+        "（11）修改GPU频率限制能实现限制不同级别的功耗，注意该功能不是超频功能。\n\n" +
+        "四.   “硬件监控”菜单说明：\n" +
+        "（1）可选择开启或关闭对应的监控信息，注意如果使用混合模式应关闭GPU监控。\n\n" +
+        "五.   “浮窗显示”菜单说明：\n" +
+        "（1）开启后，屏幕上方将覆盖硬件监控信息，1秒刷新一次。\n\n" +
+        "六.   “Omen键”菜单说明：\n" +
+        "（1）若选择“默认”，Omen键绑定的事件为任务计划程序的“Omen Key”任务；\n" +
+        "（2）若选择“切换浮窗显示”，Omen键绑定的事件为切换浮窗显示；\n" +
+        "（3）注意，Omen键功能可能与某些hp服务有关；\n" +
+        "（4）若选择“取消绑定”，Omen键将无效。\n\n" +
+        "七.   “其他设置”菜单说明：\n" +
+        "（1）“原版”图标为程序自带图标；\n" +
+        "（2）“自定义图标”需要在程序所在文件夹存放custom.ico图标文件；\n" +
+        "（3）“动态图标”会以当前CPU温度（若无CPU温度则为GPU温度）作为图标，1秒刷新一次；\n" +
+        "（4）“数据本地化”开启后会将CPU、GPU温度数据及风扇转速以Txt文本保存到本地；\n" +
+        "（5）设置开机自启后，程序会自动创建任务计划程序实现开机自启；\n" +
+        "（6）关闭开机自启后，程序会清除任务计划程序；\n" +
+        "（7）“语言”菜单可切换简体中文、繁体中文和英语，重启后完全生效。\n\n";
+    }
+
+    private static string GetHelpText_TW(Version version) {
+      return "版本號：" + version +
+        "\n更新說明：\n" +
+        "（1）功能：新增語言切換選單，支援簡體中文、繁體中文和英語；\n" +
+        "（2）功能：優化單鍵RGB燈光控制介面；\n" +
+        "（3）修復：在重新接入交流電源供應器後自動恢復功耗設定，避免可能的效能下降。\n\n" +
+        "本專案已開源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
+        "一.   「風扇配置」選單說明：\n" +
+        "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，格式為「60,2000,2300,50,2000,2300」，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
+        "（2）讀取到溫度變化後程式將立即設定對應轉速，「即時」、「高」、「中」、「低」分別以從無到高的強度對溫度進行平滑處理。\n\n" +
+        "二.   「風扇控制」選單說明：\n" +
+        "（1）選擇「自動」則程式會根據風扇配置和當前溫度自動設定風扇轉速；\n" +
+        "（2）「最大風扇」為BIOS控制，不一定是最大轉速；\n" +
+        "（3）選擇固定轉速時，OSH將在CPU溫度高於（平台最高溫度-2）℃時彈出通知警告並轉為自動風扇模式；\n" +
+        "（4）暗9筆電轉速範圍0-6400，但只有BIOS設定中關閉風扇始終啟動才能低於2000轉。\n\n" +
+        "三.   「效能控制」選單說明：\n" +
+        "（1）「大師模式」、「狂暴模式」和「平衡模式」在不同機型上作用可能不同；\n" +
+        "（2）PPab條件（Tpp）增加在CPU和GPU之間分配的總功率，為NVIDIA® Dynamic Boost提供更大的功率容量；\n" +
+        "（3）IccMax是CPU的最大電流限值；\n" +
+        "（4）AC Load Line透過調整CPU電壓補償負載下的電壓降；\n" +
+        "（5）顯示卡功耗=BTGP+CTGP+DB/Ppab，開啟CTGP和DB才能獲得最大GPU效能；\n" +
+        "（6）DB版本指設備管理員-NVIDIA Platform Controllers and Framework的驅動版本，解鎖版本使用31.0.15.3730；\n" +
+        "（7）點擊「解鎖版本」，程式會刪除解鎖版本之外的DB驅動並自動啟用再禁用驅動完成解鎖；\n" +
+        "（8）系統重啟後解鎖會失效，使用解鎖功能最好開啟OSH開機自啟；\n" +
+        "（9）若出現GPU功耗異常無法解鎖，請嘗試重新解鎖；\n" +
+        "（10）修改CPU功率會同時修改PL1與PL2；\n" +
+        "（11）修改GPU頻率限制能限制不同級別的功耗，注意該功能不是超頻功能。\n\n" +
+        "四.   「硬體監控」選單說明：\n" +
+        "（1）可選擇開啟或關閉對應的監控資訊，使用混合模式應關閉GPU監控。\n\n" +
+        "五.   「浮窗顯示」選單說明：\n" +
+        "（1）開啟後，螢幕上方將覆蓋硬體監控資訊，1秒更新一次。\n\n" +
+        "六.   「Omen鍵」選單說明：\n" +
+        "（1）若選擇「預設」，Omen鍵綁定事件為任務排程的「Omen Key」任務；\n" +
+        "（2）若選擇「切換浮窗顯示」，Omen鍵綁定事件為切換浮窗顯示；\n" +
+        "（3）注意，Omen鍵功能可能與某些hp服務有關；\n" +
+        "（4）若選擇「取消綁定」，Omen鍵將無效。\n\n" +
+        "七.   「其他設定」選單說明：\n" +
+        "（1）「原版」圖示為程式自帶圖示；\n" +
+        "（2）「自訂圖示」需要在程式所在資料夾存放custom.ico圖示檔案；\n" +
+        "（3）「動態圖示」以當前CPU溫度（若無CPU溫度則為GPU溫度）作為圖示，1秒更新一次；\n" +
+        "（4）「資料本地化」開啟後會將CPU、GPU溫度及風扇轉速以Txt文字儲存到本地；\n" +
+        "（5）設定開機自啟後，程式會自動建立任務排程實現開機自啟；\n" +
+        "（6）關閉開機自啟後，程式會清除任務排程；\n" +
+        "（7）「語言」選單可切換簡體中文、繁體中文和英文，重啟後完全生效。\n\n";
+    }
+
+    private static string GetHelpText_EN(Version version) {
+      return "Version: " + version +
+        "\nChangelog:\n" +
+        "(1) Feature: Added language switching menu (Simplified Chinese, Traditional Chinese, English);\n" +
+        "(2) Feature: Improved per‑key RGB lighting control interface;\n" +
+        "(3) Fix: Automatically restore power settings after reconnecting the AC adapter to avoid potential performance loss.\n\n" +
+        "This project is open-source on Github: https://github.com/breadeding/OmenSuperHub\n\n" +
+        "1.   Fan Config menu:\n" +
+        "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Format: \"60,2000,2300,50,2000,2300\" — CPU temp, fan1, fan2, GPU temp, fan1, fan2. Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +
+        "(2) Realtime / High / Medium / Low response modes apply increasing temperature smoothing.\n\n" +
+        "2.   Fan Control menu:\n" +
+        "(1) Auto: OSH sets fan speed based on the fan profile and current temperature (higher of CPU/GPU lookup);\n" +
+        "(2) Max Fan: BIOS-controlled; not necessarily the highest RPM;\n" +
+        "(3) Fixed RPM: if CPU temperature exceeds (platform max − 2)°C, OSH shows a balloon warning and switches to Auto;\n" +
+        "(4) OMEN 16 range: 0–6400 RPM. Below 2000 RPM requires 'Always on' fan option disabled in BIOS.\n\n" +
+        "3.   Performance menu:\n" +
+        "(1) Unleashed / Rage / Balanced modes behave differently per model;\n" +
+        "(2) PPab (Tpp): increases total power budget between CPU and GPU for NVIDIA® Dynamic Boost;\n" +
+        "(3) IccMax: maximum CPU current limit for the voltage regulator;\n" +
+        "(4) AC Load Line: load-line calibration adjusts CPU voltage to compensate voltage droop;\n" +
+        "(5) GPU TDP = BTGP + CTGP + DB/Ppab. Enable CTGP and DB for maximum GPU performance;\n" +
+        "(6) DB version refers to the driver under Device Manager → Software Devices → NVIDIA Platform Controllers. Unlocked version uses 31.0.15.3730;\n" +
+        "(7) Clicking Unlocked removes other DB drivers and toggles enable/disable to lock the current power state (40-series or older only);\n" +
+        "(8) The unlock resets on reboot — enable autostart if you use this feature;\n" +
+        "(9) If the GPU power limit anomaly message appears, retry the unlock;\n" +
+        "(10) CPU power changes set both PL1 and PL2;\n" +
+        "(11) GPU clock limit reduces max GPU frequency (not overclocking).\n\n" +
+        "4.   HW Monitor menu:\n" +
+        "(1) Toggle individual monitors. If using Hybrid mode, disable GPU monitoring to avoid high CPU usage from frequent GPU wake/sleep.\n\n" +
+        "5.   Overlay menu:\n" +
+        "(1) Shows hardware info at the top of the screen, refreshed every second.\n\n" +
+        "6.   Omen Key menu:\n" +
+        "(1) Default: binds the Omen Key to the Task Scheduler 'Omen Key' task;\n" +
+        "(2) Toggle Overlay: pressing the Omen Key toggles the overlay;\n" +
+        "(3) Note: Omen Key may depend on certain HP services;\n" +
+        "(4) Unbound: the Omen Key has no action.\n\n" +
+        "7.   Settings menu:\n" +
+        "(1) Default icon: built-in icon;\n" +
+        "(2) Custom icon: place custom.ico in the program folder;\n" +
+        "(3) Dynamic icon: shows current CPU (or GPU) temperature, refreshed every second;\n" +
+        "(4) Data Localize: saves CPU/GPU temp and fan RPM to local .txt files (useful for Macro Deck);\n" +
+        "(5) Autostart: creates a Task Scheduler entry to launch OSH at boot;\n" +
+        "(6) Disable autostart: removes the Task Scheduler entry;\n" +
+        "(7) Language: switch between Simplified Chinese, Traditional Chinese, and English. Restart to fully apply.\n\n";
     }
   }
 }
