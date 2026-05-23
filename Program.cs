@@ -1032,7 +1032,7 @@ namespace OmenSuperHub {
         GPUTemp = (tempDisplayMode == "raw") ? rawTempGPU : smoothedGPUTemp;
 
       int currentMaxCPUTemp = maxCPUTemp ?? 97;
-      if (platformMaxFanSpeed.HasValue && smoothedCPUTemp > currentMaxCPUTemp - 2 && fanControl.Contains(" RPM")) {
+      if (platformMaxFanSpeed.HasValue && (monitorCPU || monitorGPU) && smoothedCPUTemp > currentMaxCPUTemp - 2 && fanControl.Contains(" RPM")) {
         // 检查是否满足转速低于平台最大转速80%的条件
         bool fanSpeedCondition = true;
         if (platformMaxFanSpeed.Value > 0) {
@@ -1121,10 +1121,10 @@ namespace OmenSuperHub {
       }
 
       // 似乎无法一次性关闭GPU监控及选项
-      if (!monitorGPU) {
-        SetGpuMonitorState(false);
-        UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOff);
-      }
+      //if (!monitorGPU) {
+      //  SetGpuMonitorState(false);
+      //  UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOff);
+      //}
 
       prevIsConnectedToNVIDIA = isConnectedToNVIDIA;
 
