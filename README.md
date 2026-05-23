@@ -7,22 +7,26 @@
   <a href="https://github.com/breadeding/OmenSuperHub/releases/latest"><img src="https://img.shields.io/github/release/breadeding/OmenSuperHub?label=latest&logo=github&style=for-the-badge" alt="GitHub Releases"></a>
   <a href="https://github.com/breadeding/OmenSuperHub/stargazers"><img src="https://img.shields.io/github/stars/breadeding/OmenSuperHub.svg?logo=github&style=for-the-badge" alt="GitHub stars"></a>
   <a href="https://github.com/breadeding/OmenSuperHub/releases"><img src="https://img.shields.io/github/downloads/breadeding/OmenSuperHub/total.svg?logo=github&style=for-the-badge" alt="GitHub Releases"></a>
+  <div><br></div>
+
+  **惠普暗影精灵笔记本第三方控制台**
+
+  简体中文 | [繁體中文](README.zh-TW.md) | [English](README.EN.md)
 </div>
 
 关于OmenSuperHub
 =
-本程序主要功能包括伪装OGH，风扇控制，CPU和GPU功率控制，DB版本自动切换，Omen键自定义以及温度/功率监控。
-OmenSuperHub实现了惠普暗夜精灵（HP OMEN）系列的控制软件Omen Gaming Hub的大多数有用功能，但不连接网络，且没有广告、壁纸等无用功能。
+本程序主要功能包括伪装 OGH (Omen Gaming Hub)、风扇控制、功率控制、DB 版本自动切换，Omen 键自定义以及温度/功率监控
 
-* 程序设计主要基于暗影精灵9 Intel笔记本（i9-13900HX + 4060），不保证能在所有平台正常运行
+OmenSuperHub 实现了惠普暗夜精灵（HP OMEN）系列的控制软件 OGH 的大多数有用功能，但不连接网络，且没有广告、壁纸等无用功能
 
-* 目前已知**能正常使用的机型**包括**暗影精灵8p，8pp，9，9p，10，11，max，光影精灵10**
+* 程序设计主要基于暗影精灵 9 Intel 笔记本（i9-13900HX + 4060），不保证能在所有平台正常运行
 
-* 目前已知**不支持的机型**包括**暗影精灵6**
+* 主要支持暗影精灵7及以后的机型，目前最新机型为 HyperX 暗影精灵 Max (2026)，不支持暗影精灵6及以前的机型
 
-* 在不支持的机型上使用可能出现无法读取数据、蓝屏或其他后果。
+* 在不支持的机型上使用可能出现无法读取数据、蓝屏或其他后果
 
-* 为了避免功能冲突，启动前应关闭OmenCommandCenterBackground进程或卸载OGH
+* 为了避免功能冲突，启动前应关闭`OmenCommandCenterBackground`进程或卸载 OGH
 
 * 在任务栏可查看信息或右键菜单切换模式，不会因退出OGH而锁功耗
 
@@ -30,7 +34,7 @@ OmenSuperHub实现了惠普暗夜精灵（HP OMEN）系列的控制软件Omen Ga
 
 * 在右键菜单“关于OSH”中可查看更多说明
 
-* 运行“OmenSuperHub清理脚本.bat”可清空OmenSuperHub的所有配置
+* 运行`OmenSuperHub清理脚本.bat`可清空OmenSuperHub的所有配置
 
 链接
 =

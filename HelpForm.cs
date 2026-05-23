@@ -194,7 +194,7 @@ namespace OmenSuperHub {
         "(1) Auto: OSH sets fan speed based on the fan profile and current temperature (higher of CPU/GPU lookup);\n" +
         "(2) Max Fan: BIOS-controlled; not necessarily the highest RPM;\n" +
         "(3) Fixed RPM: if CPU temperature exceeds (platform max − 2)°C, OSH shows a balloon warning and switches to Auto;\n" +
-        "(4) OMEN 16 range: 0–6400 RPM. Below 2000 RPM requires 'Always on' fan option disabled in BIOS.\n\n" +
+        "(4) OMEN 16 2023 range: 0–6400 RPM. Below 2000 RPM requires 'Always on' fan option disabled in BIOS.\n\n" +
         "3.   Performance menu:\n" +
         "(1) Unleashed / Rage / Balanced modes behave differently per model;\n" +
         "(2) PPab (Tpp): increases total power budget between CPU and GPU for NVIDIA® Dynamic Boost;\n" +
