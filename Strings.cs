@@ -64,6 +64,21 @@
     public static string FanMax => T("最大风扇", "最大風扇", "Max Fan");
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 风扇除尘（Clean Creek）
+    // ─────────────────────────────────────────────────────────────────────────
+    public static string CleanCreekMenuItem => T("反转除尘", "反轉除塵", "Clean Creek");
+    public static string CleanCreekTitle => T("风扇除尘", "風扇除塵", "Fan Dust Removal");
+    public static string CleanCreekConfirmMessage => T(
+        "即将开始反转除尘。点击确定开始，要停止除尘请选择“取消”。",
+        "即將開始反轉除塵。點擊確定開始，要停止除塵請選擇「取消」。",
+        "Reverse dust removal will start soon. Click OK to start, or Cancel to stop.");
+    public static string CleanCreekProgressMessageTemplate => T(
+        "清洁进行中，剩余 {0} 秒...",
+        "清潔進行中，剩餘 {0} 秒...",
+        "Cleaning in progress, {0} seconds remaining...");
+    public static string CleanCreekStopButton => T("停止", "停止", "Stop");
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 性能控制 — 图形模式
     // ─────────────────────────────────────────────────────────────────────────
     public static string HotSwitch => T("热切换", "熱切換", "Hot Switch");

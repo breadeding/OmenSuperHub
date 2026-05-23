@@ -30,8 +30,6 @@ namespace OmenSuperHub {
     [DllImport("user32.dll")]
     static extern bool SetProcessDPIAware();
 
-    static float CPUTemp = 50;
-    static float GPUTemp = 40;
     static byte currentAnimSpeed = 1, currentAnimDirection = 0, currentAnimTheme = 0, currentAnimEffect = 2;
     // 单键RGB当前选中状态（用于菜单勾选，null/-1 表示未选择）
     static string perKeyStaticColorSel = null;
@@ -45,8 +43,6 @@ namespace OmenSuperHub {
     // 四分区/灯条 WMI 协议选择（默认 BasicFourZone；用户可在菜单中切换并持久化）
     static LightingControlInterface kbControlInterface = LightingControlInterface.BasicFourZone;
     static LightingControlInterface lbControlInterface = LightingControlInterface.Dojo;
-    static float CPUPower = 0;
-    static float GPUPower = 0;
     static int DBVersion = 2, countDB = 0, countDBInit = 5, tryTimes = 0, CPULimitDB = 25;
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
@@ -60,10 +56,10 @@ namespace OmenSuperHub {
     static List<int> fanSpeedNow = new List<int> { 20, 23 };
     static float respondSpeed = 0.4f;
 
-    static float rawTempCPU = 50f;
-    static float rawPowerCPU = 0f;
-    static float rawTempGPU = 40f;
-    static float rawPowerGPU = 0f;
+    static int? maxCPUTemp = null;
+    static int? maxGPUTemp = null;
+    static float CPUTemp = 50, GPUTemp = 40, rawTempCPU = 50f, rawTempGPU = 40f;
+    static float CPUPower = 0, GPUPower = 0, rawPowerCPU = 0f, rawPowerGPU = 0f;
     static bool rawGotGPU = false;
     static volatile bool tempReady = false;   // 子进程首次输出有效温度后置 true
     static volatile bool cpuTempReady = false; // CPU 温度已初始化给平滑值，允许参与风扇控制
@@ -73,9 +69,7 @@ namespace OmenSuperHub {
     static StreamWriter hwMonitorIn;
 
     // Cache last written values to avoid unnecessary disk reads/writes
-    static string lastCpuText = null;
-    static string lastGpuText = null;
-    static string lastFanText = null;
+    static string lastCpuText = null, lastGpuText = null, lastFanText = null;
     static string tempDisplayMode = "smoothed"; // 温度显示方式：smoothed=平滑值, raw=原始值
     static int? platformMaxFanSpeed = null; // 平台最大转速（RPM），由LoadDefaultFanConfig获取后缓存
     static SortedDictionary<float, List<int>> CPUTempFanMap = new SortedDictionary<float, List<int>>();
@@ -90,14 +84,10 @@ namespace OmenSuperHub {
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
 
-    static bool Is3FanNb = false;
+    static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
-    static int? maxCPUTemp = null;
-    static int? maxGPUTemp = null;
     static string systemSSID;
-    static bool supportAni = false;
-    static bool supportDojo = false;
-    static bool supportLightbar = false;
+    static bool supportAni = false, supportDojo = false, supportLightbar = false;
     static DeviceEnums.DeviceType deviceType;
     static PlatformSettings platformSettings;
     static GraphicsMode NvGraphicsMode;
@@ -165,6 +155,8 @@ namespace OmenSuperHub {
         // 固定为释放全部性能模式
         SetUnleashMode();
         Is3FanNb = IsThreeFanSupported();
+        isFanCleanSupported = IsCleanCreekSupported();
+        isFanLegacyCleanSupported = IsLegacyCleanCreekSupported();
 
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();

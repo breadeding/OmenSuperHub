@@ -227,6 +227,24 @@ namespace OmenSuperHub {
       });
     }
 
+    static void RestoreFanControl() {
+      if (fanControl == "auto") {
+        SetMaxFanSpeedOff();
+        fanControlTimer.Change(0, 1000);
+        UpdateCheckedState("fanControlGroup", Strings.FanAuto);
+      } else if (fanControl.Contains("max")) {
+        SetMaxFanSpeedOn();
+        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        UpdateCheckedState("fanControlGroup", Strings.FanMax);
+      } else if (fanControl.Contains(" RPM")) {
+        SetMaxFanSpeedOff();
+        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
+        SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
+        UpdateCheckedState("fanControlGroup", fanControl);
+      }
+    }
+
     static void InitMaxTemp() {
       maxCPUTemp = null;
       if (platformSettings != null) {
@@ -637,7 +655,7 @@ namespace OmenSuperHub {
               SetMaxFanSpeedOff();
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
               int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-              SetFanLevel(rpmValue / 100, rpmValue / 100);
+              SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
               UpdateCheckedState("fanControlGroup", fanControl);
             }
 

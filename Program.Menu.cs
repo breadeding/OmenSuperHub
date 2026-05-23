@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Drawing;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -149,6 +150,38 @@ namespace OmenSuperHub {
       menu.Items.Add(fanConfigMenu);
 
       ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl);
+      if (isFanCleanSupported || isFanLegacyCleanSupported) {
+        fanControlMenu.DropDownItems.Add(CreateMenuItem(Strings.CleanCreekMenuItem, null, (s, e) => {
+          if (MessageBox.Show(Strings.CleanCreekConfirmMessage, Strings.CleanCreekTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK) {
+            fanControlMenu.Enabled = false;
+            if (isFanCleanSupported) {
+              SetMaxFanSpeedOff();
+              fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+              // 准备开始清洁
+              Action start = () => {
+                SetFanLevel(platformSettings.CleanCreekCpuFanSpeed, platformSettings.CleanCreekGpuFanSpeed, Is3FanNb, true);
+              };
+              Action stop = () => {
+                fanControlMenu.Enabled = true;
+                RestoreFanControl();  // 恢复原始转速或自动控制
+              };
+              // 显示进度窗体，持续时间从配置读取（单位毫秒）
+              StartCleanCreekWithProgress(platformSettings.CleanCreekDuration, Strings.CleanCreekTitle, start, stop);
+            } else if (isFanLegacyCleanSupported) {
+              SetMaxFanSpeedOff();
+              fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+              Action start = () => SetLegacyCleanCreek(true);
+              Action stop = () => {
+                fanControlMenu.Enabled = true;
+                SetLegacyCleanCreek(false);
+                RestoreFanControl();
+              };
+              StartCleanCreekWithProgress(platformSettings.CleanCreekDuration, Strings.CleanCreekTitle, start, stop);
+            }
+          }
+        }, false));
+        fanControlMenu.DropDownItems.Add(new ToolStripSeparator());
+      }
       fanControlMenu.DropDownItems.Add(CreateMenuItem(Strings.FanAuto, "fanControlGroup", (s, e) => {
         fanControl = "auto";
         SetMaxFanSpeedOff();
@@ -167,7 +200,7 @@ namespace OmenSuperHub {
           fanControl = currentSpeed + " RPM";
           SetMaxFanSpeedOff();
           fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-          SetFanLevel(currentSpeed / 100, currentSpeed / 100);
+          SetFanLevel(currentSpeed / 100, currentSpeed / 100, Is3FanNb);
           SaveConfig("FanControl");
         }, false));
       }
@@ -868,6 +901,70 @@ namespace OmenSuperHub {
       }, false));
       menu.Items.Add(new ToolStripSeparator()); // Separator between groups
       menu.Items.Add(CreateMenuItem(Strings.Exit, null, (s, e) => Exit(), false));
+    }
+
+    // 在合适的位置添加此方法（例如 OmenHardware 类或独立的辅助类）
+    public static void StartCleanCreekWithProgress(int durationMs, string title, Action startCleanAction, Action stopCleanAction) {
+      // 创建进度窗体
+      Form progressForm = new Form();
+      progressForm.Text = title;
+      progressForm.Size = new System.Drawing.Size(300, 150);
+      progressForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+      progressForm.ControlBox = false;
+      progressForm.StartPosition = FormStartPosition.CenterScreen;
+
+      Label lblMessage = new Label();
+      lblMessage.Text = string.Format(Strings.CleanCreekProgressMessageTemplate, durationMs / 1000);
+      lblMessage.Dock = DockStyle.Top;
+      lblMessage.Height = 40;
+      lblMessage.TextAlign = ContentAlignment.MiddleCenter;
+
+      Button btnStop = new Button();
+      btnStop.Text = Strings.CleanCreekStopButton;
+      btnStop.DialogResult = DialogResult.Cancel;
+      btnStop.Dock = DockStyle.Bottom;
+      btnStop.Height = 35;
+
+      progressForm.Controls.Add(lblMessage);
+      progressForm.Controls.Add(btnStop);
+
+      // 倒计时计时器
+      System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+      timer.Interval = 1000; // 每秒更新一次
+      DateTime startTime = DateTime.Now;
+      int remainingSeconds = durationMs / 1000;
+      timer.Tick += (sender, e) => {
+        TimeSpan elapsed = DateTime.Now - startTime;
+        int remaining = (int)(durationMs - elapsed.TotalMilliseconds) / 1000;
+        if (remaining <= 0) {
+          timer.Stop();
+          progressForm.Close();      // 倒计时结束，关闭窗体
+        } else {
+          lblMessage.Text = string.Format(Strings.CleanCreekProgressMessageTemplate, remaining);
+        }
+      };
+
+      // 停止按钮点击事件
+      btnStop.Click += (sender, e) => {
+        timer.Stop();
+        progressForm.Close();          // 用户点击停止，关闭窗体
+      };
+
+      // 窗体关闭时执行停止清洁（无论是倒计时结束还是用户点击停止）
+      progressForm.FormClosed += (sender, e) => {
+        stopCleanAction?.Invoke();
+      };
+
+      // 开始清洁
+      startCleanAction?.Invoke();
+
+      // 启动倒计时
+      timer.Start();
+
+      // 显示模态对话框（阻止父窗体操作）
+      progressForm.ShowDialog();
+
+      // 注意：ShowDialog 会阻塞直到窗体关闭，但内部倒计时和停止按钮正常工作
     }
 
     static void AddLightingUI(ToolStripMenuItem parentMenu, LightingDevice device, bool isKeyboard) {

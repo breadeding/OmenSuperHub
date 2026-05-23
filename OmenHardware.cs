@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
+using System.Windows.Markup;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
@@ -414,17 +415,46 @@ namespace OmenSuperHub {
       return (result[0] & 0x20) != 0;
     }
 
-    public static void SetFanLevel(int fanSpeed1, int fanSpeed2, bool fan3 = false) {
-      byte[] data;
-      if (fan3) {
-        data = new byte[3];
-        data[2] = (byte)((fanSpeed1 + fanSpeed2) / 2);
-      } else
-        data = new byte[2];
-      data[0] = (byte)fanSpeed1;
-      data[1] = (byte)fanSpeed2;
-      if (IsThreeFanSupported())
-        
+    /// <summary>
+    /// 旧版清洁：触发反转除尘（仅支持单风扇或双风扇，取决于BIOS）
+    /// </summary>
+    /// <param name="enable">true: 启动反转；false: 停止反转</param>
+    /// <returns>是否成功</returns>
+    public static bool SetLegacyCleanCreek(bool enable) {
+      // 1. 读取当前状态（command=1, commandType=44，无输入，输出4字节）
+      byte[] state = SendOmenBiosWmi(44, null, 4, 1);
+      if (state == null || state.Length < 4)
+        return false;
+
+      // 2. 修改第3字节（索引3）的第7位（0x80）
+      if (enable)
+        state[3] |= 0x80;
+      else
+        state[3] &= 0x7F;
+
+      // 3. 写回状态（command=2, commandType=44）
+      byte[] result = SendOmenBiosWmi(44, state, 0, 2);
+      return result != null;
+    }
+
+    public static void SetFanLevel(int fanSpeed1, int fanSpeed2, bool fan3 = false, bool fanClean = false) {
+      byte[] data = new byte[fan3 ? 3 : 2];
+      if (fanClean) {
+        GetFanType(out var types, out var Capabilities);
+        var caps = Capabilities.Take(types.Count).ToList();
+        data[0] = (byte)(caps[0] ? fanSpeed1 + 128 : fanSpeed1);
+        data[1] = (byte)(caps[1] ? fanSpeed2 + 128 : fanSpeed2);
+        if (fan3) {
+          int fan3Speed = (fanSpeed1 + fanSpeed2) / 2;
+          data[2] = (byte)(caps[2] ? fan3Speed + 128 : fan3Speed);
+        }
+      } else {
+        data[0] = (byte)fanSpeed1;
+        data[1] = (byte)fanSpeed2;
+        if (fan3) {
+          data[2] = (byte)((fanSpeed1 + fanSpeed2) / 2);
+        }
+      }
       SendOmenBiosWmi(0x2E, data, 0);
       //Console.WriteLine("SetFanLevel: " + fanSpeed * 100);
     }
