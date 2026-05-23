@@ -44,6 +44,7 @@ namespace OmenSuperHub {
     static LightingControlInterface kbControlInterface = LightingControlInterface.BasicFourZone;
     static LightingControlInterface lbControlInterface = LightingControlInterface.Dojo;
     static int DBVersion = 2, countDB = 0, countDBInit = 5, tryTimes = 0, CPULimitDB = 25;
+    static ToolStripMenuItem DBMenu;
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
@@ -892,6 +893,7 @@ namespace OmenSuperHub {
               ExecuteCommand(command);
               DBVersion = 2;
               countDB = 0;
+              DBMenu.Enabled = true;
               SaveConfig("DBVersion");
               UpdateCheckedState("DBGroup", Strings.DbNormal);
             } else {
@@ -901,6 +903,7 @@ namespace OmenSuperHub {
             }
           } else {
             tryTimes = 0;
+            DBMenu.Enabled = true;
             if (autoStart == "off") {
               MessageBox.Show(Strings.DbUnlockSuccessNoAutoStart, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }

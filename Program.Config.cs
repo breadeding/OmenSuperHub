@@ -793,6 +793,7 @@ namespace OmenSuperHub {
                   SetGpuPowerState(true, true); // fallback for db state
                   SetCpuPowerLimit((byte)CPULimitDB);
                   countDB = countDBInit;
+                  DBMenu.Enabled = false;
                   UpdateCheckedState("DBGroup", Strings.DbUnlocked);
                   break;
                 case 2:

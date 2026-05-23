@@ -531,7 +531,7 @@ namespace OmenSuperHub {
           }, false));
         }
         performanceControlMenu.DropDownItems.Add(gpuClockMenu);
-        ToolStripMenuItem DBMenu = new ToolStripMenuItem(Strings.DbVersionMenu);
+        DBMenu = new ToolStripMenuItem(Strings.DbVersionMenu);
         if (platformSettings != null && platformSettings.TppSupport) {
           DBMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfDbTip) { Enabled = false });
           DBMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -545,6 +545,7 @@ namespace OmenSuperHub {
                 MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 DBVersion = 2;
                 countDB = 0;
+                DBMenu.Enabled = true;
                 SaveConfig("DBVersion");
                 UpdateCheckedState("DBGroup", Strings.DbNormal);
                 return;
@@ -557,12 +558,14 @@ namespace OmenSuperHub {
             DBVersion = 1;
             ChangeDBVersion(DBVersion);
             countDB = countDBInit;
+            DBMenu.Enabled = false;
             SaveConfig("DBVersion");
           }
         }, false, Strings.PerfDbUnlockTooltip));
         DBMenu.DropDownItems.Add(CreateMenuItem(Strings.DbNormal, "DBGroup", (s, e) => {
           DBVersion = 2;
           countDB = 0;
+          DBMenu.Enabled = true;
           //ChangeDBVersion(DBVersion);
 
           string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
@@ -1354,6 +1357,7 @@ namespace OmenSuperHub {
                 MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 DBVersion = 2;
                 countDB = 0;
+                DBMenu.Enabled = true;
                 SaveConfig("DBVersion");
                 UpdateCheckedState("DBGroup", Strings.DbNormal);
                 return;
@@ -1365,6 +1369,7 @@ namespace OmenSuperHub {
             MessageBox.Show(Strings.PleaseConnectAC, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DBVersion = 2;
             countDB = 0;
+            DBMenu.Enabled = true;
             SaveConfig("DBVersion");
             UpdateCheckedState("DBGroup", Strings.DbNormal);
             return;
@@ -1372,6 +1377,7 @@ namespace OmenSuperHub {
           if (!CheckDBVersion(1)) {
             DBVersion = 2;
             countDB = 0;
+            DBMenu.Enabled = true;
             SaveConfig("DBVersion");
             UpdateCheckedState("DBGroup", Strings.DbNormal);
             return;
@@ -1380,6 +1386,7 @@ namespace OmenSuperHub {
           //  MessageBox.Show(Strings.DbUnlockCpuHighWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           //  DBVersion = 2;
           //  countDB = 0;
+          //  DBMenu.Enabled = true;
           //  SaveConfig("DBVersion");
           //  UpdateCheckedState("DBGroup", Strings.DbNormal);
           //  return;
