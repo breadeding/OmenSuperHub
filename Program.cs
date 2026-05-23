@@ -740,6 +740,7 @@ namespace OmenSuperHub {
         var powerStatus = SystemInformation.PowerStatus;
         if (powerStatus.PowerLineStatus == PowerLineStatus.Online) {
           //Logger.Info("笔记本已连接到电源。");
+          RestorePowerConfig();
           powerOnline = true;
         } else {
           //Logger.Info("笔记本未连接到电源。");
@@ -747,8 +748,6 @@ namespace OmenSuperHub {
         }
       }
     }
-
-    
 
     static void TrayIcon_MouseClick(object sender, MouseEventArgs e) {
       if (e.Button == MouseButtons.Left) {
