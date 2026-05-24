@@ -151,7 +151,10 @@ namespace OmenSuperHub {
 
       ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl);
       if (isFanCleanSupported || isFanLegacyCleanSupported) {
-        fanControlMenu.DropDownItems.Add(CreateMenuItem(Strings.CleanCreekMenuItem, null, (s, e) => {
+        string menuText = Strings.CleanCreekMenuItem;
+        if (!isFanCleanSupported && isFanLegacyCleanSupported)
+          menuText = Strings.CleanCreekLegacyMenuItem;
+        fanControlMenu.DropDownItems.Add(CreateMenuItem(menuText, null, (s, e) => {
           if (MessageBox.Show(Strings.CleanCreekConfirmMessage, Strings.CleanCreekTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK) {
             fanControlMenu.Enabled = false;
             if (isFanCleanSupported) {

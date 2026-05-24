@@ -67,6 +67,7 @@
     // 风扇除尘（Clean Creek）
     // ─────────────────────────────────────────────────────────────────────────
     public static string CleanCreekMenuItem => T("反转除尘", "反轉除塵", "Clean Creek");
+    public static string CleanCreekLegacyMenuItem => T("反转除尘（旧版）", "反轉除塵（舊版）", "Clean Creek (Legacy)");
     public static string CleanCreekTitle => T("风扇除尘", "風扇除塵", "Fan Dust Removal");
     public static string CleanCreekConfirmMessage => T(
         "即将开始反转除尘。点击确定开始，要停止除尘请选择“取消”。",
