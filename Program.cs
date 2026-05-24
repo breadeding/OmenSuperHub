@@ -49,12 +49,12 @@ namespace OmenSuperHub {
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off", appLanguage = "zh-CN";
-    static volatile bool monitorFan = true;
+    static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
     static bool hasNVIDIAGpu, hasAMDDiscreteGpu; // 启动时一次性检测，硬件状态不会改变
     static string monitorRefreshRate = "low"; // 刷新频率：low=1s, high=0.25s
-    static List<int> fanSpeedNow = new List<int> { 20, 23 };
+    static List<int> fanSpeedNow = new List<int> { 20, 23, 0 };
     static float respondSpeed = 0.4f;
 
     static int? maxCPUTemp = null;
@@ -188,14 +188,14 @@ namespace OmenSuperHub {
           if (!tempReady && fanControl == "auto") return;
           int fanSpeed1 = GetFanSpeedForTemperature(0) / 100;
           int fanSpeed2 = GetFanSpeedForTemperature(1) / 100;
-          if (monitorFan) {
-            int s0, s1;
-            lock (fanSpeedNow) { s0 = fanSpeedNow[0]; s1 = fanSpeedNow[1]; }
-            if (fanSpeed1 != s0 || fanSpeed2 != s1) {
-              SetFanLevel(fanSpeed1, fanSpeed2, Is3FanNb);
-            }
-          } else
+          int s0, s1;
+          lock (fanSpeedNow) { s0 = fanSpeedNow[0]; s1 = fanSpeedNow[1]; }
+          if (Math.Abs(fanSpeed1 - s0) > 1 || Math.Abs(fanSpeed2 - s1) > 1) {
             SetFanLevel(fanSpeed1, fanSpeed2, Is3FanNb);
+            if (!monitorFan) {
+              lock (fanSpeedNow) { fanSpeedNow[0] = fanSpeed1; fanSpeedNow[1] = fanSpeed2; }
+            }
+          }
         }, null, 100, 1000);
 
         getOmenKeyTask();
@@ -232,11 +232,10 @@ namespace OmenSuperHub {
         //Console.WriteLine($"Platform Name: {omenPlatform.Name}");
         //Console.WriteLine($"Display Name: {omenPlatform.DisplayName}");
         //Console.WriteLine($"Features: {string.Join(", ", omenPlatform.Feature ?? new List<string>())}");
-        //Console.WriteLine($"Background Features: {string.Join(", ", omenPlatform.BackgroundFeature ?? new List<string>())}");
-        //if (omenPlatform.ProductNum != null) {
-        //  foreach (var info in omenPlatform.ProductNum)
-        //    Console.WriteLine($"  SSID: {info.SSID}, Cycle: {info.Cycle}");
-        //}
+        //Console.WriteLine($"IsNVdGPU: {OmenHsaClient.IsNVdGPU}");
+        //Console.WriteLine($"IsIntelGPU: {OmenHsaClient.IsIntelGPU}");
+        //Console.WriteLine($"IsGpuSupport: {OmenHsaClient.IsGpuSupport}");
+        //Console.WriteLine($"IsIntelGraphics: {OmenHsaClient.IsIntelGraphics()}");
 
         Logger.Info($"version: {version}");
         Application.Run();
@@ -721,8 +720,7 @@ namespace OmenSuperHub {
     static void OnPowerChange(object s, PowerModeChangedEventArgs e) {
       // 休眠重新启动
       if (e.Mode == PowerModes.Resume) {
-        // GetFanCount
-        SendOmenBiosWmi(0x10, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 4);
+        GetFanCount(out bool ocp, out bool otp);
 
         tooltipUpdateTimer.Start();
         countRestore = 3;
@@ -945,7 +943,7 @@ namespace OmenSuperHub {
           string fanText;
           // brief lock to avoid potential race on the list
           lock (fanSpeedNow) {
-            fanText = (fanSpeedNow[0] * 100).ToString();
+            fanText = ((fanSpeedNow[0] + fanSpeedNow[1]) * 50).ToString();
           }
 
           // 仅当与上次内存中保存的值不同时才写入磁盘，避免不必要的 I/O
@@ -1033,7 +1031,7 @@ namespace OmenSuperHub {
         bool fanSpeedCondition = true;
         if (platformMaxFanSpeed.Value > 0) {
           int currentFanSpeed;
-          lock (fanSpeedNow) { currentFanSpeed = fanSpeedNow[0] * 100; }
+          lock (fanSpeedNow) { currentFanSpeed = (fanSpeedNow[0] + fanSpeedNow[1]) * 50; }
           fanSpeedCondition = currentFanSpeed < platformMaxFanSpeed.Value * 0.8;
         }
 
@@ -1246,7 +1244,10 @@ namespace OmenSuperHub {
       }
       if (monitorFan) {
         if (str.Length > 0) str += "\n";
-        str += $"Fan:  {fanSpeedNow[0] * 100}, {fanSpeedNow[1] * 100}";
+        if (Is3FanNb)
+          str += $"Fan:  {fanSpeedNow[0] * 100}, {fanSpeedNow[1] * 100}, {fanSpeedNow[2] * 100}";
+        else
+          str += $"Fan:  {fanSpeedNow[0] * 100}, {fanSpeedNow[1] * 100}";
       }
       if (str.Length == 0) str = Strings.MonitorClosed;
       return str;

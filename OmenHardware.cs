@@ -301,13 +301,13 @@ namespace OmenSuperHub {
 
     public static List<int> GetFanLevel() {
       // Send command to retrieve fan speed
-      List<int> fanSpeedNow = new List<int> { 0, 0 };
+      List<int> fanSpeedNow = new List<int> { 0, 0, 0 };
       byte[] fanLevel = SendOmenBiosWmi(0x2D, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
       if (fanLevel != null) {
-        if (fanLevel.Length >= 2) {
+        if (fanLevel.Length >= 3) {
           fanSpeedNow[0] = fanLevel[0];
           fanSpeedNow[1] = fanLevel[1];
-          //Console.WriteLine("GetFanLevel: " + level * 100);
+          fanSpeedNow[2] = fanLevel[2];
         }
         else {
           Logger.Error($": GetFanLevel:- Failed: Error  length={fanLevel.Length}");

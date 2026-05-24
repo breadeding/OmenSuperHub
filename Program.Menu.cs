@@ -742,11 +742,11 @@ namespace OmenSuperHub {
       monitorFanMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorFanOn, "monitorFanGroup", (s, e) => {
         monitorFan = true;
         SaveConfig("MonitorFan");
-      }, true));
+      }, false));
       monitorFanMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorFanOff, "monitorFanGroup", (s, e) => {
         monitorFan = false;
         SaveConfig("MonitorFan");
-      }, false));
+      }, true));
       hardwareMonitorMenu.DropDownItems.Add(monitorFanMenu);
       ToolStripMenuItem monitorRefreshMenu = new ToolStripMenuItem(Strings.MonitorRefresh);
       monitorRefreshMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorRefreshHigh, "monitorRefreshGroup", (s, e) => {

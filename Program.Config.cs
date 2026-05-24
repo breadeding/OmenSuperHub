@@ -874,7 +874,7 @@ namespace OmenSuperHub {
               StartHardwareMonitor(); // 内部已调用 SetCpuMonitorState / SetGpuMonitorState
             }
 
-            bool monitorFanCache = Convert.ToBoolean(key.GetValue("MonitorFan", true));
+            bool monitorFanCache = Convert.ToBoolean(key.GetValue("MonitorFan", false));
             if (monitorFanCache == true) {
               monitorFan = true;
               UpdateCheckedState("monitorFanGroup", Strings.MonitorFanOn);
