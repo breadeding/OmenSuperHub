@@ -91,9 +91,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_ZH(Version version) {
       return "版本号：" + version +
         "\n更新说明：\n" +
-        "（1）功能：为支持的机型添加反转除尘功能；\n" +
-        "（2）功能：支持3风扇机型（直接与CPU、GPU风扇同步，无视IR传感器）；\n" +
-        "（3）修复：解锁DB时禁用菜单以避免意外操作。\n\n" +
+        "（1）功能：风扇转速显示功能支持3风扇机型；\n" +
+        "（2）功能：使自动转速控制触发条件更加严格以减少WMI调用；\n" +
+        "（3）功能：默认不再监控转速以减少WMI调用。\n\n" +
         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   “风扇配置”菜单说明：\n" +
         "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，格式为“60,2000,2300,50,2000,2300”，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +
@@ -137,9 +137,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_TW(Version version) {
       return "版本號：" + version +
         "\n更新說明：\n" +
-        "（1）功能：為支援的機型添加反轉除塵功能；\n" +
-        "（2）功能：支援3風扇機型（直接與CPU、GPU風扇同步，無視IR感測器）；\n" +
-        "（3）修復：解鎖DB時停用選單以避免意外操作。\n\n" +
+        "（1）功能：風扇轉速顯示功能支援3風扇機型；\n" +
+        "（2）功能：使自動轉速控制觸發條件更加嚴格以減少WMI調用；\n" +
+        "（3）功能：預設不再監控轉速以減少WMI調用。\n\n" +
         "本專案已開源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   「風扇配置」選單說明：\n" +
         "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，格式為「60,2000,2300,50,2000,2300」，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
@@ -183,9 +183,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_EN(Version version) {
       return "Version: " + version +
         "\nChangelog:\n" +
-        "(1) Feature: Added a reverse dust-removal function for supported models;\n" +
-        "(2) Feature: Added support for 3-fan models (synchronizes directly with the CPU and GPU fans, bypassing the IR sensor);\n" +
-        "(3) Fix: Disabled the menu while unlocking the DB to prevent accidental operations.\n\n" +
+        "(1) Feature: Fan speed display functionality now supports 3-fan models; \n" +
+        "(2) Feature: Made the trigger conditions for automatic fan speed control more stringent to reduce WMI calls; \n" +
+        "(3) Feature: Fan speed monitoring is no longer enabled by default, in order to reduce WMI calls. \n\n" +
         "This project is open-source on Github: https://github.com/breadeding/OmenSuperHub\n\n" +
         "1.   Fan Config menu:\n" +
         "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Format: \"60,2000,2300,50,2000,2300\" — CPU temp, fan1, fan2, GPU temp, fan1, fan2. Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +
