@@ -1037,8 +1037,33 @@ namespace OmenSuperHub {
       // 注意：ShowDialog 会阻塞直到窗体关闭，但内部倒计时和停止按钮正常工作
     }
 
+    public class CustomTrackBar : TrackBar {
+      private const int WM_MOUSEWHEEL = 0x020A;
+
+      protected override void WndProc(ref Message m) {
+        if (m.Msg == WM_MOUSEWHEEL) {
+          // 解析滚轮滚动量
+          int delta = (short)((m.WParam.ToInt64() >> 16) & 0xFFFF);
+          Console.WriteLine($"delta: {delta}");
+          if (delta < 120 || delta > 120) {
+            delta = delta > 0 ? 120 : -120;
+          }
+          int newValue = this.Value + delta / 120;
+          if (newValue < this.Minimum) newValue = this.Minimum;
+          if (newValue > this.Maximum) newValue = this.Maximum;
+          if (newValue != this.Value)
+            this.Value = newValue;        // 触发 ValueChanged 事件
+
+          // 标记消息已处理，不再调用默认窗口过程
+          m.Result = IntPtr.Zero;
+          return;
+        }
+        base.WndProc(ref m);
+      }
+    }
+
     public class ToolStripTrackBar : ToolStripControlHost {
-      public ToolStripTrackBar() : base(new TrackBar()) {
+      public ToolStripTrackBar() : base(new CustomTrackBar()) {
         // 确保宿主允许自定义宽度，内部控件填充
         this.AutoSize = false;
         this.Width = 800;          // 默认宽度
