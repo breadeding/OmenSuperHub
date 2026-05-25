@@ -441,6 +441,9 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
       }
       ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
+      if (platformSettings == null) {
+        cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerNotSupportedTip) { Enabled = false });
+      }
       cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerTip) { Enabled = false });
       cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
       cpuPowerMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "cpuPowerGroup", (s, e) => {
@@ -455,7 +458,11 @@ namespace OmenSuperHub {
       cpuPowerTrackBar = new ToolStripTrackBar();
       cpuPowerTrackBar.Minimum = 10;
       cpuPowerTrackBar.Maximum = 254;
-      cpuPowerTrackBar.Value = platformSettings.NbPL1UpperBoundPerformance > 0 ? platformSettings.NbPL1UpperBoundPerformance : 100;
+      if (platformSettings != null) {
+        cpuPowerTrackBar.Value = platformSettings.NbPL1UpperBoundPerformance > 0 ? platformSettings.NbPL1UpperBoundPerformance : 100;
+      } else {
+        cpuPowerTrackBar.Value = 100;
+      }
       cpuPowerTrackBar.TickFrequency = cpuPowerTrackBar.Maximum - cpuPowerTrackBar.Minimum;     // 设置刻度间隔
       cpuPowerTrackBar.Width = 800;           // 设置宿主宽度，内部控件会自动填充
 
@@ -527,7 +534,7 @@ namespace OmenSuperHub {
         tppTrackBar = new ToolStripTrackBar();
         tppTrackBar.Minimum = 20;
         tppTrackBar.Maximum = 254;
-        tppTrackBar.Value = platformSettings.TppMaxValue;
+        tppTrackBar.Value = platformSettings != null ? platformSettings.TppMaxValue : 60;
         tppTrackBar.TickFrequency = tppTrackBar.Maximum - tppTrackBar.Minimum;
         tppTrackBar.Width = 800;
 
