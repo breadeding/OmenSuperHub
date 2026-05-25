@@ -790,34 +790,42 @@ namespace OmenSuperHub {
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     extern static bool DestroyIcon(IntPtr handle);
     static void GenerateDynamicIcon(int number) {
-      using (Bitmap bitmap = new Bitmap(128, 128)) {
+      // 获取系统推荐的图标尺寸（已适配 DPI）
+      Size iconSize = SystemInformation.IconSize;
+      int width = iconSize.Width * 2;
+      int height = iconSize.Height * 2;
+
+      using (Bitmap bitmap = new Bitmap(width, height)) {
         using (Graphics graphics = Graphics.FromImage(bitmap)) {
-          graphics.Clear(Color.Transparent); // 清除背景
-          graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit; // 设置文本渲染模式为抗锯齿
+          graphics.Clear(Color.Transparent);
+          graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 
           string text = number.ToString("00");
 
-          Font font = new Font("Arial", 52, FontStyle.Bold);
-          // 计算文本的大小
-          SizeF textSize = graphics.MeasureString(text, font);
+          using (Font font = new Font("Arial", 45.5f, FontStyle.Bold)) {
+            // 测量文本大小
+            SizeF textSize = graphics.MeasureString(text, font);
 
-          // 计算绘制位置，使文本居中
-          float x = (bitmap.Width - textSize.Width) / 2;
-          float y = (bitmap.Height - textSize.Height) / 8; // 改为居中
+            // 计算居中位置
+            float x = (width - textSize.Width) / 2;
+            float y = (height - textSize.Height) / 8;
 
-          // 绘制居中的数字
-          graphics.DrawString(text, font, Brushes.Tan, new PointF(x, y));
+            // 绘制文本
+            graphics.DrawString(text, font, Brushes.Tan, x, y);
+          }
 
-          IntPtr hIcon = bitmap.GetHicon(); // 获取 HICON 句柄
-          trayIcon.Icon = Icon.FromHandle(hIcon); // 转换为Icon对象
-
-          // 销毁图标句柄
+          // 转换为图标
+          IntPtr hIcon = bitmap.GetHicon();
+          Icon newIcon = Icon.FromHandle(hIcon);
+          // 替换托盘图标
+          trayIcon.Icon = newIcon;
+          // 销毁旧句柄（注意：不能直接销毁，因为 Icon.FromHandle 需要手动释放）
           DestroyIcon(hIcon);
         }
       }
     }
 
-    
+
     // 状态栏定时更新任务+硬件查询+DB解锁
     static void UpdateTooltip() {
       try {
