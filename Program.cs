@@ -84,6 +84,8 @@ namespace OmenSuperHub {
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
+    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuClockTrackBar;
+    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuClockValueLabel;
 
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
@@ -847,24 +849,12 @@ namespace OmenSuperHub {
             ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
             pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
             vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
-            if (hasNVIDIAGpu) {
-              var limits = GetGpuPowerLimits();
-              string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-              ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith(Strings.SysNvidiaPower));
-              if (limitsMenu != null) limitsMenu.Text = Strings.SysNvidiaPowerLimitText(limitsText);
-            }
           }));
         } else {
           irSensorMenu.Text = $"{Strings.SysIRSensor}: {GetSensorTemperature(0)}°C";
           ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
           pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
           vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
-          if (hasNVIDIAGpu) {
-            var limits = GetGpuPowerLimits();
-            string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-            ToolStripMenuItem limitsMenu = (ToolStripMenuItem)parentStrip.Items.Cast<ToolStripItem>().FirstOrDefault(i => i.Text.StartsWith(Strings.SysNvidiaPower));
-            if (limitsMenu != null) limitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
-          }
         }
       }
 

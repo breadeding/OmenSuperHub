@@ -2,6 +2,7 @@
 using System.Diagnostics; // 用于打开浏览器
 using System.Drawing;
 using System.Reflection;
+using System.Windows.Documents;
 using System.Windows.Forms;
 
 namespace OmenSuperHub {
@@ -91,12 +92,11 @@ namespace OmenSuperHub {
     private static string GetHelpText_ZH(Version version) {
       return "版本号：" + version +
         "\n更新说明：\n" +
-        "（1）功能：风扇转速显示功能支持3风扇机型；\n" +
-        "（2）功能：使自动转速控制触发条件更加严格以减少WMI调用；\n" +
-        "（3）功能：默认不再监控转速以减少WMI调用。\n\n" +
+        "（1）功能：使用滑块优化风扇转速、CPU功耗、PPab条件(Tpp)、GPU频率菜单操作；\n" +
+        "（2）功能：提升本机信息加载速度和性能。\n\n" +
         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   “风扇配置”菜单说明：\n" +
-        "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，格式为“60,2000,2300,50,2000,2300”，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +
+        "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +
         "（2）读取到温度变化后程序将立即设置对应的转速，“实时”，“高”，“中”和“低”分别能以从无到高的强度对温度进行平滑处理。\n\n" +
         "二.   “风扇控制”菜单说明：\n" +
         "（1）选择“自动”则程序会根据风扇配置和当前温度自动设定风扇转速；\n" +
@@ -104,7 +104,7 @@ namespace OmenSuperHub {
         "（3）选择固定转速时，OSH将在CPU温度高于（平台最高温度-2）℃时弹出通知警告并转为自动风扇模式；\n" +
         "（4）暗9笔记本转速范围0-6400，但只有BIOS设置中关闭了风扇始终启动才能低于2000转。\n\n" +
         "三.   “性能控制”菜单说明：\n" +
-        "（1）“大师模式”、“狂暴模式”和“平衡模式”在不同机型上作用可能不同；\n" +
+        "（1）图形模式等同于BIOS设置中的冷切换，热切换即NVIDIA Advanced Optimus；\n" +
         "（2）PPab条件（Tpp）增加在CPU和GPU之间分配的总功率，为NVIDIA® Dynamic Boost提供更大的功率容量；\n" +
         "（3）IccMax是CPU的最大电流限值；\n" +
         "（4）AC Load Line通过调整CPU电压补偿负载下的电压降；\n" +
@@ -137,12 +137,11 @@ namespace OmenSuperHub {
     private static string GetHelpText_TW(Version version) {
       return "版本號：" + version +
         "\n更新說明：\n" +
-        "（1）功能：風扇轉速顯示功能支援3風扇機型；\n" +
-        "（2）功能：使自動轉速控制觸發條件更加嚴格以減少WMI調用；\n" +
-        "（3）功能：預設不再監控轉速以減少WMI調用。\n\n" +
+        "（1）功能：使用滑桿優化風扇轉速、CPU功耗、PPab條件(Tpp)、GPU頻率選單操作；\n" +
+        "（2）功能：提升本機資訊載入速度與效能。\n\n" +
         "本專案已開源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   「風扇配置」選單說明：\n" +
-        "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，格式為「60,2000,2300,50,2000,2300」，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
+        "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
         "（2）讀取到溫度變化後程式將立即設定對應轉速，「即時」、「高」、「中」、「低」分別以從無到高的強度對溫度進行平滑處理。\n\n" +
         "二.   「風扇控制」選單說明：\n" +
         "（1）選擇「自動」則程式會根據風扇配置和當前溫度自動設定風扇轉速；\n" +
@@ -150,7 +149,7 @@ namespace OmenSuperHub {
         "（3）選擇固定轉速時，OSH將在CPU溫度高於（平台最高溫度-2）℃時彈出通知警告並轉為自動風扇模式；\n" +
         "（4）暗9筆電轉速範圍0-6400，但只有BIOS設定中關閉風扇始終啟動才能低於2000轉。\n\n" +
         "三.   「效能控制」選單說明：\n" +
-        "（1）「大師模式」、「狂暴模式」和「平衡模式」在不同機型上作用可能不同；\n" +
+        "（1）圖形模式等同於BIOS設定中的冷切換，熱切換即NVIDIA Advanced Optimus；\n" +
         "（2）PPab條件（Tpp）增加在CPU和GPU之間分配的總功率，為NVIDIA® Dynamic Boost提供更大的功率容量；\n" +
         "（3）IccMax是CPU的最大電流限值；\n" +
         "（4）AC Load Line透過調整CPU電壓補償負載下的電壓降；\n" +
@@ -183,12 +182,11 @@ namespace OmenSuperHub {
     private static string GetHelpText_EN(Version version) {
       return "Version: " + version +
         "\nChangelog:\n" +
-        "(1) Feature: Fan speed display functionality now supports 3-fan models; \n" +
-        "(2) Feature: Made the trigger conditions for automatic fan speed control more stringent to reduce WMI calls; \n" +
-        "(3) Feature: Fan speed monitoring is no longer enabled by default, in order to reduce WMI calls. \n\n" +
+        "(1) Function: Use sliders to optimize fan speed, CPU power consumption, PPab conditions (Tpp), and GPU frequency settings;\n" +
+        "(2) Function: Improve the loading speed and performance of device information.\n\n" +
         "This project is open-source on Github: https://github.com/breadeding/OmenSuperHub\n\n" +
         "1.   Fan Config menu:\n" +
-        "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Format: \"60,2000,2300,50,2000,2300\" — CPU temp, fan1, fan2, GPU temp, fan1, fan2. Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +
+        "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +
         "(2) Realtime / High / Medium / Low response modes apply increasing temperature smoothing.\n\n" +
         "2.   Fan Control menu:\n" +
         "(1) Auto: OSH sets fan speed based on the fan profile and current temperature (higher of CPU/GPU lookup);\n" +
@@ -196,7 +194,7 @@ namespace OmenSuperHub {
         "(3) Fixed RPM: if CPU temperature exceeds (platform max − 2)°C, OSH shows a balloon warning and switches to Auto;\n" +
         "(4) OMEN 16 2023 range: 0–6400 RPM. Below 2000 RPM requires 'Always on' fan option disabled in BIOS.\n\n" +
         "3.   Performance menu:\n" +
-        "(1) Unleashed / Rage / Balanced modes behave differently per model;\n" +
+        "(1) Graphics mode is equivalent to cold switching in BIOS settings, while hot switching is NVIDIA Advanced Optimus;\n" +
         "(2) PPab (Tpp): increases total power budget between CPU and GPU for NVIDIA® Dynamic Boost;\n" +
         "(3) IccMax: maximum CPU current limit for the voltage regulator;\n" +
         "(4) AC Load Line: load-line calibration adjusts CPU voltage to compensate voltage droop;\n" +

@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
+using Newtonsoft.Json.Linq;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 
@@ -201,11 +202,9 @@ namespace OmenSuperHub {
 
     static void RestoreCPUPower() {
       // 恢复CPU功耗设定
-      if (cpuPower == "max") {
-        SetCpuPowerLimit(254);
-      } else if (cpuPower.Contains(" W")) {
+      if (cpuPower.Contains(" W")) {
         int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-        if (value > 10 && value <= 254) {
+        if (value >= 10 && value <= 254) {
           SetCpuPowerLimit((byte)value);
         }
       }
@@ -216,11 +215,9 @@ namespace OmenSuperHub {
       System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
         RestoreCPUPower();
         SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
-        if (tppPower == "max") {
-          SetConcurrentTdp(254);
-        } else if (tppPower.Contains(" W")) {
+        if (tppPower.Contains(" W")) {
           int value = int.Parse(tppPower.Replace(" W", "").Trim());
-          if (value >= 20 && value <= 240) {
+          if (value >= 20 && value <= 254) {
             SetConcurrentTdp((byte)value);
           }
         }
@@ -241,7 +238,10 @@ namespace OmenSuperHub {
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
         SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
-        UpdateCheckedState("fanControlGroup", fanControl);
+        if (fanTrackBar != null && rpmValue / 100 >= fanTrackBar.Minimum && rpmValue / 100 <= fanTrackBar.Maximum) {
+          fanTrackBar.Value = rpmValue / 100;
+        }
+        UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
       }
     }
 
@@ -656,7 +656,10 @@ namespace OmenSuperHub {
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
               int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
               SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
-              UpdateCheckedState("fanControlGroup", fanControl);
+              if (fanTrackBar != null && rpmValue / 100 >= fanTrackBar.Minimum && rpmValue / 100 <= fanTrackBar.Maximum) {
+                fanTrackBar.Value = rpmValue / 100;
+              }
+              UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
             }
 
             tempSensitivity = (string)key.GetValue("TempSensitivity", "high");
@@ -688,12 +691,17 @@ namespace OmenSuperHub {
                   UpdateCheckedState("tppPowerGroup", Strings.NotSet);
                 } else if (tppPowerSnapshot == "max") {
                   SetConcurrentTdp(254);
-                  UpdateCheckedState("tppPowerGroup", Strings.Maximum);
+                  if (tppTrackBar != null && tppTrackBar.Minimum <= 254 && 254 <= tppTrackBar.Maximum) {
+                    tppTrackBar.Value = 254;
+                  }
                 } else if (tppPowerSnapshot.Contains(" W")) {
                   int value = int.Parse(tppPowerSnapshot.Replace(" W", "").Trim());
-                  if (value >= 20 && value <= 240) {
+                  if (value >= 20 && value <= 254) {
                     SetConcurrentTdp((byte)value);
-                    UpdateCheckedState("tppPowerGroup", tppPowerSnapshot);
+                    if (tppTrackBar != null && tppTrackBar.Minimum <= value && value <= tppTrackBar.Maximum) {
+                      tppTrackBar.Value = value;
+                    }
+                    UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
                   }
                 }
               });
@@ -746,12 +754,18 @@ namespace OmenSuperHub {
               UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
             } else if (cpuPower == "max") {
               SetCpuPowerLimit(254);
-              UpdateCheckedState("cpuPowerGroup", Strings.Maximum);
+              if (cpuPowerTrackBar != null && 254 >= cpuPowerTrackBar.Minimum && 254 <= cpuPowerTrackBar.Maximum) {
+                cpuPowerTrackBar.Value = 254;
+              }
+              UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
             } else if (cpuPower.Contains(" W")) {
               int value = int.Parse(cpuPower.Replace(" W", "").Trim());
               if (value >= 5 && value <= 254) {
                 SetCpuPowerLimit((byte)value);
-                UpdateCheckedState("cpuPowerGroup", cpuPower);
+                if (cpuPowerTrackBar != null && value >= cpuPowerTrackBar.Minimum && value <= cpuPowerTrackBar.Maximum) {
+                  cpuPowerTrackBar.Value = value;
+                }
+                UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
               }
             }
 
@@ -767,7 +781,12 @@ namespace OmenSuperHub {
             if (hasNVIDIAGpu) {
               gpuClock = (int)key.GetValue("GpuClock", 0);
               if (SetGPUClockLimit(gpuClock)) {
-                UpdateCheckedState("gpuClockGroup", gpuClock + " MHz");
+                if (gpuClock > 0 && gpuClockTrackBar != null && gpuClockTrackBar.Minimum <= gpuClock / 10 && gpuClock / 10 <= gpuClockTrackBar.Maximum) {
+                  gpuClockTrackBar.Value = gpuClock / 10;
+                  UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
+                } else if (gpuClock == 0) {
+                  UpdateCheckedState("gpuClockGroup", Strings.Restore);
+                }
               } else {
                 UpdateCheckedState("gpuClockGroup", Strings.Restore);
               }

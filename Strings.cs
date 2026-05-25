@@ -132,6 +132,11 @@
     public static string IccMaxMenu => T("IccMax", "IccMax", "IccMax");
     public static string AcLoadLineMenu => T("AC Load Line", "AC Load Line", "AC Load Line");
     public static string CpuPowerMenu => T("CPU功率", "CPU功率", "CPU Power");
+    public static string SetCpuPowerSlider => T("拖动滑块设置功率 (W)", "拖動滑桿設定功率 (W)", "Drag slider to set power (W)");
+    public static string CurrentSliderValueTemp => T("滑块值：{0}", "滑桿值：{0}", "Slider Value: {0}");
+    public static string SetFanSpeedSlider => T("拖动滑块设置转速 (RPM)", "拖動滑桿設定轉速 (RPM)", "Drag slider to set speed (RPM)");
+    public static string SetTppSlider => T("拖动滑块设置功率 (W)", "拖動滑桿設定功率 (W)", "Drag slider to set power (W)");
+    public static string SetGpuClockSlider => T("拖动滑块设置频率 (MHz)", "拖動滑桿設定頻率 (MHz)", "Drag slider to set clock (MHz)");
     public static string PpabPowerMenu => T("PPab条件(Tpp)", "PPab條件(Tpp)", "PPab (Tpp)");
     public static string DStateSubMenu => T("DB模式", "DB模式", "DB Mode");
     public static string DbVersionMenu => T("DB版本", "DB版本", "DB Version");

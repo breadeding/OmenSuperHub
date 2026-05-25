@@ -107,7 +107,20 @@ namespace OmenSuperHub {
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysAdapterPower}: {GetAdapterPower()}W") { Enabled = false });
 
       // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
-      sysInfoMenu.DropDownOpening += (s, e) => { isSysInfoMenuOpen = true; };
+      sysInfoMenu.DropDownOpening += (s, e) => {
+        isSysInfoMenuOpen = true;
+
+        if (irSensorMenu != null) irSensorMenu.Text = $"{Strings.SysIRSensor}: {GetSensorTemperature(0)}°C";
+        if (ambientSensorMenu != null) ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
+        if (pchSensorMenu != null) pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
+        if (vrSensorMenu != null) vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
+
+        if (hasNVIDIAGpu && gpuPowerLimitsMenu != null) {
+          var limits = GetGpuPowerLimits();
+          string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+          gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
+        }
+      };
       sysInfoMenu.DropDownClosed += (s, e) => { isSysInfoMenuOpen = false; };
 
       menu.Items.Add(sysInfoMenu);
@@ -197,16 +210,35 @@ namespace OmenSuperHub {
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         SaveConfig("FanControl");
       }, false));
-      for (int speed = 1600; speed <= 6400; speed += 400) {
-        int currentSpeed = speed;  // 创建一个局部变量，保存当前的 power 值
-        fanControlMenu.DropDownItems.Add(CreateMenuItem(currentSpeed + " RPM", "fanControlGroup", (s, e) => {
-          fanControl = currentSpeed + " RPM";
-          SetMaxFanSpeedOff();
-          fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-          SetFanLevel(currentSpeed / 100, currentSpeed / 100, Is3FanNb);
-          SaveConfig("FanControl");
-        }, false));
-      }
+      fanControlMenu.DropDownItems.Add(CreateMenuItem(Strings.SetFanSpeedSlider, "fanControlGroup", (s, e) => { }, false));
+      fanTrackBar = new ToolStripTrackBar();
+      fanTrackBar.Minimum = 0;
+      fanTrackBar.Maximum = platformMaxFanSpeed > 0 ? (int)(platformMaxFanSpeed * 1.1 / 100) : 64;
+      fanTrackBar.Value = fanTrackBar.Maximum / 2;
+      fanTrackBar.TickFrequency = fanTrackBar.Maximum - fanTrackBar.Minimum;
+      fanTrackBar.Width = 800;
+
+      fanValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM")) { Enabled = false };
+
+      fanTrackBar.ValueChanged += (sender, e) => {
+        fanControl = fanTrackBar.Value * 100 + " RPM";
+        fanValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM");
+        SetFanLevel((byte)fanTrackBar.Value, (byte)fanTrackBar.Value, Is3FanNb);
+      };
+
+      fanTrackBar.MouseDown += (sender, e) => {
+        SetMaxFanSpeedOff();
+        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        SetFanLevel((byte)fanTrackBar.Value, (byte)fanTrackBar.Value, Is3FanNb);
+        UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
+      };
+
+      fanTrackBar.MouseUp += (sender, e) => {
+        SaveConfig("FanControl");
+      };
+
+      fanControlMenu.DropDownItems.Add(fanTrackBar);
+      fanControlMenu.DropDownItems.Add(fanValueLabel);
       menu.Items.Add(fanControlMenu);
 
       ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem(Strings.PerfControl);
@@ -415,19 +447,40 @@ namespace OmenSuperHub {
         cpuPower = "null";
         SaveConfig("CpuPower");
       }, true));
-      cpuPowerMenu.DropDownItems.Add(CreateMenuItem(Strings.Maximum, "cpuPowerGroup", (s, e) => {
-        cpuPower = "max";
-        SetCpuPowerLimit(254);
+      // 添加提示（只读）
+      ToolStripMenuItem cpuPowerSliderItem = CreateMenuItem(Strings.SetCpuPowerSlider, "cpuPowerGroup", (s, e) => { }, false);
+      cpuPowerMenu.DropDownItems.Add(cpuPowerSliderItem);
+
+      // 创建滑块项
+      cpuPowerTrackBar = new ToolStripTrackBar();
+      cpuPowerTrackBar.Minimum = 10;
+      cpuPowerTrackBar.Maximum = 254;
+      cpuPowerTrackBar.Value = platformSettings.NbPL1UpperBoundPerformance > 0 ? platformSettings.NbPL1UpperBoundPerformance : 100;
+      cpuPowerTrackBar.TickFrequency = cpuPowerTrackBar.Maximum - cpuPowerTrackBar.Minimum;     // 设置刻度间隔
+      cpuPowerTrackBar.Width = 800;           // 设置宿主宽度，内部控件会自动填充
+
+      // 显示当前值的只读标签
+      cpuPowerValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{cpuPowerTrackBar.Value} W")) { Enabled = false };
+
+      // 滑块值改变时更新标签并应用设置
+      cpuPowerTrackBar.ValueChanged += (sender, e) =>
+      {
+        int val = cpuPowerTrackBar.Value;
+        cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
+        UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+      };
+
+      // 鼠标松开
+      cpuPowerTrackBar.MouseUp += (sender, e) =>
+      {
+        cpuPower = cpuPowerTrackBar.Value + " W";
+        SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
         SaveConfig("CpuPower");
-      }, false));
-      for (int power = 10; power <= 200; power += 10) {
-        int currentPower = power;  // 创建一个局部变量，保存当前的 power 值
-        cpuPowerMenu.DropDownItems.Add(CreateMenuItem(power + " W", "cpuPowerGroup", (s, e) => {
-          cpuPower = currentPower + " W";
-          SetCpuPowerLimit((byte)currentPower);
-          SaveConfig("CpuPower");
-        }, false));
-      }
+        UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+      };
+
+      cpuPowerMenu.DropDownItems.Add(cpuPowerTrackBar);
+      cpuPowerMenu.DropDownItems.Add(cpuPowerValueLabel);
       performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
 
       ToolStripMenuItem gpuPowerMenu = new ToolStripMenuItem(Strings.GpuPowerControlMenu);
@@ -470,19 +523,30 @@ namespace OmenSuperHub {
           tppPower = "null";
           SaveConfig("TppPower");
         }, true));
-        tppMenu.DropDownItems.Add(CreateMenuItem(Strings.Maximum, "tppPowerGroup", (s, e) => {
-          tppPower = "max";
-          SetConcurrentTdp(254);
+        tppMenu.DropDownItems.Add(CreateMenuItem(Strings.SetTppSlider, "tppPowerGroup", (s, e) => { }, false));
+        tppTrackBar = new ToolStripTrackBar();
+        tppTrackBar.Minimum = 20;
+        tppTrackBar.Maximum = 254;
+        tppTrackBar.Value = platformSettings.TppMaxValue;
+        tppTrackBar.TickFrequency = tppTrackBar.Maximum - tppTrackBar.Minimum;
+        tppTrackBar.Width = 800;
+
+        tppValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{tppTrackBar.Value} W")) { Enabled = false };
+
+        tppTrackBar.ValueChanged += (sender, e) => {
+          tppValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{tppTrackBar.Value} W");
+          UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
+        };
+
+        tppTrackBar.MouseUp += (sender, e) => {
+          tppPower = tppTrackBar.Value + " W";
+          SetConcurrentTdp((byte)tppTrackBar.Value);
           SaveConfig("TppPower");
-        }, false));
-        for (int power = 20; power <= 240; power += 20) {
-          int currentPower = power;
-          tppMenu.DropDownItems.Add(CreateMenuItem(currentPower + " W", "tppPowerGroup", (s, e) => {
-            tppPower = currentPower + " W";
-            SetConcurrentTdp((byte)currentPower);
-            SaveConfig("TppPower");
-          }, false));
-        }
+          UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
+        };
+
+        tppMenu.DropDownItems.Add(tppTrackBar);
+        tppMenu.DropDownItems.Add(tppValueLabel);
         gpuPowerMenu.DropDownItems.Add(tppMenu);
       }
 
@@ -509,30 +573,30 @@ namespace OmenSuperHub {
           SetGPUClockLimit(gpuClock);
           SaveConfig("GpuClock");
         }, true));
-        for (int clock = 600; clock <= 1400; clock += 400) {
-          int currentclock = clock;
-          gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
-            gpuClock = currentclock;
-            SetGPUClockLimit(gpuClock);
-            SaveConfig("GpuClock");
-          }, false));
-        }
-        for (int clock = 1550; clock <= 2000; clock += 150) {
-          int currentclock = clock;
-          gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
-            gpuClock = currentclock;
-            SetGPUClockLimit(gpuClock);
-            SaveConfig("GpuClock");
-          }, false));
-        }
-        for (int clock = 2100; clock <= 2500; clock += 100) {
-          int currentclock = clock;
-          gpuClockMenu.DropDownItems.Add(CreateMenuItem(currentclock + " MHz", "gpuClockGroup", (s, e) => {
-            gpuClock = currentclock;
-            SetGPUClockLimit(gpuClock);
-            SaveConfig("GpuClock");
-          }, false));
-        }
+        gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuClockSlider, "gpuClockGroup", (s, e) => { }, false));
+        gpuClockTrackBar = new ToolStripTrackBar();
+        gpuClockTrackBar.Minimum = 21;
+        gpuClockTrackBar.Maximum = 250;
+        gpuClockTrackBar.Value = 150;
+        gpuClockTrackBar.TickFrequency = gpuClockTrackBar.Maximum - gpuClockTrackBar.Minimum;
+        gpuClockTrackBar.Width = 800;
+
+        gpuClockValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{gpuClockTrackBar.Value * 10} MHz")) { Enabled = false };
+
+        gpuClockTrackBar.ValueChanged += (sender, e) => {
+          gpuClockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{gpuClockTrackBar.Value * 10} MHz");
+          UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
+        };
+
+        gpuClockTrackBar.MouseUp += (sender, e) => {
+          gpuClock = gpuClockTrackBar.Value * 10;
+          SetGPUClockLimit(gpuClock);
+          SaveConfig("GpuClock");
+          UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
+        };
+
+        gpuClockMenu.DropDownItems.Add(gpuClockTrackBar);
+        gpuClockMenu.DropDownItems.Add(gpuClockValueLabel);
         performanceControlMenu.DropDownItems.Add(gpuClockMenu);
         DBMenu = new ToolStripMenuItem(Strings.DbVersionMenu);
         if (platformSettings != null && platformSettings.TppSupport) {
@@ -971,6 +1035,67 @@ namespace OmenSuperHub {
       progressForm.ShowDialog();
 
       // 注意：ShowDialog 会阻塞直到窗体关闭，但内部倒计时和停止按钮正常工作
+    }
+
+    public class ToolStripTrackBar : ToolStripControlHost {
+      public ToolStripTrackBar() : base(new TrackBar()) {
+        // 确保宿主允许自定义宽度，内部控件填充
+        this.AutoSize = false;
+        this.Width = 800;          // 默认宽度
+        TrackBarControl.Dock = DockStyle.Fill;
+      }
+
+      // 公开内部 TrackBar 控件
+      public TrackBar TrackBarControl => Control as TrackBar;
+
+      // 常用属性代理
+      public int Minimum {
+        get => TrackBarControl.Minimum;
+        set => TrackBarControl.Minimum = value;
+      }
+
+      public int Maximum {
+        get => TrackBarControl.Maximum;
+        set => TrackBarControl.Maximum = value;
+      }
+
+      public int Value {
+        get => TrackBarControl.Value;
+        set => TrackBarControl.Value = value;
+      }
+
+      public int TickFrequency {
+        get => TrackBarControl.TickFrequency;
+        set => TrackBarControl.TickFrequency = value;
+      }
+
+      public Orientation Orientation {
+        get => TrackBarControl.Orientation;
+        set => TrackBarControl.Orientation = value;
+      }
+
+      // 直接设置内部控件宽度（如果需要独立控制）
+      public int TrackBarWidth {
+        get => TrackBarControl.Width;
+        set => TrackBarControl.Width = value;
+      }
+
+      // 事件代理
+      public event EventHandler ValueChanged {
+        add => TrackBarControl.ValueChanged += value;
+        remove => TrackBarControl.ValueChanged -= value;
+      }
+
+      // 注意：使用 new 隐藏基类 MouseUp，并使用 MouseEventHandler
+      public new event MouseEventHandler MouseUp {
+        add => TrackBarControl.MouseUp += value;
+        remove => TrackBarControl.MouseUp -= value;
+      }
+
+      public new event MouseEventHandler MouseDown {
+        add => TrackBarControl.MouseDown += value;
+        remove => TrackBarControl.MouseDown -= value;
+      }
     }
 
     static void AddLightingUI(ToolStripMenuItem parentMenu, LightingDevice device, bool isKeyboard) {
