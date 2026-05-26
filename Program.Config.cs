@@ -699,6 +699,27 @@ namespace OmenSuperHub {
             presetCustom2Name = (string)key.GetValue("PresetCustom2Name", Strings.PresetCustom2);
             presetCustom3Name = (string)key.GetValue("PresetCustom3Name", Strings.PresetCustom3);
 
+            switch (currentPreset) {
+              case "PresetAllPerformance":
+                UpdateCheckedState("presetsGroup", Strings.PresetAllPerformance);
+                break;
+              case "PresetGpuPriority":
+                UpdateCheckedState("presetsGroup", Strings.PresetGpuPriority);
+                break;
+              case "PresetLightUse":
+                UpdateCheckedState("presetsGroup", Strings.PresetLightUse);
+                break;
+              case "PresetCustom1":
+                UpdateCheckedState("presetsGroup", Strings.PresetCustom1);
+                break;
+              case "PresetCustom2":
+                UpdateCheckedState("presetsGroup", Strings.PresetCustom2);
+                break;
+              case "PresetCustom3":
+                UpdateCheckedState("presetsGroup", Strings.PresetCustom3);
+                break;
+            }
+
             if (currentPreset != "PresetAllPerformance" && currentPreset != "PresetGpuPriority" && currentPreset != "PresetLightUse") {
               LoadPresetFromRegistry(currentPreset);
             }
