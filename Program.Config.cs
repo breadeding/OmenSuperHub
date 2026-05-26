@@ -650,7 +650,7 @@ namespace OmenSuperHub {
     }
 
     static void SavePresetToRegistry(string presetKey) {
-      if (presetKey == "PresetAllPerformance" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") return;
+      if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") return;
       try {
         using (RegistryKey key = Registry.CurrentUser.CreateSubKey($@"Software\OmenSuperHub\{presetKey}")) {
           if (key != null) {
@@ -694,14 +694,14 @@ namespace OmenSuperHub {
       try {
         using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
           if (key != null) {
-            currentPreset = (string)key.GetValue("CurrentPreset", platformSettings != null ? "PresetAllPerformance" : "PresetCustom1");
+            currentPreset = (string)key.GetValue("CurrentPreset", platformSettings != null ? "PresetExtreme" : "PresetCustom1");
             presetCustom1Name = (string)key.GetValue("PresetCustom1Name", Strings.PresetCustom1);
             presetCustom2Name = (string)key.GetValue("PresetCustom2Name", Strings.PresetCustom2);
             presetCustom3Name = (string)key.GetValue("PresetCustom3Name", Strings.PresetCustom3);
 
             switch (currentPreset) {
-              case "PresetAllPerformance":
-                UpdateCheckedState("presetsGroup", Strings.PresetAllPerformance);
+              case "PresetExtreme":
+                UpdateCheckedState("presetsGroup", Strings.PresetExtreme);
                 break;
               case "PresetGpuPriority":
                 UpdateCheckedState("presetsGroup", Strings.PresetGpuPriority);
@@ -720,11 +720,11 @@ namespace OmenSuperHub {
                 break;
             }
 
-            if (currentPreset != "PresetAllPerformance" && currentPreset != "PresetGpuPriority" && currentPreset != "PresetLightUse") {
+            if (currentPreset != "PresetExtreme" && currentPreset != "PresetGpuPriority" && currentPreset != "PresetLightUse") {
               LoadPresetFromRegistry(currentPreset);
             }
 
-            if (currentPreset == "PresetAllPerformance" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
+            if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
               fanTable = (string)key.GetValue("FanTable", fanTable);
               fanControl = (string)key.GetValue("FanControl", "auto");
               tempSensitivity = (string)key.GetValue("TempSensitivity", "high");
@@ -1070,7 +1070,7 @@ namespace OmenSuperHub {
           } else {
             // 如果注册表键不存在
             if (platformSettings != null) {
-              applyPresetLogic("PresetAllPerformance");
+              applyPresetLogic("PresetExtreme");
             } else {
               applyPresetLogic("PresetCustom1");
             }
@@ -1092,14 +1092,14 @@ namespace OmenSuperHub {
       currentPreset = targetPreset;
       SaveConfig("CurrentPreset");
       // Reload preset and save values natively
-      if (targetPreset == "PresetAllPerformance" || targetPreset == "PresetGpuPriority" || targetPreset == "PresetLightUse") {
+      if (targetPreset == "PresetExtreme" || targetPreset == "PresetGpuPriority" || targetPreset == "PresetLightUse") {
         fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
         tgpPower = "on"; ppabPower = "on"; dState = "normal";
         gpuClock = 0; iccMax = "null"; acLoadline = "null";
         int targetPL1Perf = (platformSettings?.NbPL1UpperBoundPerformance > 0) ? platformSettings.NbPL1UpperBoundPerformance : 160;
         int targetPL1Default = (platformSettings?.NbPL1UpperBoundDefault > 0) ? platformSettings.NbPL1UpperBoundDefault : 55;
 
-        if (targetPreset == "PresetAllPerformance") {
+        if (targetPreset == "PresetExtreme") {
           cpuPower = $"{targetPL1Perf} W";
           tppPower = $"{targetPL1Perf} W";
         } else if (targetPreset == "PresetGpuPriority") {

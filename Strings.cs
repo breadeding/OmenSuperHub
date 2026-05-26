@@ -33,7 +33,7 @@
     // 预设菜单
     // ─────────────────────────────────────────────────────────────────────────
     public static string PresetsMenu => T("预设", "預設", "Presets");
-    public static string PresetAllPerformance => T("全部性能", "全部效能", "All Performance");
+    public static string PresetExtreme => T("极致性能", "極致性能", "Extreme Performance");
     public static string PresetGpuPriority => T("GPU优先", "GPU優先", "GPU Priority");
     public static string PresetLightUse => T("轻度使用", "輕度使用", "Light Use");
     public static string PresetCustom1 => T("自定义预设1", "自定義預設1", "Custom 1");
@@ -57,7 +57,7 @@
         "💡只有自訂預設能永久儲存設置，內建預設的變更會在下次切換預設時遺失！",
         "💡 Only custom presets can permanently save your settings; any changes made to built-in presets will be lost the next time you switch presets!"
     );
-    public static string PresetAllPerformanceTooltip => T(
+    public static string PresetExtremeTooltip => T(
         "完全释放性能，甚至可以尝试继续调高CPU功率。",
         "完全釋放效能，甚至可以嘗試繼續調高CPU功率。",
         "Unleash full performance—you can even try further increasing the CPU power."

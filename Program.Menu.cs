@@ -142,7 +142,7 @@ namespace OmenSuperHub {
       presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetNote) { Enabled = false });
       if (platformSettings != null) {
         presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetInternalNote) { Enabled = false });
-        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetAllPerformance, "presetsGroup", (s, e) => applyPresetLogic("PresetAllPerformance"), currentPreset == "PresetAllPerformance", Strings.PresetAllPerformanceTooltip));
+        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetExtreme, "presetsGroup", (s, e) => applyPresetLogic("PresetExtreme"), currentPreset == "PresetExtreme", Strings.PresetExtremeTooltip));
         presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetGpuPriority, "presetsGroup", (s, e) => applyPresetLogic("PresetGpuPriority"), currentPreset == "PresetGpuPriority", Strings.PresetGpuPriorityTooltip));
         presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetLightUse, "presetsGroup", (s, e) => applyPresetLogic("PresetLightUse"), currentPreset == "PresetLightUse", Strings.PresetLightUseTooltip));
         presetsMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -201,7 +201,7 @@ namespace OmenSuperHub {
       menu.Items.Add(presetsMenu);
 
       menu.Items.Add(new ToolStripSeparator());
-      bool isBuiltInPreset = (currentPreset == "PresetAllPerformance" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse");
+      bool isBuiltInPreset = (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse");
 
       ToolStripMenuItem fanConfigMenu = new ToolStripMenuItem(Strings.FanConfig);
       fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanSilentMode, "fanTableGroup", (s, e) => {

@@ -143,7 +143,7 @@ namespace OmenSuperHub {
         string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
         platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
         if (platformSettings != null) {
-          currentPreset = "PresetAllPerformance";
+          currentPreset = "PresetExtreme";
         }
         if (FourZoneHelper.IsAnimationSupported) {
           supportAni = true;
