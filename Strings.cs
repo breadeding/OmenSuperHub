@@ -30,6 +30,50 @@
     public static string Exit => T("退出", "結束", "Exit");
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 预设菜单
+    // ─────────────────────────────────────────────────────────────────────────
+    public static string PresetsMenu => T("预设", "預設", "Presets");
+    public static string PresetAllPerformance => T("全部性能", "全部效能", "All Performance");
+    public static string PresetGpuPriority => T("GPU优先", "GPU優先", "GPU Priority");
+    public static string PresetLightUse => T("轻度使用", "輕度使用", "Light Use");
+    public static string PresetCustom1 => T("自定义预设1", "自定義預設1", "Custom 1");
+    public static string PresetCustom2 => T("自定义预设2", "自定義預設2", "Custom 2");
+    public static string PresetCustom3 => T("自定义预设3", "自定義預設3", "Custom 3");
+    public static string RenamePreset => T("重命名", "重新命名", "Rename");
+    public static string RenamePresetTitle => T("重命名预设", "重新命名預設", "Rename Preset");
+    public static string RenamePresetPrompt => T("请输入新的预设名称：", "請輸入新的預設名稱：", "Please enter new preset name:");
+    public static string RenamePresetError => T("预设名称不能为空，且不能与其他预设同名。", "預設名稱不能為空，且不能與其他預設同名。", "Preset name cannot be empty and must be unique.");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 预设菜单 — 内置预设提示
+    // ─────────────────────────────────────────────────────────────────────────
+    public static string PresetNote => T(
+        "💡预设包括除DB版本之外的风扇配置、风扇控制、性能控制选项。",
+        "💡預設包含DB版本以外的風扇配置、風扇控制、效能控制選項。",
+        "💡 Presets include fan config, fan control, and performance control options—excluding the DB version."
+    );
+    public static string PresetInternalNote => T(
+        "💡只有自定义预设能永久保存设置，内置预设的改动会在下一次切换预设时丢失！",
+        "💡只有自訂預設能永久儲存設置，內建預設的變更會在下次切換預設時遺失！",
+        "💡 Only custom presets can permanently save your settings; any changes made to built-in presets will be lost the next time you switch presets!"
+    );
+    public static string PresetAllPerformanceTooltip => T(
+        "完全释放性能，甚至可以尝试继续调高CPU功率。",
+        "完全釋放效能，甚至可以嘗試繼續調高CPU功率。",
+        "Unleash full performance—you can even try further increasing the CPU power."
+    );
+    public static string PresetGpuPriorityTooltip => T(
+        "散热不足的情况下优先保证GPU性能，适当降低CPU功耗。",
+        "散熱不足的情況下優先確保GPU效能，適當降低CPU功耗。",
+        "In scenarios with insufficient cooling, priority is given to maintaining GPU performance while appropriately reducing CPU power consumption."
+    );
+    public static string PresetLightUseTooltip => T(
+        "降低整体功耗，适合需要安静的场景。",
+        "降低整體功耗，適合需要安靜的場景。",
+        "Reduces overall power consumption, making it suitable for environments requiring quiet operation."
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 语言菜单
     // ─────────────────────────────────────────────────────────────────────────
     public static string LanguageMenu => T("语言", "語言", "Language");
@@ -127,7 +171,7 @@
     public static string Disable => T("关闭", "關閉", "Disable");
     public static string Normal => T("正常", "正常", "Normal");
     public static string LowPower => T("低功耗", "低功耗", "Low Power");
-    public static string Restore => T("还原", "還原", "Restore");
+    public static string Restore => T("无限制", "無限制", "Unlimited");
 
     public static string IccMaxMenu => T("IccMax", "IccMax", "IccMax");
     public static string AcLoadLineMenu => T("AC Load Line", "AC Load Line", "AC Load Line");
@@ -138,11 +182,11 @@
     public static string SetTppSlider => T("拖动滑块设置功率 (W)", "拖動滑桿設定功率 (W)", "Drag slider to set power (W)");
     public static string SetGpuClockSlider => T("拖动滑块设置频率 (MHz)", "拖動滑桿設定頻率 (MHz)", "Drag slider to set clock (MHz)");
     public static string PpabPowerMenu => T("PPab条件(Tpp)", "PPab條件(Tpp)", "PPab (Tpp)");
-    public static string DStateSubMenu => T("DB模式", "DB模式", "DB Mode");
+    public static string DStateSubMenu => T("dState", "dState", "dState");
     public static string DbVersionMenu => T("DB版本", "DB版本", "DB Version");
     public static string DbNormal => T("普通版本", "普通版本", "Normal");
     public static string DbUnlocked => T("解锁版本", "解鎖版本", "Unlocked");
-    public static string GpuClockMenu => T("GPU频率上限", "GPU頻率上限", "GPU Clock Limit");
+    public static string GpuClockMenu => T("GPU频率限制", "GPU頻率限制", "GPU Clock Limit");
 
     // DB 解锁相关
     public static string DbUnlockCpuHighWarning => T("请在CPU低负载下解锁",

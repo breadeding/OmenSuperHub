@@ -379,9 +379,11 @@
     <EmbeddedResource Include="Resources\Microsoft.Extensions.ObjectPool.dll" />
     <EmbeddedResource Include="Resources\NvidiaApi.dll" />
     <EmbeddedResource Include="Resources\PerformanceControl.dll" />
+    <EmbeddedResource Include="Resources\Prism.dll" />
     <EmbeddedResource Include="Resources\SMBiosSDK.dll" />
     <EmbeddedResource Include="Resources\System.Threading.Tasks.Extensions.dll" />
     <EmbeddedResource Include="Resources\Utf8Json.dll" />
+    <EmbeddedResource Include="Resources\WindowsDisplayAPI.dll" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\HP.Omen.Core.Logger.dll" />

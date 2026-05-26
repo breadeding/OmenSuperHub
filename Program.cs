@@ -48,6 +48,7 @@ namespace OmenSuperHub {
     static int textSize = 48;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
+    static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
     static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off", appLanguage = "zh-CN";
     static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
@@ -141,6 +142,9 @@ namespace OmenSuperHub {
         deviceType = DeviceModel.DeviceType;
         string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
         platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
+        if (platformSettings != null) {
+          currentPreset = "PresetAllPerformance";
+        }
         if (FourZoneHelper.IsAnimationSupported) {
           supportAni = true;
         }
