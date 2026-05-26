@@ -108,18 +108,26 @@ namespace OmenSuperHub {
 
       // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
       sysInfoMenu.DropDownOpening += (s, e) => {
-        isSysInfoMenuOpen = true;
-
-        if (irSensorMenu != null) irSensorMenu.Text = $"{Strings.SysIRSensor}: {GetSensorTemperature(0)}°C";
-        if (ambientSensorMenu != null) ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
-        if (pchSensorMenu != null) pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
-        if (vrSensorMenu != null) vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
-
-        if (hasNVIDIAGpu && gpuPowerLimitsMenu != null) {
+        System.Threading.Tasks.Task.Run(() => {
           var limits = GetGpuPowerLimits();
           string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-          gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
-        }
+          // 更新 UI（必须在 UI 线程）
+          menu.BeginInvoke(new Action(() => {
+            gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
+          }));
+        });
+
+        System.Threading.Tasks.Task.Run(() => {
+          // 更新 UI（必须在 UI 线程）
+          menu.BeginInvoke(new Action(() => {
+            if (irSensorMenu != null) irSensorMenu.Text = $"{Strings.SysIRSensor}: {GetSensorTemperature(0)}°C";
+            if (ambientSensorMenu != null) ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
+            if (pchSensorMenu != null) pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
+            if (vrSensorMenu != null) vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
+          }));
+        });
+
+        isSysInfoMenuOpen = true;
       };
       sysInfoMenu.DropDownClosed += (s, e) => { isSysInfoMenuOpen = false; };
 
@@ -654,67 +662,62 @@ namespace OmenSuperHub {
       // ---- 灯光控制 ----
       if (kbType >= 0) {
         ToolStripMenuItem lightingControlMenu = new ToolStripMenuItem(Strings.LightingControl);
-        lightingControlMenu.DropDownOpening += (s, e) => {
-          lightingControlMenu.DropDownItems.Clear();
+        if (supportDojo)
+          kbControlInterface = LightingControlInterface.Dojo;
 
-          if (supportDojo)
-            kbControlInterface = LightingControlInterface.Dojo;
+        // ---------- 四分区/单分区键盘 ----------
+        if (kbType > 0) {
+          ToolStripMenuItem kbMenu = new ToolStripMenuItem(Strings.LightingFourZoneKeyboard);
+          kbMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.LightingBrightnessRangeTip) { Enabled = false });
+          kbMenu.DropDownItems.Add(new ToolStripSeparator());
+          AddLightingUI(kbMenu, LightingDevice.Keyboard, true);
+          lightingControlMenu.DropDownItems.Add(kbMenu);
+        } else {
+          lightingControlMenu.DropDownItems.Add(CreateMenuItem(Strings.LightingOn, "lightSwitch", (s1, e1) => {
+            SetZoneBrightness(LightingDevice.Keyboard, 228);
+          }, GetZoneBrightness() == 228));
+          lightingControlMenu.DropDownItems.Add(CreateMenuItem(Strings.LightingOff, "lightSwitch", (s1, e1) => {
+            SetZoneBrightness(LightingDevice.Keyboard, 100);
+          }, GetZoneBrightness() == 100));
+        }
 
-          // ---------- 四分区/单分区键盘 ----------
-          if (kbType > 0) {
-            ToolStripMenuItem kbMenu = new ToolStripMenuItem(Strings.LightingFourZoneKeyboard);
-            kbMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.LightingBrightnessRangeTip) { Enabled = false });
-            kbMenu.DropDownItems.Add(new ToolStripSeparator());
-            AddLightingUI(kbMenu, LightingDevice.Keyboard, true);
-            lightingControlMenu.DropDownItems.Add(kbMenu);
-          } else {
-            lightingControlMenu.DropDownItems.Add(CreateMenuItem(Strings.LightingOn, "lightSwitch", (s1, e1) => {
-              SetZoneBrightness(LightingDevice.Keyboard, 228);
-            }, GetZoneBrightness() == 228));
-            lightingControlMenu.DropDownItems.Add(CreateMenuItem(Strings.LightingOff, "lightSwitch", (s1, e1) => {
-              SetZoneBrightness(LightingDevice.Keyboard, 100);
-            }, GetZoneBrightness() == 100));
+        // ---------- 灯条 ----------
+        if (supportLightbar) {
+          ToolStripMenuItem lbMenu = new ToolStripMenuItem(Strings.LightingLightBar);
+          lbMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.LightingBrightnessRangeTip) { Enabled = false });
+          lbMenu.DropDownItems.Add(new ToolStripSeparator());
+          AddLightingUI(lbMenu, LightingDevice.LightBar, false);
+          lightingControlMenu.DropDownItems.Add(lbMenu);
+        }
+
+        // ---------- 单键 RGB ----------
+        if (kbType == NbKeyboardLightingType.RgbPerKey) {
+          ToolStripMenuItem perKeyMenu = new ToolStripMenuItem(Strings.LightingPerKeyTitle);
+          AddPerKeyLightingUI(perKeyMenu);
+          lightingControlMenu.DropDownItems.Add(perKeyMenu);
+        }
+
+        // ---------- 状态显示 ----------
+        lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
+        byte brightness = GetZoneBrightness();
+        var colors = GetZoneStaticColor();
+        lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingBrightnessStatus}: {brightness}%") { Enabled = false });
+        if (supportAni) {
+          int currentAnimation = GetCurrentAnimationEffect();
+          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingAnimationStatus}: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
+        }
+        if (kbType == NbKeyboardLightingType.FourZoneWithNumpad || kbType == NbKeyboardLightingType.FourZoneWithoutNumpad) {
+          if (colors != null && colors.Length == 4) {
+            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
+            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
+            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
+            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
           }
-
-          // ---------- 灯条 ----------
-          if (supportLightbar) {
-            ToolStripMenuItem lbMenu = new ToolStripMenuItem(Strings.LightingLightBar);
-            lbMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.LightingBrightnessRangeTip) { Enabled = false });
-            lbMenu.DropDownItems.Add(new ToolStripSeparator());
-            AddLightingUI(lbMenu, LightingDevice.LightBar, false);
-            lightingControlMenu.DropDownItems.Add(lbMenu);
+        } else if (kbType == NbKeyboardLightingType.OneZoneWithNumpad || kbType == NbKeyboardLightingType.OneZoneWithoutNumpad) {
+          if (colors != null && colors.Length == 4) {
+            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingSingleZoneColor}: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
           }
-
-          // ---------- 单键 RGB ----------
-          if (kbType == NbKeyboardLightingType.RgbPerKey) {
-            ToolStripMenuItem perKeyMenu = new ToolStripMenuItem(Strings.LightingPerKeyTitle);
-            AddPerKeyLightingUI(perKeyMenu);
-            lightingControlMenu.DropDownItems.Add(perKeyMenu);
-          }
-
-          // ---------- 状态显示 ----------
-          lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
-          byte brightness = GetZoneBrightness();
-          var colors = GetZoneStaticColor();
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingBrightnessStatus}: {brightness}%") { Enabled = false });
-          if (supportAni) {
-            int currentAnimation = GetCurrentAnimationEffect();
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingAnimationStatus}: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
-          }
-          if (kbType == NbKeyboardLightingType.FourZoneWithNumpad || kbType == NbKeyboardLightingType.FourZoneWithoutNumpad) {
-            if (colors != null && colors.Length == 4) {
-              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
-              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
-              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
-              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
-            }
-          } else if (kbType == NbKeyboardLightingType.OneZoneWithNumpad || kbType == NbKeyboardLightingType.OneZoneWithoutNumpad) {
-            if (colors != null && colors.Length == 4) {
-              lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingSingleZoneColor}: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
-            }
-          }
-        };
-
+        }
         menu.Items.Add(lightingControlMenu);
       }
 
