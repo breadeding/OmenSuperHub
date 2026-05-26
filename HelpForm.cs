@@ -92,9 +92,10 @@ namespace OmenSuperHub {
     private static string GetHelpText_ZH(Version version) {
       return "版本号：" + version +
         "\n更新说明：\n" +
-        "（1）功能：设置滑块时可使用滚轮微调；\n" +
-        "（2）修复：动态图标适配不同屏幕缩放率；\n" +
-        "（3）修复：在不支持的机型上获取默认CPU功率导致的错误。\n\n" +
+        "（1）功能：新增预设菜单，包括三项内置预设和自定义预设；\n" +
+        "（2）修复：HyperX机型缺少部分依赖的问题；\n" +
+        "（3）修复：显卡dState菜单显示错误的问题，优化GPU频率限制菜单名称以更准确地反映其功能；\n" +
+        "（4）修复：本机信息打开延迟的问题。\n\n" +
         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   “风扇配置”菜单说明：\n" +
         "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +
@@ -138,9 +139,10 @@ namespace OmenSuperHub {
     private static string GetHelpText_TW(Version version) {
       return "版本號：" + version +
         "\n更新說明：\n" +
-        "（1）功能：設定滑桿時可使用滾輪微調；\n" +
-        "（2）修正：動態圖示適配不同螢幕縮放率；\n" +
-        "（3）修正：在不支援的機型上取得預設CPU功率所導致的錯誤。\n\n" +
+        "（1）功能：新增預設選單，包括三項內建預設和自訂預設；\n" +
+        "（2）修復：HyperX機型缺少部分依賴的問題；\n" +
+        "（3）修復：顯示卡dState選單顯示錯誤的問題，最佳化GPU頻率限制選單名稱以更準確地反映其功能；\n" +
+        "（4）修復：本機資訊開啟延遲的問題。\n\n" +
         "本專案已開源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   「風扇配置」選單說明：\n" +
         "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
@@ -184,9 +186,10 @@ namespace OmenSuperHub {
     private static string GetHelpText_EN(Version version) {
       return "Version: " + version +
         "\nChangelog:\n" +
-        "(1) Feature: The slider can be fine-tuned using the scroll wheel;\n" +
-        "(2) Fix: Dynamic icons adapt to different screen scaling rates;\n" +
-        "(3) Fix: Error caused by obtaining default CPU power on unsupported models.\n\n" +
+        "(1) Feature: Added a Presets menu, including three built-in presets and custom presets;\n" +
+        "(2) Fix: Resolved an issue where HyperX Models was missing certain dependencies;\n" +
+        "(3) Fix: Fixed an issue where the graphics card dState menu displayed errors; optimized the naming of the GPU frequency limit menu to more accurately reflect its functionality;\n" +
+        "(4) Fix: Resolved a delay issue when opening the System Information section.\n\n" +
         "This project is open-source on Github: https://github.com/breadeding/OmenSuperHub\n\n" +
         "1.   Fan Config menu:\n" +
         "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +

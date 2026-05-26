@@ -132,8 +132,77 @@ namespace OmenSuperHub {
       sysInfoMenu.DropDownClosed += (s, e) => { isSysInfoMenuOpen = false; };
 
       menu.Items.Add(sysInfoMenu);
+      menu.Items.Add(new ToolStripSeparator());
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // 预设配置
+      // ─────────────────────────────────────────────────────────────────────────
+      ToolStripMenuItem presetsMenu = new ToolStripMenuItem(Strings.PresetsMenu);
+
+      presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetNote) { Enabled = false });
+      if (platformSettings != null) {
+        presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetInternalNote) { Enabled = false });
+        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetAllPerformance, "presetsGroup", (s, e) => applyPresetLogic("PresetAllPerformance"), currentPreset == "PresetAllPerformance", Strings.PresetAllPerformanceTooltip));
+        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetGpuPriority, "presetsGroup", (s, e) => applyPresetLogic("PresetGpuPriority"), currentPreset == "PresetGpuPriority", Strings.PresetGpuPriorityTooltip));
+        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetLightUse, "presetsGroup", (s, e) => applyPresetLogic("PresetLightUse"), currentPreset == "PresetLightUse", Strings.PresetLightUseTooltip));
+        presetsMenu.DropDownItems.Add(new ToolStripSeparator());
+      }
+
+      var custom1Item = CreateMenuItem(presetCustom1Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom1"), currentPreset == "PresetCustom1");
+      var custom2Item = CreateMenuItem(presetCustom2Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom2"), currentPreset == "PresetCustom2");
+      var custom3Item = CreateMenuItem(presetCustom3Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom3"), currentPreset == "PresetCustom3");
+      presetsMenu.DropDownOpening += (s, e) => {
+        custom1Item.Text = presetCustom1Name;
+        custom2Item.Text = presetCustom2Name;
+        custom3Item.Text = presetCustom3Name;
+      };
+
+      void attachRename(ToolStripMenuItem item, string presetKey) {
+        var renameItem = new ToolStripMenuItem(Strings.RenamePreset);
+        renameItem.Click += (s, e) => {
+          Form renameForm = new Form {
+            Width = 400,
+            Height = 200,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            Text = Strings.RenamePresetTitle,
+            StartPosition = FormStartPosition.CenterScreen
+          };
+          Label textLabel = new Label() { Left = 10, Top = 10, Width = 360, Text = Strings.RenamePresetPrompt };
+          TextBox inputBox = new TextBox() { Left = 10, Top = 40, Width = 360, Text = item.Text };
+          Button confirmation = new Button() { Text = "OK", Left = 120, Width = 140, Height = 45, Top = 80, DialogResult = DialogResult.OK };
+          renameForm.Controls.Add(textLabel);
+          renameForm.Controls.Add(inputBox);
+          renameForm.Controls.Add(confirmation);
+          renameForm.AcceptButton = confirmation;
+
+          if (renameForm.ShowDialog() == DialogResult.OK) {
+            string result = inputBox.Text;
+            if (!string.IsNullOrWhiteSpace(result) && result != presetCustom1Name && result != presetCustom2Name && result != presetCustom3Name) {
+              item.Text = result;
+              if (presetKey == "PresetCustom1") { presetCustom1Name = result; SaveConfig("PresetCustom1Name"); }
+              if (presetKey == "PresetCustom2") { presetCustom2Name = result; SaveConfig("PresetCustom2Name"); }
+              if (presetKey == "PresetCustom3") { presetCustom3Name = result; SaveConfig("PresetCustom3Name"); }
+            } else if (string.IsNullOrWhiteSpace(result)) {
+              MessageBox.Show(Strings.RenamePresetError, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+          }
+        };
+        item.DropDownItems.Add(renameItem);
+      }
+
+      attachRename(custom1Item, "PresetCustom1");
+      attachRename(custom2Item, "PresetCustom2");
+      attachRename(custom3Item, "PresetCustom3");
+
+      presetsMenu.DropDownItems.Add(custom1Item);
+      presetsMenu.DropDownItems.Add(custom2Item);
+      presetsMenu.DropDownItems.Add(custom3Item);
+
+      menu.Items.Add(presetsMenu);
 
       menu.Items.Add(new ToolStripSeparator());
+      bool isBuiltInPreset = (currentPreset == "PresetAllPerformance" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse");
+
       ToolStripMenuItem fanConfigMenu = new ToolStripMenuItem(Strings.FanConfig);
       fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanSilentMode, "fanTableGroup", (s, e) => {
         fanTable = "silent";
@@ -478,16 +547,14 @@ namespace OmenSuperHub {
       cpuPowerValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{cpuPowerTrackBar.Value} W")) { Enabled = false };
 
       // 滑块值改变时更新标签并应用设置
-      cpuPowerTrackBar.ValueChanged += (sender, e) =>
-      {
+      cpuPowerTrackBar.ValueChanged += (sender, e) => {
         int val = cpuPowerTrackBar.Value;
         cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
         UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
       };
 
       // 鼠标松开
-      cpuPowerTrackBar.MouseUp += (sender, e) =>
-      {
+      cpuPowerTrackBar.MouseUp += (sender, e) => {
         cpuPower = cpuPowerTrackBar.Value + " W";
         SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
         SaveConfig("CpuPower");
