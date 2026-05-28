@@ -520,7 +520,7 @@
     // ─────────────────────────────────────────────────────────────────────────
     public static string CheckDriverFailed => T("查询显卡驱动失败", "查詢顯示卡驅動失敗", "Failed to query graphics driver");
     public static string DriverNotFound => T("无法找到 NVIDIA 显卡驱动版本", "無法找到 NVIDIA 顯示卡驅動版本", "Cannot find NVIDIA graphics driver version");
-    public static string UpdateDriverTip => T("请安装新版显卡驱动", "請安裝新版顯示卡驅動", "Please install a newer graphics driver");
+    public static string DriverNotAllow => T("NVIDIA 显卡驱动在[537.42, 610.47)内的版本才支持解锁DB", "NVIDIA 顯示卡驅動在[537.42, 610.47)內的版本才支援解鎖DB", "Only NVIDIA graphics card drivers versions [537.42, 610.47] support DB unlocking.");
     public static string DeviceNotFound => T("未找到描述包含 NVIDIA 的显示适配器！", "未找到描述包含 NVIDIA 的顯示卡！", "Display adapter containing 'NVIDIA' not found!");
     public static string RestartGPUSuccess => T("重启显卡成功！", "重啟顯示卡成功！", "Restart GPU successful!");
     public static string RestartGPUFailed => T("重启显卡失败！", "重啟顯示卡失敗！", "Failed to restart GPU!");

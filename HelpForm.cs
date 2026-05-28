@@ -92,10 +92,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_ZH(Version version) {
       return "版本号：" + version +
         "\n更新说明：\n" +
-        "（1）功能：新增预设菜单，包括三项内置预设和自定义预设；\n" +
-        "（2）修复：HyperX机型缺少部分依赖的问题；\n" +
-        "（3）修复：显卡dState菜单显示错误的问题，优化GPU频率限制菜单名称以更准确地反映其功能；\n" +
-        "（4）修复：本机信息打开延迟的问题。\n\n" +
+        "（1）修复：解锁DB新增驱动版本的上限限制：610.47；\n" +
+        "（2）修复：自动开启GPU监控增加条件：需为自动转速模式；\n" +
+        "（3）修复：HyperX机型缺少部分依赖的问题。\n\n" +
         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   “风扇配置”菜单说明：\n" +
         "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +

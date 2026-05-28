@@ -191,20 +191,22 @@ namespace OmenSuperHub {
       ProcessResult result = ExecuteCommand("nvidia-smi");
 
       if (result.ExitCode == 0) {
-        string pattern = @"Driver Version:\s*(\d+\.\d+)";
+        // 直接匹配第一行的 NVIDIA-SMI 版本号
+        string pattern = @"NVIDIA-SMI\s+(\d+\.\d+)";
         Match match = Regex.Match(result.Output, pattern);
         string version = match.Success ? match.Groups[1].Value : null;
 
         if (version != null) {
           Version v1 = new Version(version);
           Version v2 = new Version("537.42");
+          Version v3 = new Version("610.47");
           //if(kind == 2)
           //  v2 = new Version("555.99");
-          if (v1.CompareTo(v2) >= 0) {
+          if (v1 >= v2 && v1 < v3) {
             //MessageBox.Show("当前显卡驱动：" + version, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return true;
           } else {
-            MessageBox.Show(Strings.UpdateDriverTip, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Strings.DriverNotAllow, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
           }
         } else {
