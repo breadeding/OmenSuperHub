@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Windows.Markup;
+using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
@@ -146,25 +147,17 @@ namespace OmenSuperHub {
       Console.WriteLine("=============================================");
     }
 
-    public enum GraphicsMode {
-      NotSupported = -1, // 不支持显卡切换
-      Hybrid = 0,    // 混合模式
-      Discrete = 1,  // 独显直连
-      Optimus = 2,   // Optimus
-      UMA = 3        // 仅核显
-    }
-
     /// <summary>
     /// 获取当前显卡模式（指BIOS中的设置）
     /// </summary>
-    public static GraphicsMode GetGfxMode() {
+    public static GraphicsSwitcherMode GetGfxMode() {
       byte[] result = SendOmenBiosWmi(82, new byte[4] { 0, 0, 0, 0 }, 4, 1);
       if (result != null && result.Length > 0) {
         int modeValue = result[0] & 0x7F; // 忽略最高位（可能是状态位）
         if (modeValue >= 0 && modeValue <= 3)
-          return (GraphicsMode)modeValue;
+          return (GraphicsSwitcherMode)modeValue;
       }
-      return GraphicsMode.NotSupported;
+      return GraphicsSwitcherMode.Unknown;
     }
 
     /// <summary>
@@ -173,7 +166,7 @@ namespace OmenSuperHub {
     /// <param name="mode">目标模式</param>
     /// <param name="dynamicSwitch">是否为动态切换（DDS，无需重启）</param>
     /// <returns>true 表示命令发送成功</returns>
-    public static bool SetGfxMode(GraphicsMode mode, bool dynamicSwitch = false) {
+    public static bool SetGfxMode(GraphicsSwitcherMode mode, bool dynamicSwitch = false) {
       byte modeByte = (byte)mode;
       // 如果是动态切换且支持 DDS，设置 bit7
       if (dynamicSwitch)

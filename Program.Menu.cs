@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Drawing;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -10,6 +10,7 @@ using Hp.Bridge.Client.SDKs.McuSDK2.Common.DataStructure;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
+using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 using static OmenSuperHub.OmenLighting;
@@ -320,7 +321,7 @@ namespace OmenSuperHub {
 
       ToolStripMenuItem performanceControlMenu = new ToolStripMenuItem(Strings.PerfControl);
       // 图形模式
-      if (NvGraphicsMode == GraphicsMode.Optimus || NvGraphicsMode == GraphicsMode.Hybrid) {
+      if (NvGraphicsMode == GraphicsSwitcherMode.Optimus || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
         var hotSwitchItem = CreateMenuItem(Strings.HotSwitch, null, (s, e) => {
           if (LaunchDDS() != 0)
             MessageBox.Show(Strings.DdsInitFail, Strings.Warning, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -350,47 +351,47 @@ namespace OmenSuperHub {
           bool supportsHybrid = (supportedGfxModes & 0x02) != 0;
           bool supportsDiscrete = (supportedGfxModes & 0x04) != 0;
           bool supportsDDS = (supportedGfxModes & 0x08) != 0;
-          if (supportsDDS || NvGraphicsMode == GraphicsMode.Optimus) {
+          if (supportsDDS || NvGraphicsMode == GraphicsSwitcherMode.Optimus) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("NVIDIA Advanced Optimus", "graphicsModeGroup", (s, e) => {
-              if (SetGfxMode(GraphicsMode.Optimus))
+              if (SetGfxMode(GraphicsSwitcherMode.Optimus))
                 MessageBox.Show(Strings.GfxSwitchedTo("NVIDIA Advanced Optimus"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               else {
                 SetGfxMode(NvGraphicsMode);
                 MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               }
-            }, NvGraphicsMode == GraphicsMode.Optimus, "混合"));
+            }, NvGraphicsMode == GraphicsSwitcherMode.Optimus));
           }
-          if (supportsDiscrete || NvGraphicsMode == GraphicsMode.Discrete) {
+          if (supportsDiscrete || NvGraphicsMode == GraphicsSwitcherMode.Discrete) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("Discrete", "graphicsModeGroup", (s, e) => {
-              if (SetGfxMode(GraphicsMode.Discrete))
+              if (SetGfxMode(GraphicsSwitcherMode.Discrete))
                 MessageBox.Show(Strings.GfxSwitchedTo("Discrete"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               else {
                 SetGfxMode(NvGraphicsMode);
                 MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               }
-            }, NvGraphicsMode == GraphicsMode.Discrete, "仅独显"));
+            }, NvGraphicsMode == GraphicsSwitcherMode.Discrete));
           }
-          if (supportsUMA || NvGraphicsMode == GraphicsMode.UMA) {
+          if (supportsUMA || NvGraphicsMode == GraphicsSwitcherMode.UMAMode) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("UMA", "graphicsModeGroup", (s, e) => {
               if (MessageBox.Show(Strings.GfxUMAConfirm, Strings.GfxUMATitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-                if (SetGfxMode(GraphicsMode.UMA))
+                if (SetGfxMode(GraphicsSwitcherMode.UMAMode))
                   MessageBox.Show(Strings.GfxSwitchedTo("UMA"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 else {
                   SetGfxMode(NvGraphicsMode);
                   MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
               }
-            }, NvGraphicsMode == GraphicsMode.UMA, "关闭独立 GPU 并仅使用板载 GPU 以最大限度地延长电池续航时间。"));
+            }, NvGraphicsMode == GraphicsSwitcherMode.UMAMode));
           }
-          if (supportsHybrid || NvGraphicsMode == GraphicsMode.Hybrid) {
+          if (supportsHybrid || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("Hybrid", "graphicsModeGroup", (s, e) => {
-              if (SetGfxMode(GraphicsMode.Hybrid))
+              if (SetGfxMode(GraphicsSwitcherMode.Hybrid))
                 MessageBox.Show(Strings.GfxSwitchedTo("Hybrid"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               else {
                 SetGfxMode(NvGraphicsMode);
                 MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               }
-            }, NvGraphicsMode == GraphicsMode.Hybrid, "混合"));
+            }, NvGraphicsMode == GraphicsSwitcherMode.Hybrid));
           }
         }
       }
@@ -405,9 +406,9 @@ namespace OmenSuperHub {
             var nvMode = GetGfxMode();
             string chk;
             switch (nvMode) {
-              case GraphicsMode.Discrete: chk = "Discrete"; break;
-              case GraphicsMode.Optimus: chk = "NVIDIA Advanced Optimus"; break;
-              case GraphicsMode.UMA: chk = "UMA"; break;
+              case GraphicsSwitcherMode.Discrete: chk = "Discrete"; break;
+              case GraphicsSwitcherMode.Optimus: chk = "NVIDIA Advanced Optimus"; break;
+              case GraphicsSwitcherMode.UMAMode: chk = "UMA"; break;
               default: chk = "Hybrid"; break;
             }
             UpdateCheckedState("graphicsModeGroup", chk);

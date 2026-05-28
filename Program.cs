@@ -16,6 +16,7 @@ using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
+using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 using static OmenSuperHub.OmenLighting;
@@ -94,7 +95,7 @@ namespace OmenSuperHub {
     static bool supportAni = false, supportDojo = false, supportLightbar = false;
     static DeviceEnums.DeviceType deviceType;
     static PlatformSettings platformSettings;
-    static GraphicsMode NvGraphicsMode;
+    static GraphicsSwitcherMode NvGraphicsMode;
     static NbKeyboardLightingType kbType;
 
     [STAThread]
@@ -157,7 +158,7 @@ namespace OmenSuperHub {
         NvGraphicsMode = GetGfxMode();
         hasAMDDiscreteGpu = HasAmdDiscreteGpu();
         hasNVIDIAGpu = GetNVIDIAModel() != null;
-        if (hasNVIDIAGpu && (NvGraphicsMode == GraphicsMode.Hybrid || NvGraphicsMode == GraphicsMode.Optimus))
+        if (hasNVIDIAGpu && (NvGraphicsMode == GraphicsSwitcherMode.Hybrid || NvGraphicsMode == GraphicsSwitcherMode.Optimus))
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
         // 固定为释放全部性能模式
         SetUnleashMode();
