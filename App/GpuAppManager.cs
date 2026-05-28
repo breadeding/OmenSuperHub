@@ -203,10 +203,9 @@ namespace OmenSuperHub {
           //if(kind == 2)
           //  v2 = new Version("555.99");
           if (v1 >= v2 && v1 < v3) {
-            //MessageBox.Show("当前显卡驱动：" + version, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return true;
           } else {
-            MessageBox.Show(Strings.DriverNotAllow, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Strings.DriverNotAllow + version, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
           }
         } else {
