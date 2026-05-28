@@ -138,10 +138,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_TW(Version version) {
       return "版本號：" + version +
         "\n更新說明：\n" +
-        "（1）功能：新增預設選單，包括三項內建預設和自訂預設；\n" +
-        "（2）修復：HyperX機型缺少部分依賴的問題；\n" +
-        "（3）修復：顯示卡dState選單顯示錯誤的問題，最佳化GPU頻率限制選單名稱以更準確地反映其功能；\n" +
-        "（4）修復：本機資訊開啟延遲的問題。\n\n" +
+        "（1）修復：解鎖DB新增驅動版本的上限限制：610.47；\n" +
+        "（2）修復：自動開啟GPU監控增加條件：需為自動轉速模式；\n" +
+        "（3）修復：HyperX機型缺少部分依賴的問題。\n\n" +
         "本專案已開源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   「風扇配置」選單說明：\n" +
         "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
@@ -185,10 +184,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_EN(Version version) {
       return "Version: " + version +
         "\nChangelog:\n" +
-        "(1) Feature: Added a Presets menu, including three built-in presets and custom presets;\n" +
-        "(2) Fix: Resolved an issue where HyperX Models was missing certain dependencies;\n" +
-        "(3) Fix: Fixed an issue where the graphics card dState menu displayed errors; optimized the naming of the GPU frequency limit menu to more accurately reflect its functionality;\n" +
-        "(4) Fix: Resolved a delay issue when opening the System Information section.\n\n" +
+        "(1) Fixed: Unlocked the upper limit of the new driver version in DB: 610.47;\n" +
+        "(2) Fixed: Added condition for automatically enabling GPU monitoring: must be in automatic speed mode;\n" +
+        "(3) Fixed: Issue of missing some dependencies for HyperX models.\n\n" +
         "This project is open-source on Github: https://github.com/breadeding/OmenSuperHub\n\n" +
         "1.   Fan Config menu:\n" +
         "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +
