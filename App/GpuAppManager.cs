@@ -54,7 +54,7 @@ namespace OmenSuperHub {
         }
 
         if (string.IsNullOrEmpty(instanceId)) {
-          MessageBox.Show("未找到描述包含 NVIDIA 的显示适配器！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show(Strings.DeviceNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           return;
         }
 
@@ -64,10 +64,10 @@ namespace OmenSuperHub {
 
         // 可选：根据结果给出提示
         if (result.ExitCode != 0) {
-          MessageBox.Show($"重启显卡失败！错误信息：{result.Error}", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show($"{Strings.RestartGPUFailed} {Strings.Error}：{result.Error}", Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
       } catch {
-        MessageBox.Show("重启显卡失败！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(Strings.RestartGPUFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
       }
     }
 
@@ -204,15 +204,15 @@ namespace OmenSuperHub {
             //MessageBox.Show("当前显卡驱动：" + version, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return true;
           } else {
-            MessageBox.Show("请安装新版显卡驱动", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Strings.UpdateDriverTip, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
           }
         } else {
-          MessageBox.Show($"无法找到 NVIDIA 显卡驱动版本", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show(Strings.DriverNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           return false;
         }
       } else {
-        MessageBox.Show($"查询显卡驱动失败", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(Strings.CheckDriverFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
       }
     }

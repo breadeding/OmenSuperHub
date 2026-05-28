@@ -230,10 +230,30 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
 
-        //Console.WriteLine($"DeviceType: {WindowsLightingUtility.IsLightBarPlatform()}");
         //Console.WriteLine($"DeviceType: {deviceType}");
         //Console.WriteLine($"PlatformSku: {sku}");
         //Console.WriteLine($"TppMaxValue: {platformSettings.TppMaxValue}");
+
+        //// 1. 获取所有可能的键盘附件类型（OGH 中通过 AccessoryList.json 定义）
+        //var keyboardTypes = new[]
+        //{
+        //        AccessoryEnums.AccessoryType.Keyboard_Woodstock,
+        //        AccessoryEnums.AccessoryType.Keyboard_Woody2,
+        //        AccessoryEnums.AccessoryType.Keyboard_Winston
+        //    };
+
+        //// 2. 遍历尝试打开当前已连接的键盘设备
+        //foreach (var type in keyboardTypes) {
+        //  var hwid = DeviceModel.GetCurrentlyUsingHWID(type);
+        //  if (hwid == null) continue;
+
+        //  // 解析 VID/PID（十六进制字符串 → int）
+        //  if (!int.TryParse(hwid.VID, System.Globalization.NumberStyles.HexNumber, null, out int vid))
+        //    continue;
+        //  if (!int.TryParse(hwid.PID, System.Globalization.NumberStyles.HexNumber, null, out int pid))
+        //    continue;
+
+        //}
 
         //Platform omenPlatform = DeviceModel.OmenPlatform;
         //Console.WriteLine($"Platform Name: {omenPlatform.Name}");
@@ -1095,8 +1115,8 @@ namespace OmenSuperHub {
           trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
         }
       }
-      //自动开启GPU监控：需从"未连接显示器"切换为"已连接"时才触发
-      if (autoStartMonitorGPU && isConnectedToNVIDIA && !prevIsConnectedToNVIDIA && !monitorGPU) {
+      //自动开启GPU监控：需为自动转速控制且从"未连接显示器"切换为"已连接"时才触发
+      if (autoStartMonitorGPU && isConnectedToNVIDIA && !prevIsConnectedToNVIDIA && !monitorGPU && fanControl == "auto") {
         GPUPower = 0;
         rawPowerGPU = 0f;
         hasStartAuto = true;

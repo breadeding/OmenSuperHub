@@ -376,6 +376,7 @@
     <EmbeddedResource Include="Resources\HP.Omen.Core.Utilities.dll" />
     <EmbeddedResource Include="Resources\IntelXTUSDK.dll" />
     <EmbeddedResource Include="Resources\McuSDK2.dll" />
+    <EmbeddedResource Include="Resources\Microsoft.AppCenter.dll" />
     <EmbeddedResource Include="Resources\Microsoft.Extensions.ObjectPool.dll" />
     <EmbeddedResource Include="Resources\NvidiaApi.dll" />
     <EmbeddedResource Include="Resources\PerformanceControl.dll" />
