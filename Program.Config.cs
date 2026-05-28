@@ -690,7 +690,7 @@ namespace OmenSuperHub {
       } catch { }
     }
 
-    static void RestoreConfig() {
+    static void RestoreConfig(bool isPreset = false) {
       try {
         using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
           if (key != null) {
@@ -882,7 +882,7 @@ namespace OmenSuperHub {
                 UpdateCheckedState("gpuClockGroup", Strings.Restore);
               }
 
-              if (DBMenu.Enabled) {
+              if (DBMenu.Enabled && !isPreset) {
                 DBVersion = (int)key.GetValue("DBVersion", 2);
                 switch (DBVersion) {
                   case 1:
@@ -1117,7 +1117,7 @@ namespace OmenSuperHub {
         LoadPresetFromRegistry(targetPreset);
       }
       SaveConfig();
-      RestoreConfig();
+      RestoreConfig(isPreset: true);
     }
   }
 }
