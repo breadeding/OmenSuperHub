@@ -377,6 +377,8 @@
     <EmbeddedResource Include="Resources\IntelXTUSDK.dll" />
     <EmbeddedResource Include="Resources\McuSDK2.dll" />
     <EmbeddedResource Include="Resources\Microsoft.AppCenter.dll" />
+    <EmbeddedResource Include="Resources\Microsoft.AppCenter.Analytics.dll" />
+    <EmbeddedResource Include="Resources\Microsoft.AppCenter.Crashes.dll" />
     <EmbeddedResource Include="Resources\Microsoft.Extensions.ObjectPool.dll" />
     <EmbeddedResource Include="Resources\NvidiaApi.dll" />
     <EmbeddedResource Include="Resources\PerformanceControl.dll" />
