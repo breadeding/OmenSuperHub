@@ -376,17 +376,12 @@
     <EmbeddedResource Include="Resources\HP.Omen.Core.Utilities.dll" />
     <EmbeddedResource Include="Resources\IntelXTUSDK.dll" />
     <EmbeddedResource Include="Resources\McuSDK2.dll" />
-    <EmbeddedResource Include="Resources\Microsoft.AppCenter.dll" />
-    <EmbeddedResource Include="Resources\Microsoft.AppCenter.Analytics.dll" />
-    <EmbeddedResource Include="Resources\Microsoft.AppCenter.Crashes.dll" />
     <EmbeddedResource Include="Resources\Microsoft.Extensions.ObjectPool.dll" />
     <EmbeddedResource Include="Resources\NvidiaApi.dll" />
     <EmbeddedResource Include="Resources\PerformanceControl.dll" />
-    <EmbeddedResource Include="Resources\Prism.dll" />
     <EmbeddedResource Include="Resources\SMBiosSDK.dll" />
     <EmbeddedResource Include="Resources\System.Threading.Tasks.Extensions.dll" />
     <EmbeddedResource Include="Resources\Utf8Json.dll" />
-    <EmbeddedResource Include="Resources\WindowsDisplayAPI.dll" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\HP.Omen.Core.Logger.dll" />

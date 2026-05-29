@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Hp.Bridge.Client.SDKs.McuSDK2;
 using Hp.Bridge.Client.SDKs.McuSDK2.Common.DataStructure;
@@ -16,17 +14,6 @@ using static OmenSuperHub.OmenHardware;
 
 namespace OmenSuperHub {
   internal class OmenLighting {
-    static OmenLighting() {
-      AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
-      {
-        string assemblyName = new AssemblyName(args.Name).Name + ".dll";
-        string libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Libs", assemblyName);
-        if (File.Exists(libPath))
-          return Assembly.LoadFrom(libPath);
-        return null;
-      };
-    }
-
     public static string GetKeyboardTypeName(NbKeyboardLightingType type) {
       switch (type) {
         case NbKeyboardLightingType.Normal: return Strings.KbTypeNormal;
@@ -216,6 +203,59 @@ namespace OmenSuperHub {
         return ((result[0] >> 1) & 1) == 1;
       }
       return false;
+    }
+
+    internal static class FourZoneSupportHelper {
+      private static bool? _isSupported;
+      private static bool? _isAnimationSupported;
+
+      /// <summary>
+      /// 判断键盘是否支持四区/单区灯光控制（IsSupported）
+      /// 直接使用已有的 kbType，无需任何 WMI
+      /// </summary>
+      public static bool IsSupported(NbKeyboardLightingType kbType) {
+        if (!_isSupported.HasValue) {
+          DeviceEnums.DeviceType device = DeviceModel.Instance.GetDevice();
+          if (device == DeviceEnums.DeviceType.Pirates11 || (uint)(device - 6) <= 2u || (uint)(device - 14) <= 1u) {
+            _isSupported = GetLightingSupported() == 1;
+          } else {
+            _isSupported = kbType == NbKeyboardLightingType.FourZoneWithNumpad ||
+              kbType == NbKeyboardLightingType.FourZoneWithoutNumpad ||
+              kbType == NbKeyboardLightingType.OneZoneWithNumpad ||
+              kbType == NbKeyboardLightingType.OneZoneWithoutNumpad;
+          }
+        }
+        return _isSupported.Value;
+      }
+
+      /// <summary>
+      /// 判断是否支持动画（Dojo 协议）
+      /// </summary>
+      public static bool IsAnimationSupported(NbKeyboardLightingType kbType) {
+        if (!_isAnimationSupported.HasValue) {
+          _isAnimationSupported = false;
+          if (DeviceModel.GetCycleNumber(DeviceModel.OmenPlatform.ProductNum.FirstOrDefault((SSIDInfo x) => x.SSID.Equals(DeviceModel.ThisSystemID)).Cycle) > 260) {
+            _isAnimationSupported = true;
+          }
+          if (_isAnimationSupported.Value) {
+            return IsSupported(kbType);
+          }
+        }
+        return false;
+      }
+
+      /// <summary>
+      /// 执行 WMI 命令 0x20009 + commandType=1，返回硬件灯光支持标志（bit0）
+      /// 与 OGH 的 FourZoneHelper.BiosWmiCmd_IsLightingSupported 完全一致
+      /// </summary>
+      /// <returns>1 表示支持，0 表示不支持，-1 表示失败</returns>
+      public static int GetLightingSupported() {
+        // command = 0x20009 (131081), commandType = 1, 输出 128 字节，无输入数据
+        byte[] result = SendOmenBiosWmi(1, null, 128, 0x20009);
+        if (result != null && result.Length > 0)
+          return result[0] & 0x01;
+        return -1;
+      }
     }
 
     // ════════════ 四区 / 灯条 WMI 控制 ═══════════════════════════════

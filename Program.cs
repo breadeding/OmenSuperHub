@@ -146,7 +146,7 @@ namespace OmenSuperHub {
         if (platformSettings != null) {
           currentPreset = "PresetExtreme";
         }
-        if (FourZoneHelper.IsAnimationSupported) {
+        if (FourZoneSupportHelper.IsAnimationSupported(kbType)) {
           supportAni = true;
         }
         if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
@@ -233,7 +233,7 @@ namespace OmenSuperHub {
         //Console.WriteLine($"DeviceType: {deviceType}");
         //Console.WriteLine($"PlatformSku: {sku}");
         //Console.WriteLine($"TppMaxValue: {platformSettings.TppMaxValue}");
-
+        
         //// 1. 获取所有可能的键盘附件类型（OGH 中通过 AccessoryList.json 定义）
         //var keyboardTypes = new[]
         //{
