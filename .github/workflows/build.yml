@@ -1,0 +1,41 @@
+name: Build OmenSuperHub
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - uses: NuGet/setup-nuget@v2
+
+      - name: Restore
+        run: nuget restore OmenSuperHub.sln
+
+      - name: Build
+        run: >
+          msbuild OmenSuperHub.sln
+          /m
+          /p:Configuration=Release
+          /p:Platform=x64
+
+      - name: Create ZIP
+        shell: powershell
+        run: |
+          $buildDir = Get-ChildItem -Recurse -Directory |
+            Where-Object { $_.FullName -match "bin\\x64\\Release$" } |
+            Select-Object -First 1
+
+          Compress-Archive `
+            -Path "$($buildDir.FullName)\*" `
+            -DestinationPath OmenSuperHub.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OmenSuperHub
+          path: OmenSuperHub.zip
