@@ -1,7 +1,10 @@
-name: Build OmenSuperHub
+name: Build and Release
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,28 +17,48 @@ jobs:
 
       - uses: NuGet/setup-nuget@v2
 
+      - name: Generate Version
+        id: version
+        shell: powershell
+        run: |
+          $version = Get-Date -Format "yyyy.M.d"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
       - name: Restore
         run: nuget restore OmenSuperHub.sln
 
       - name: Build
-        run: >
-          msbuild OmenSuperHub.sln
-          /m
-          /p:Configuration=Release
-          /p:Platform=x64
+        run: msbuild OmenSuperHub.sln /p:Configuration=Release /p:Platform=x64
 
-      - name: Create ZIP
+      - name: Find EXE
+        id: findexe
         shell: powershell
         run: |
-          $buildDir = Get-ChildItem -Recurse -Directory |
-            Where-Object { $_.FullName -match "bin\\x64\\Release$" } |
-            Select-Object -First 1
+          $exe = Get-ChildItem -Recurse -Filter OmenSuperHub.exe |
+                 Where-Object {$_.FullName -match "Release"} |
+                 Select-Object -First 1
 
-          Compress-Archive `
-            -Path "$($buildDir.FullName)\*" `
-            -DestinationPath OmenSuperHub.zip
+          echo "path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
 
-      - uses: actions/upload-artifact@v4
+      # 完整目录 Artifact
+      - name: Upload Build Folder
+        uses: actions/upload-artifact@v4
         with:
-          name: OmenSuperHub
-          path: OmenSuperHub.zip
+          name: OmenSuperHub-Build
+          path: bin/x64/Release
+
+      # 单独 EXE Artifact
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmenSuperHub-EXE
+          path: ${{ steps.findexe.outputs.path }}
+
+      # Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: OmenSuperHub ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: ${{ steps.findexe.outputs.path }}
