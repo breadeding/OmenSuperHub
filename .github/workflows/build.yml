@@ -11,54 +11,83 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: microsoft/setup-msbuild@v2
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-      - uses: NuGet/setup-nuget@v2
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
 
       - name: Generate Version
         id: version
         shell: powershell
         run: |
-          $version = Get-Date -Format "yyyy.M.d"
+          $date = Get-Date -Format "yyyy.M.d"
+
+          git fetch --tags
+
+          $tags = git tag
+
+          if ($tags -notcontains "v$date") {
+              $version = $date
+          }
+          else {
+              $i = 1
+              while ($tags -contains "v$date.$i") {
+                  $i++
+              }
+              $version = "$date.$i"
+          }
+
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
-      - name: Restore
+      - name: Restore NuGet Packages
         run: nuget restore OmenSuperHub.sln
 
-      - name: Build
-        run: msbuild OmenSuperHub.sln /p:Configuration=Release /p:Platform=x64
+      - name: Build Release x64
+        run: >
+          msbuild OmenSuperHub.sln
+          /m
+          /p:Configuration=Release
+          /p:Platform=x64
 
       - name: Find EXE
         id: findexe
         shell: powershell
         run: |
           $exe = Get-ChildItem -Recurse -Filter OmenSuperHub.exe |
-                 Where-Object {$_.FullName -match "Release"} |
+                 Where-Object { $_.FullName -match "Release" } |
                  Select-Object -First 1
+
+          if (-not $exe) {
+              throw "OmenSuperHub.exe not found"
+          }
 
           echo "path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
 
-      # 完整目录 Artifact
-      - name: Upload Build Folder
+      - name: Upload Build Directory
         uses: actions/upload-artifact@v4
         with:
           name: OmenSuperHub-Build
           path: bin/x64/Release
 
-      # 单独 EXE Artifact
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: OmenSuperHub-EXE
           path: ${{ steps.findexe.outputs.path }}
 
-      # Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: OmenSuperHub ${{ steps.version.outputs.version }}
-          generate_release_notes: true
+          tag_name: v${{ steps.version.outputs.version }}
+          name: OmenSuperHub v${{ steps.version.outputs.version }}
+          body: ""
+          generate_release_notes: false
+          draft: false
+          prerelease: false
           files: ${{ steps.findexe.outputs.path }}
