@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -25,24 +23,50 @@ jobs:
       - name: Generate Version
         id: version
         shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $date = Get-Date -Format "yyyy.M.d"
 
-          git fetch --tags
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = "application/vnd.github+json"
+          }
 
-          $tags = git tag
+          $releases = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/${{ github.repository }}/releases?per_page=100" `
+            -Headers $headers
 
-          if ($tags -notcontains "v$date") {
-              $version = $date
+          $tags = @($releases.tag_name)
+
+          $sameDayTags = $tags | Where-Object {
+            $_ -match "^v$([regex]::Escape($date))(\.\d+)?$"
+          }
+
+          if ($sameDayTags.Count -eq 0) {
+            $version = $date
           }
           else {
-              $i = 1
-              while ($tags -contains "v$date.$i") {
-                  $i++
+            $maxSuffix = 0
+
+            foreach ($tag in $sameDayTags) {
+              if ($tag -eq "v$date") {
+                if ($maxSuffix -lt 1) {
+                  $maxSuffix = 1
+                }
               }
-              $version = "$date.$i"
+              elseif ($tag -match "^v$([regex]::Escape($date))\.(\d+)$") {
+                $n = [int]$matches[1] + 1
+                if ($n -gt $maxSuffix) {
+                  $maxSuffix = $n
+                }
+              }
+            }
+
+            $version = "$date.$maxSuffix"
           }
 
+          Write-Host "Version: v$version"
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Restore NuGet Packages
@@ -64,7 +88,7 @@ jobs:
                  Select-Object -First 1
 
           if (-not $exe) {
-              throw "OmenSuperHub.exe not found"
+            throw "OmenSuperHub.exe not found"
           }
 
           echo "path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
