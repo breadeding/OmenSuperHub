@@ -109,14 +109,16 @@ namespace OmenSuperHub {
 
       // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
       sysInfoMenu.DropDownOpening += (s, e) => {
-        System.Threading.Tasks.Task.Run(() => {
-          var limits = GetGpuPowerLimits();
-          string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
-          // 更新 UI（必须在 UI 线程）
-          menu.BeginInvoke(new Action(() => {
-            gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
-          }));
-        });
+        if (hasNVIDIAGpu) {
+          System.Threading.Tasks.Task.Run(() => {
+            var limits = GetGpuPowerLimits();
+            string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+            // 更新 UI（必须在 UI 线程）
+            menu.BeginInvoke(new Action(() => {
+              gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
+            }));
+          });
+        }
 
         System.Threading.Tasks.Task.Run(() => {
           // 更新 UI（必须在 UI 线程）
@@ -687,20 +689,14 @@ namespace OmenSuperHub {
           DBMenu.DropDownItems.Add(new ToolStripSeparator());
         }
         DBMenu.DropDownItems.Add(CreateMenuItem(Strings.DbUnlocked, "DBGroup", (s, e) => {
-          string gpuModel = GetNVIDIAModel();
-          if (gpuModel != null) {
-            var match = Regex.Match(gpuModel, @"^\d+");
-            if (match.Success && int.TryParse(match.Value, out int modelNum)) {
-              if (modelNum >= 5000) {
-                MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                DBVersion = 2;
-                countDB = 0;
-                DBMenu.Enabled = true;
-                SaveConfig("DBVersion");
-                UpdateCheckedState("DBGroup", Strings.DbNormal);
-                return;
-              }
-            }
+          if (IsAbove50Series()) {
+            MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DBVersion = 2;
+            countDB = 0;
+            DBMenu.Enabled = true;
+            SaveConfig("DBVersion");
+            UpdateCheckedState("DBGroup", Strings.DbNormal);
+            return;
           }
           if (MessageBox.Show(Strings.PerfDbUnlockWarning, Strings.DbUnlockTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
             SetGpuPowerState(true, true);
@@ -1580,20 +1576,14 @@ namespace OmenSuperHub {
       };
       item.Click += (s, e) => {
         if (item.Text == Strings.DbUnlocked) {
-          string gpuModel = GetNVIDIAModel();
-          if (gpuModel != null) {
-            var match = Regex.Match(gpuModel, @"^\d+");
-            if (match.Success && int.TryParse(match.Value, out int modelNum)) {
-              if (modelNum >= 5000) {
-                MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                DBVersion = 2;
-                countDB = 0;
-                DBMenu.Enabled = true;
-                SaveConfig("DBVersion");
-                UpdateCheckedState("DBGroup", Strings.DbNormal);
-                return;
-              }
-            }
+          if (IsAbove50Series()) {
+            MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DBVersion = 2;
+            countDB = 0;
+            DBMenu.Enabled = true;
+            SaveConfig("DBVersion");
+            UpdateCheckedState("DBGroup", Strings.DbNormal);
+            return;
           }
 
           if (!powerOnline) {

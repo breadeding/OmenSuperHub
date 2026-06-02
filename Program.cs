@@ -157,7 +157,7 @@ namespace OmenSuperHub {
 
         NvGraphicsMode = GetGfxMode();
         hasAMDDiscreteGpu = HasAmdDiscreteGpu();
-        hasNVIDIAGpu = GetNVIDIAModel() != null;
+        hasNVIDIAGpu = HasNvidiaGpu();
         if (hasNVIDIAGpu && (NvGraphicsMode == GraphicsSwitcherMode.Hybrid || NvGraphicsMode == GraphicsSwitcherMode.Optimus))
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
         // 固定为释放全部性能模式
