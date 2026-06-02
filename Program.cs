@@ -843,7 +843,12 @@ namespace OmenSuperHub {
           IntPtr hIcon = bitmap.GetHicon();
           Icon newIcon = Icon.FromHandle(hIcon);
           // 替换托盘图标
+          Icon oldIcon = trayIcon.Icon;
           trayIcon.Icon = newIcon;
+          // 如果旧图标不是默认图标，则显式释放
+          if (oldIcon != null && oldIcon != Properties.Resources.smallfan) {
+            oldIcon.Dispose();
+          }
           // 销毁旧句柄（注意：不能直接销毁，因为 Icon.FromHandle 需要手动释放）
           DestroyIcon(hIcon);
         }
