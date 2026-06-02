@@ -1,6 +1,6 @@
 name: Build and Release
 
-于:
+on:
   workflow_dispatch:
 
   push:
