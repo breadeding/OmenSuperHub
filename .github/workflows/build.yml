@@ -3,6 +3,15 @@ name: Build and Release
 on:
   workflow_dispatch:
 
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+
 permissions:
   contents: write
 
