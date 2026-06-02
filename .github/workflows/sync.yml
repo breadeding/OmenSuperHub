@@ -1,0 +1,32 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/上游作者/OmenSuperHub.git
+          git fetch upstream
+
+      - name: Sync
+        run: |
+          git checkout main
+          git reset --hard upstream/main
+
+      - name: Push
+        run: |
+          git push origin main --force
