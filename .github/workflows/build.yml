@@ -1,11 +1,9 @@
 name: Build and Release
 
-on:
+于:
   workflow_dispatch:
 
   push:
-    branches:
-      - main
     paths-ignore:
       - '.github/**'
       - '**/*.md'
