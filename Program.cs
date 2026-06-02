@@ -758,11 +758,11 @@ namespace OmenSuperHub {
         // 获取当前电源连接状态
         var powerStatus = SystemInformation.PowerStatus;
         if (powerStatus.PowerLineStatus == PowerLineStatus.Online) {
-          //Logger.Info("笔记本已连接到电源。");
+          Logger.Info("笔记本已连接到电源。");
           RestorePowerConfig();
           powerOnline = true;
         } else {
-          //Logger.Info("笔记本未连接到电源。");
+          Logger.Info("笔记本已断开电源。");
           powerOnline = false;
         }
       }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.McuSDK2.Common.DataStructure;
@@ -763,25 +762,67 @@ namespace OmenSuperHub {
 
         // ---------- 状态显示 ----------
         lightingControlMenu.DropDownItems.Add(new ToolStripSeparator());
+
+        // 提升为局部变量，供 DropDownOpening 引用
         byte brightness = GetZoneBrightness();
         var colors = GetZoneStaticColor();
-        lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingBrightnessStatus}: {brightness}%") { Enabled = false });
+
+        var brightnessItem = new ToolStripMenuItem($"{Strings.LightingBrightnessStatus}: {brightness}%") { Enabled = false };
+        lightingControlMenu.DropDownItems.Add(brightnessItem);
+
+        ToolStripMenuItem animationItem = null;
         if (supportAni) {
           int currentAnimation = GetCurrentAnimationEffect();
-          lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingAnimationStatus}: {(currentAnimation != -1 ? "ID " + currentAnimation : "无")}") { Enabled = false });
+          animationItem = new ToolStripMenuItem($"{Strings.LightingAnimationStatus}: {(currentAnimation != -1 ? "ID " + currentAnimation : Strings.LightingAnimationNone)}") { Enabled = false };
+          lightingControlMenu.DropDownItems.Add(animationItem);
         }
+
+        ToolStripMenuItem zone1Item = null, zone2Item = null, zone3Item = null, zone4Item = null;
+        ToolStripMenuItem singleZoneItem = null;
+
         if (kbType == NbKeyboardLightingType.FourZoneWithNumpad || kbType == NbKeyboardLightingType.FourZoneWithoutNumpad) {
           if (colors != null && colors.Length == 4) {
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false });
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false });
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingZoneTag}4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false });
+            zone1Item = new ToolStripMenuItem($"{Strings.LightingZoneTag}1: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false };
+            zone2Item = new ToolStripMenuItem($"{Strings.LightingZoneTag}2: RGB({colors[1].R},{colors[1].G},{colors[1].B})") { Enabled = false };
+            zone3Item = new ToolStripMenuItem($"{Strings.LightingZoneTag}3: RGB({colors[2].R},{colors[2].G},{colors[2].B})") { Enabled = false };
+            zone4Item = new ToolStripMenuItem($"{Strings.LightingZoneTag}4: RGB({colors[3].R},{colors[3].G},{colors[3].B})") { Enabled = false };
+            lightingControlMenu.DropDownItems.Add(zone1Item);
+            lightingControlMenu.DropDownItems.Add(zone2Item);
+            lightingControlMenu.DropDownItems.Add(zone3Item);
+            lightingControlMenu.DropDownItems.Add(zone4Item);
           }
         } else if (kbType == NbKeyboardLightingType.OneZoneWithNumpad || kbType == NbKeyboardLightingType.OneZoneWithoutNumpad) {
           if (colors != null && colors.Length == 4) {
-            lightingControlMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.LightingSingleZoneColor}: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false });
+            singleZoneItem = new ToolStripMenuItem($"{Strings.LightingSingleZoneColor}: RGB({colors[0].R},{colors[0].G},{colors[0].B})") { Enabled = false };
+            lightingControlMenu.DropDownItems.Add(singleZoneItem);
           }
         }
+
+        // 每次打开菜单时刷新状态
+        lightingControlMenu.DropDownOpening += (s, e) => {
+          byte b = GetZoneBrightness();
+          var c = GetZoneStaticColor();
+
+          brightnessItem.Text = $"{Strings.LightingBrightnessStatus}: {b}%";
+
+          if (kbType == 0) {
+            UpdateCheckedState("lightSwitch", GetZoneBrightness() == 228 ? Strings.LightingOn : Strings.LightingOff);
+          }
+
+          if (animationItem != null) {
+            int anim = GetCurrentAnimationEffect();
+            animationItem.Text = $"{Strings.LightingAnimationStatus}: {(anim != -1 ? "ID " + anim : Strings.LightingAnimationNone)}";
+          }
+
+          if (c != null && c.Length == 4) {
+            if (zone1Item != null) zone1Item.Text = $"{Strings.LightingZoneTag}1: RGB({c[0].R},{c[0].G},{c[0].B})";
+            if (zone2Item != null) zone2Item.Text = $"{Strings.LightingZoneTag}2: RGB({c[1].R},{c[1].G},{c[1].B})";
+            if (zone3Item != null) zone3Item.Text = $"{Strings.LightingZoneTag}3: RGB({c[2].R},{c[2].G},{c[2].B})";
+            if (zone4Item != null) zone4Item.Text = $"{Strings.LightingZoneTag}4: RGB({c[3].R},{c[3].G},{c[3].B})";
+            if (singleZoneItem != null) singleZoneItem.Text = $"{Strings.LightingSingleZoneColor}: RGB({c[0].R},{c[0].G},{c[0].B})";
+          }
+        };
+
         menu.Items.Add(lightingControlMenu);
       }
 
