@@ -213,9 +213,8 @@ namespace OmenSuperHub {
       /// 判断键盘是否支持四区/单区灯光控制（IsSupported）
       /// 直接使用已有的 kbType，无需任何 WMI
       /// </summary>
-      public static bool IsSupported(NbKeyboardLightingType kbType) {
+      public static bool IsSupported(NbKeyboardLightingType kbType, DeviceEnums.DeviceType device) {
         if (!_isSupported.HasValue) {
-          DeviceEnums.DeviceType device = DeviceModel.Instance.GetDevice();
           if (device == DeviceEnums.DeviceType.Pirates11 || (uint)(device - 6) <= 2u || (uint)(device - 14) <= 1u) {
             _isSupported = GetLightingSupported() == 1;
           } else {
@@ -231,14 +230,14 @@ namespace OmenSuperHub {
       /// <summary>
       /// 判断是否支持动画（Dojo 协议）
       /// </summary>
-      public static bool IsAnimationSupported(NbKeyboardLightingType kbType) {
+      public static bool IsAnimationSupported(NbKeyboardLightingType kbType, DeviceEnums.DeviceType device) {
         if (!_isAnimationSupported.HasValue) {
           _isAnimationSupported = false;
           if (DeviceModel.GetCycleNumber(DeviceModel.OmenPlatform.ProductNum.FirstOrDefault((SSIDInfo x) => x.SSID.Equals(DeviceModel.ThisSystemID)).Cycle) > 260) {
             _isAnimationSupported = true;
           }
           if (_isAnimationSupported.Value) {
-            return IsSupported(kbType);
+            return IsSupported(kbType, device);
           }
         }
         return false;

@@ -146,7 +146,7 @@ namespace OmenSuperHub {
         if (platformSettings != null) {
           currentPreset = "PresetExtreme";
         }
-        if (FourZoneSupportHelper.IsAnimationSupported(kbType)) {
+        if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
           supportAni = true;
         }
         if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
