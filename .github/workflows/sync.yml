@@ -19,7 +19,7 @@ jobs:
 
       - name: Add upstream
         run: |
-          git remote add upstream https://github.com/上游作者/OmenSuperHub.git
+          git remote add upstream https://github.com/breadeding/OmenSuperHub.git
           git fetch upstream
 
       - name: Sync
