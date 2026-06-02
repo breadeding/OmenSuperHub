@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
-using Newtonsoft.Json.Linq;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 
@@ -886,19 +884,13 @@ namespace OmenSuperHub {
                 DBVersion = (int)key.GetValue("DBVersion", 2);
                 switch (DBVersion) {
                   case 1:
-                    string gpuModel = GetNVIDIAModel();
-                    if (gpuModel != null) {
-                      var match = Regex.Match(gpuModel, @"^\d+");
-                      if (match.Success && int.TryParse(match.Value, out int modelNum)) {
-                        if (modelNum >= 5000) {
-                          DBVersion = 2;
-                          string deviceId50 = "\"ACPI\\NVDA0820\\NPCF\"";
-                          string command50 = $"pnputil /enable-device {deviceId50}";
-                          ExecuteCommand(command50);
-                          UpdateCheckedState("DBGroup", Strings.DbNormal);
-                          break;
-                        }
-                      }
+                    if (IsAbove50Series()) {
+                      DBVersion = 2;
+                      string deviceId50 = "\"ACPI\\NVDA0820\\NPCF\"";
+                      string command50 = $"pnputil /enable-device {deviceId50}";
+                      ExecuteCommand(command50);
+                      UpdateCheckedState("DBGroup", Strings.DbNormal);
+                      break;
                     }
                     DBVersion = 1;
                     SetGpuPowerState(true, true); // fallback for db state

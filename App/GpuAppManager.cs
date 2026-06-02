@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Management;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -98,44 +99,41 @@ namespace OmenSuperHub {
       return gpuNames;
     }
 
-    // 获取显卡数字代号
-    public static string GetNVIDIAModel() {
-      // 执行 nvidia-smi 命令并获取输出
-      var result = ExecuteCommand("nvidia-smi --query-gpu=name --format=csv");
-
-      // 检查命令是否成功执行
-      if (result.ExitCode == 0) {
-
-        string gpuModel;
-
-        string output = result.Output;
-
-        string[] lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        string modelName = null;
-        // 检查是否有至少两行
-        if (lines.Length > 1) {
-          modelName = lines[1]; // 返回第二行
+    /// <summary>
+    /// 通过 WMI 枚举所有 NVIDIA 显卡信息（不依赖 nvidia-smi，UMA 模式下仍可检测到硬件）。
+    /// </summary>
+    public static List<(string Name, int ModelNum)> GetNvidiaGpuInfoList() {
+      var result = new List<(string Name, int ModelNum)>();
+      try {
+        using (var searcher = new ManagementObjectSearcher(
+            "SELECT Name FROM Win32_VideoController WHERE Name LIKE '%NVIDIA%'")) {
+          foreach (ManagementObject obj in searcher.Get()) {
+            string name = obj["Name"]?.ToString() ?? "";
+            // 从名称中提取第一段纯数字（如 "RTX 4060" → 4060，"RTX 5080" → 5080）
+            var m = Regex.Match(name, @"\b(\d{3,})\b");
+            int modelNum = m.Success ? int.Parse(m.Value) : -1;
+            result.Add((name, modelNum));
+          }
         }
-
-        // 定义正则表达式以匹配第一个以数字开头的部分
-        string pattern = @"\b(\d[\w\d\-]*)\b";
-
-        // 查找第一个匹配项
-        var match = Regex.Match(output, pattern);
-        if (match.Success) {
-          gpuModel = match.Groups[1].Value; // 返回匹配到的代号部分
-          //if(modelName != null)
-          //  MessageBox.Show($"显卡型号为：{gpuModel}", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-          //Console.WriteLine($"First GPU Model Code: {gpuModel}");
-          return gpuModel;
-        } else {
-          Logger.Error("GPU model code not found.");
-        }
-      } else {
-        Logger.Error($"Error executing command: {result.Error}");
+        
+      } catch (Exception ex) {
+        Logger.Error($"WMI GPU query failed: {ex.Message}");
       }
+      return result;
+    }
 
-      return null;
+    /// <summary>是否存在 NVIDIA 独显（WMI 层面，UMA 模式下硬件仍在）。</summary>
+    public static bool HasNvidiaGpu()
+        => GetNvidiaGpuInfoList().Count > 0;
+
+    /// <summary>
+    /// 是否为 50 系及以上显卡。
+    /// 若检测不到显卡，返回 true。
+    /// </summary>
+    public static bool IsAbove50Series() {
+      var gpus = GetNvidiaGpuInfoList();
+      if (gpus.Count == 0) return true;   // 检测不到时保守处理
+      return gpus.All(g => g.ModelNum >= 5000);
     }
 
     public static float[] GetGpuPowerLimits() {

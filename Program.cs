@@ -146,7 +146,7 @@ namespace OmenSuperHub {
         if (platformSettings != null) {
           currentPreset = "PresetExtreme";
         }
-        if (FourZoneSupportHelper.IsAnimationSupported(kbType)) {
+        if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
           supportAni = true;
         }
         if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
@@ -157,7 +157,7 @@ namespace OmenSuperHub {
 
         NvGraphicsMode = GetGfxMode();
         hasAMDDiscreteGpu = HasAmdDiscreteGpu();
-        hasNVIDIAGpu = GetNVIDIAModel() != null;
+        hasNVIDIAGpu = HasNvidiaGpu();
         if (hasNVIDIAGpu && (NvGraphicsMode == GraphicsSwitcherMode.Hybrid || NvGraphicsMode == GraphicsSwitcherMode.Optimus))
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
         // 固定为释放全部性能模式
@@ -758,11 +758,11 @@ namespace OmenSuperHub {
         // 获取当前电源连接状态
         var powerStatus = SystemInformation.PowerStatus;
         if (powerStatus.PowerLineStatus == PowerLineStatus.Online) {
-          //Logger.Info("笔记本已连接到电源。");
+          Logger.Info("笔记本已连接到电源。");
           RestorePowerConfig();
           powerOnline = true;
         } else {
-          //Logger.Info("笔记本未连接到电源。");
+          Logger.Info("笔记本已断开电源。");
           powerOnline = false;
         }
       }
@@ -843,7 +843,12 @@ namespace OmenSuperHub {
           IntPtr hIcon = bitmap.GetHicon();
           Icon newIcon = Icon.FromHandle(hIcon);
           // 替换托盘图标
+          Icon oldIcon = trayIcon.Icon;
           trayIcon.Icon = newIcon;
+          // 如果旧图标不是默认图标，则显式释放
+          if (oldIcon != null && oldIcon != Properties.Resources.smallfan) {
+            oldIcon.Dispose();
+          }
           // 销毁旧句柄（注意：不能直接销毁，因为 Icon.FromHandle 需要手动释放）
           DestroyIcon(hIcon);
         }

@@ -2,7 +2,6 @@
 using System.Diagnostics; // 用于打开浏览器
 using System.Drawing;
 using System.Reflection;
-using System.Windows.Documents;
 using System.Windows.Forms;
 
 namespace OmenSuperHub {
@@ -92,9 +91,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_ZH(Version version) {
       return "版本号：" + version +
         "\n更新说明：\n" +
-        "（1）新增：优化DB解锁时的版本不支持提示并附加当前驱动版本信息；\n" +
-        "（2）修复：修复切换预设会重新应用解锁DB设置的问题；\n" +
-        "（3）修复：HyperX机型缺少部分依赖的问题，优化灯光接口。\n\n" +
+        "（1）修复：无NV显卡时依然刷新功率限制菜单导致的错误；\n" +
+        "（2）修复：HyperX机型缺少依赖的问题；\n" +
+        "（3）修复：灯光控制菜单中信息显示不变的问题。\n\n" +
         "本项目已开源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   “风扇配置”菜单说明：\n" +
         "（1）本程序可设置两种不同的温度-转速对应配置，安静模式加载\"silent.txt\"，降温模式加载\"cool.txt\"，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；\n" +
@@ -138,9 +137,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_TW(Version version) {
       return "版本號：" + version +
         "\n更新說明：\n" +
-        "（1）新增：優化DB解鎖時的版本不支援提示並附加目前驅動版本資訊；\n" +
-        "（2）修復：修復切換預設會重新套用解鎖DB設定的問題；\n" +
-        "（3）修復：HyperX機型缺少部分依賴的問題，優化燈光介面。\n\n" +
+        "（1）修復：無NV顯示卡時仍刷新功率限制選單所導致的錯誤；\n" +
+        "（2）修復：HyperX機型缺少依賴的問題；\n" +
+        "（3）修復：燈光控制選單中資訊顯示不變的問題。\n\n" +
         "本專案已開源至Github：https://github.com/breadeding/OmenSuperHub\n\n" +
         "一.   「風扇配置」選單說明：\n" +
         "（1）本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入\"silent.txt\"，降溫模式載入\"cool.txt\"，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；\n" +
@@ -184,9 +183,9 @@ namespace OmenSuperHub {
     private static string GetHelpText_EN(Version version) {
       return "Version: " + version +
         "\nChangelog:\n" +
-        "(1) Added: Optimized the prompt for version support during DB unlocking and appended the current driver version information;\n" +
-        "(2) Fixed: Fixed the issue where switching presets would reapply the DB unlocking settings;\n" +
-        "(3) Fixed: Addressing the issue of missing dependencies in HyperX models and optimizing the lighting interface.\n\n" +
+        "(1) Fixed: An error caused by the power limit menu attempting to refresh even when no NV graphics card was present;\n" +
+        "(2) Fixed: A missing dependency issue affecting HyperX models;\n" +
+        "(3) Fixed: An issue where information displayed in the lighting control menu remained static.\n\n" +
         "This project is open-source on Github: https://github.com/breadeding/OmenSuperHub\n\n" +
         "1.   Fan Config menu:\n" +
         "(1) Two fan profiles are supported. Silent mode loads \"silent.txt\" (conservative), Cool mode loads \"cool.txt\" (aggressive). Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;\n" +

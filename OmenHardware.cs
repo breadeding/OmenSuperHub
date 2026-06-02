@@ -787,21 +787,22 @@ namespace OmenSuperHub {
               inParams["InData"] = biosDataIn;
 
               using (var result = biosMethods.InvokeMethod(methodName, inParams, null)) {
-                var outData = result["OutData"] as ManagementBaseObject;
-                uint returnCode = (uint)outData["rwReturnCode"];
+                using (var outData = result["OutData"] as ManagementBaseObject) {
+                  uint returnCode = (uint)outData["rwReturnCode"];
 
-                if (returnCode == 0) {
-                  if (outputSize != 0)
-                    return (byte[])outData["Data"];
-                  else
-                    return Array.Empty<byte>();
-                } else {
-                  string errorMessage = "";
-                  switch (returnCode) {
-                    case 0x03: errorMessage = " - Command Not Available"; break;
-                    case 0x05: errorMessage = " - Input or Output Size Too Small"; break;
+                  if (returnCode == 0) {
+                    if (outputSize != 0)
+                      return (byte[])outData["Data"];
+                    else
+                      return Array.Empty<byte>();
+                  } else {
+                    string errorMessage = "";
+                    switch (returnCode) {
+                      case 0x03: errorMessage = " - Command Not Available"; break;
+                      case 0x05: errorMessage = " - Input or Output Size Too Small"; break;
+                    }
+                    Logger.Error(": SendOmenBiosWmi: " + $"(CommandType=0x{commandType:X2})" + " - Failed: Error " + errorMessage);
                   }
-                  Logger.Error(": SendOmenBiosWmi: " + $"(CommandType=0x{commandType:X2})" + " - Failed: Error " + errorMessage);
                 }
               }
             }
