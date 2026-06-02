@@ -1,4 +1,4 @@
-name: Sync Upstream
+name: Sync Fork
 
 on:
   schedule:
@@ -17,16 +17,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Add upstream
-        run: |
+      - run: |
           git remote add upstream https://github.com/breadeding/OmenSuperHub.git
           git fetch upstream
 
-      - name: Sync
-        run: |
+      - run: |
           git checkout main
-          git reset --hard upstream/main
+          git merge upstream/main --no-edit
 
-      - name: Push
-        run: |
-          git push origin main --force
+      - run: |
+          git push origin main
