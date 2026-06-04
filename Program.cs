@@ -54,7 +54,8 @@ namespace OmenSuperHub {
     static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off", appLanguage = "zh-CN";
     static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
-    static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, powerOnline = true, checkFloating = false, isTwoBytePL4 = false;
+    static bool powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
+    static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, checkFloating = false, isTwoBytePL4 = false;
     static bool hasNVIDIAGpu, hasAMDDiscreteGpu; // 启动时一次性检测，硬件状态不会改变
     static string monitorRefreshRate = "low"; // 刷新频率：low=1s, high=0.25s
     static List<int> fanSpeedNow = new List<int> { 20, 23, 0 };
@@ -198,7 +199,6 @@ namespace OmenSuperHub {
         isFanCleanSupported = IsCleanCreekSupported();
         isFanLegacyCleanSupported = IsLegacyCleanCreekSupported();
 
-        powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
 
         isTwoBytePL4 = IsTwoBytePL4Supported();
@@ -775,6 +775,7 @@ namespace OmenSuperHub {
     static void OnPowerChange(object s, PowerModeChangedEventArgs e) {
       // 休眠重新启动
       if (e.Mode == PowerModes.Resume) {
+        Logger.Info("系统已恢复启动。");
         GetFanCount(out bool ocp, out bool otp);
 
         tooltipUpdateTimer.Start();
@@ -784,14 +785,15 @@ namespace OmenSuperHub {
       // 检查电源模式是否发生变化
       if (e.Mode == PowerModes.StatusChange) {
         // 获取当前电源连接状态
-        var powerStatus = SystemInformation.PowerStatus;
-        if (powerStatus.PowerLineStatus == PowerLineStatus.Online) {
-          Logger.Info("笔记本已连接到电源。");
-          RestorePowerConfig();
-          powerOnline = true;
-        } else {
-          Logger.Info("笔记本已断开电源。");
-          powerOnline = false;
+        var powerLineStatus = SystemInformation.PowerStatus.PowerLineStatus;
+        if (powerOnline != (powerLineStatus == PowerLineStatus.Online)) {
+          powerOnline = powerLineStatus == PowerLineStatus.Online;
+          if (powerOnline) {
+            Logger.Info("笔记本已连接到电源。");
+            RestorePowerConfig();
+          } else {
+            Logger.Info("笔记本已断开电源。");
+          }
         }
       }
     }
