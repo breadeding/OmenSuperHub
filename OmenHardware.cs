@@ -2,11 +2,50 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
-using System.Windows.Markup;
+using HP.Omen.Core.Common.WMI;
+using HP.Omen.Core.Model.Device.Models;
 using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 
 namespace OmenSuperHub {
   internal class OmenHardware {
+    private static bool? _isGamingProduct;
+    public static string Validation() {
+      if (IsGamingProduct) {
+        return Strings.ValidationGamingProduct;
+      } else {
+        if (DeviceModel.IsOldOmenProduct) {
+          return Strings.ValidationOldOmenProduct;
+        } else if (DeviceModel.IsHP) {
+          return Strings.ValidationUnsupportedHPProduct;
+        } else {
+          return Strings.ValidationUnsupported;
+        }
+      }
+    }
+
+    public static bool IsGamingProduct {
+      get {
+        if (!_isGamingProduct.HasValue) {
+          _isGamingProduct = false;
+
+          string displayName = DeviceModel.OmenPlatform.DisplayName;
+
+          if (displayName.Contains("OMEN")) {
+            _isGamingProduct = true;
+          } else {
+            if (DeviceModel.FeatureByte.Contains("7K") && DeviceModel.FeatureByte.Contains("fd")) {
+              if (displayName.Contains("PAVILION") || displayName.Contains("VICTUS")) {
+                _isGamingProduct = true;
+              }
+            } else if (displayName.Contains("VICTUS")) {
+              _isGamingProduct = true;
+            }
+          }
+        }
+        return _isGamingProduct.Value;
+      }
+    }
+
     // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
     public static byte[] GetSystemDesignData() {
       return SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
@@ -638,7 +677,7 @@ namespace OmenSuperHub {
       SendOmenBiosWmi(0x22, data, 0, 0x20008); // commandType=34, command=131080
     }
 
-    // Tpp设置，这里似乎无作用
+    // Tpp设置
     public static void SetConcurrentTdp(byte value) {
       SendOmenBiosWmi(0x29, new byte[] { 0xFF, 0xFF, 0xFF, value }, 0);
     }

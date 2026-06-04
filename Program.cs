@@ -12,6 +12,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+using HidSharp.Utility;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
@@ -138,6 +139,37 @@ namespace OmenSuperHub {
         Application.SetCompatibleTextRenderingDefault(false);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
+
+        Version version = Assembly.GetExecutingAssembly().GetName().Version;
+        string versionString = version.ToString().Replace(".", "");
+        alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
+
+        try {
+          using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+            if (key != null) {
+              alreadyRead = (int)key.GetValue("AlreadyRead", 0);
+            }
+          }
+        } catch (Exception ex) {
+          Logger.Error($"Error restoring AlreadyRead configuration: {ex.Message}");
+        }
+        // 每版本仅显示一次
+        if (alreadyRead != alreadyReadCode) {
+          if (Validation() == Strings.ValidationUnsupported) {
+            var result = MessageBox.Show(Strings.ProductUnsupported, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+              return; // 退出程序
+          } else if (Validation() == Strings.ValidationUnsupportedHPProduct) {
+            var result = MessageBox.Show(Strings.ProductUnsupportedHP, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+              return; // 退出程序
+          } else if (Validation() == Strings.ValidationOldOmenProduct) {
+            var result = MessageBox.Show(Strings.ProductOldOmen, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+              return; // 退出程序
+          }
+        }
+
         kbType = GetKeyboardType();
         systemSSID = DeviceModel.ThisSystemID; // DeviceModel.OmenPlatform.Name
         deviceType = DeviceModel.DeviceType;
@@ -168,10 +200,6 @@ namespace OmenSuperHub {
 
         powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
         monitorQuery();
-
-        Version version = Assembly.GetExecutingAssembly().GetName().Version;
-        string versionString = version.ToString().Replace(".", "");
-        alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
 
         isTwoBytePL4 = IsTwoBytePL4Supported();
 
@@ -233,7 +261,7 @@ namespace OmenSuperHub {
         //Console.WriteLine($"DeviceType: {deviceType}");
         //Console.WriteLine($"PlatformSku: {sku}");
         //Console.WriteLine($"TppMaxValue: {platformSettings.TppMaxValue}");
-        
+
         //// 1. 获取所有可能的键盘附件类型（OGH 中通过 AccessoryList.json 定义）
         //var keyboardTypes = new[]
         //{
@@ -924,7 +952,8 @@ namespace OmenSuperHub {
               UpdateCheckedState("DBGroup", Strings.DbNormal);
             } else {
               SetGpuPowerState(true, true);
-              SetCpuPowerLimit((byte)CPULimitDB);
+              if (platformSettings != null)
+                SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
             }
           } else {

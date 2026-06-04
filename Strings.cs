@@ -15,6 +15,26 @@
   public static class Strings {
     public static AppLanguage Current = AppLanguage.SimplifiedChinese;
 
+    public static string ProductUnsupported => T(
+        "您的设备不是 HP 产品，本程序可能无法正常工作。是否继续？",
+        "您的設備不是 HP 產品，本程式可能無法正常工作。是否繼續？",
+        "Your device is not an HP product. This program may not function correctly. Continue anyway?"
+    );
+
+    // 不支持的 HP 机型（非游戏类 HP 产品）
+    public static string ProductUnsupportedHP => T(
+        "您的 HP 机型非惠普游戏笔记本，可能无法正常使用。是否继续？",
+        "您的 HP 機型非惠普遊戲筆記本，可能無法正常使用。是否繼續？",
+        "Your HP model is not an HP gaming laptop. Some features may not work properly. Continue anyway?"
+    );
+
+    // 旧款 OMEN 产品提示
+    public static string ProductOldOmen => T(
+        "您的设备属于旧款 OMEN 产品，部分功能可能无法使用。是否继续运行程序？",
+        "您的設備屬於舊款 OMEN 產品，部分功能可能無法使用。是否繼續執行程式？",
+        "Your device is an older OMEN product. Some features may not be available. Do you want to continue?"
+    );
+
     // ─────────────────────────────────────────────────────────────────────────
     // 顶层菜单 / 分组标题
     // ─────────────────────────────────────────────────────────────────────────
@@ -413,7 +433,12 @@
     // ─────────────────────────────────────────────────────────────────────────
     // 系统信息标签
     // ─────────────────────────────────────────────────────────────────────────
-    public static string SysModelName => T("机型名称", "機型名稱", "Model Name");
+    public static string SysModelName => T("机型名称", "機型名稱", "Product Name");
+    public static string SysModelValidation => T("机型支持情况", "機型支持情況", "Product Validation");
+    public static string ValidationGamingProduct => T("完全支持", "完全支持", "Fully supported");
+    public static string ValidationOldOmenProduct => T("旧 OMEN 機型", "舊 OMEN 機型", "Old Omen Product");
+    public static string ValidationUnsupportedHPProduct => T("不支持的 HP 机型", "不支援的 HP 機型", "Unsupported HP Product");
+    public static string ValidationUnsupported => T("不支持的机型", "不支援的 HP 機型", "Unsupported HP Product");
     public static string SysBoardProduct => T("主板产品号", "主機板型號", "Board Product");
     public static string SysBiosVersion => T("BIOS 版本", "BIOS 版本", "BIOS Version");
     public static string SysCpu => T("CPU", "CPU", "CPU");
