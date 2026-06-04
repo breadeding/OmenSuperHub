@@ -64,6 +64,7 @@ namespace OmenSuperHub {
 
       ToolStripMenuItem sysInfoMenu = new ToolStripMenuItem(Strings.SysInfo);
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelName}: {DeviceModel.OmenPlatform.DisplayName}") { Enabled = false });
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelValidation}: {Validation()}") { Enabled = false });
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysBoardProduct}: {systemSSID}") { Enabled = false });
       // BIOS 版本
       string biosVersion = GetBiosVersion();
@@ -558,7 +559,8 @@ namespace OmenSuperHub {
       // 鼠标松开
       cpuPowerTrackBar.MouseUp += (sender, e) => {
         cpuPower = cpuPowerTrackBar.Value + " W";
-        SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
+        if (platformSettings != null)
+          SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
         SaveConfig("CpuPower");
         UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
       };
@@ -699,7 +701,8 @@ namespace OmenSuperHub {
           }
           if (MessageBox.Show(Strings.PerfDbUnlockWarning, Strings.DbUnlockTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
             SetGpuPowerState(true, true);
-            SetCpuPowerLimit((byte)CPULimitDB);
+            if (platformSettings != null)
+              SetCpuPowerLimit((byte)CPULimitDB);
             DBVersion = 1;
             ChangeDBVersion(DBVersion);
             countDB = countDBInit;

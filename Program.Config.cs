@@ -201,7 +201,7 @@ namespace OmenSuperHub {
       // 恢复CPU功耗设定
       if (cpuPower.Contains(" W")) {
         int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-        if (value >= 10 && value <= 254) {
+        if (platformSettings != null && value >= 10 && value <= 254) {
           SetCpuPowerLimit((byte)value);
         }
       }
@@ -894,7 +894,8 @@ namespace OmenSuperHub {
                     }
                     DBVersion = 1;
                     SetGpuPowerState(true, true); // fallback for db state
-                    SetCpuPowerLimit((byte)CPULimitDB);
+                    if (platformSettings != null)
+                      SetCpuPowerLimit((byte)CPULimitDB);
                     countDB = countDBInit;
                     DBMenu.Enabled = false;
                     UpdateCheckedState("DBGroup", Strings.DbUnlocked);
