@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
+using HP.Omen.Core.Common.PowerControl.Enum;
+using HP.Omen.Core.Common.WMI;
 using HP.Omen.Core.Model.Device.Models;
 using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 
@@ -545,29 +547,57 @@ namespace OmenSuperHub {
       Eco = 256, // 0x00000100
     }
 
-    /// <summary>
-    /// 热策略版本
-    /// </summary>
-    public enum ThermalPolicyVersion {
-      V0 = 0,   // 旧版
-      V1 = 1    // 新版（支持更多模式映射）
+    public static bool IsPowerControlSupported(DeviceEnums.DeviceType deviceType) {
+      if (DeviceModel.DeviceType == DeviceEnums.DeviceType.HPPC)
+        return false;
+      else if (!DeviceModel.IsDesktop && !PerformanceControlHelper.IsPavilionGaming) {
+        return IsSupported() && deviceType != DeviceEnums.DeviceType.Gamora10;
+      } else
+        return IsSwFanControlSupport();
     }
 
-    /// <summary>
-    /// 从 SystemDesignData 第 3 字节获取热策略版本
-    /// </summary>
-    public static ThermalPolicyVersion GetThermalPolicyVersion() {
-      byte[] data = GetSystemDesignData(); // 你已有的 128 字节数据
-      if (data == null || data.Length < 4)
-        return ThermalPolicyVersion.V0; // 默认旧版
-
-      // SystemDesignData[3] 存储 ThermalPolicyVersion
-      switch (data[3]) {
-        case 1:
-          return ThermalPolicyVersion.V1;
-        default:
-          return ThermalPolicyVersion.V0;
+    private static bool? _isPerformanceModeSupported;
+    private static bool? _isSupported;
+    public static bool IsSupported() {
+      if (!_isSupported.HasValue) {
+        _isSupported = new bool?(false);
+        foreach (PerformanceCtrlPlatform supportPlatform in PerformanceControlHelper.SupportPlatforms) {
+          if (string.Equals(supportPlatform.SSID, DeviceModel.ThisSystemID)) {
+            _isPerformanceModeSupported = new bool?(supportPlatform.AlwaysSupport);
+            _isSupported = !_isPerformanceModeSupported.Value ? new bool?(PerformanceControlHelper.IsBiosCoolModeSupported) : new bool?(true);
+            break;
+          }
+        }
+        if (!_isSupported.Value && (!_isPerformanceModeSupported.HasValue || !_isPerformanceModeSupported.Value))
+          _isSupported = _isPerformanceModeSupported = GetThermalPolicyVersion() == ThermalPolicyVersion.V1;
       }
+      return _isSupported.Value;
+    }
+
+    public static bool IsSwFanControlSupport() {
+      byte[] systemDesignData = GetSystemDesignData();
+      if (systemDesignData != null && systemDesignData.Length != 0) {
+        return (systemDesignData[4] & 1) > 0;
+      }
+      return false;
+    }
+
+    public static ThermalPolicyVersion GetThermalPolicyVersion() {
+      ThermalPolicyVersion thermalPolicyVersion = ThermalPolicyVersion.V0;
+      byte[] systemDesignData = GetSystemDesignData();
+      if (systemDesignData != null && systemDesignData.Length != 0)
+        thermalPolicyVersion = (ThermalPolicyVersion)systemDesignData[3];
+      if ((new string[6]
+      {
+        "8607",
+        "8746",
+        "8747",
+        "8749",
+        "874A",
+        "8748"
+      }).Contains(OmenSMBiosHelper.SystemID))
+        thermalPolicyVersion = ThermalPolicyVersion.V0;
+      return thermalPolicyVersion;
     }
 
     /// <summary>

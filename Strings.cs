@@ -233,10 +233,6 @@
     // ─────────────────────────────────────────────────────────────────────────
     // 性能控制 — 提示文本
     // ─────────────────────────────────────────────────────────────────────────
-    public static string PerfCpuPowerNotSupportedTip => T("💡本机型无平台描述文件，可能无法使用该设置！",
-        "💡本機型無平台描述文件，可能無法使用此設定！",
-        "💡 This model does not have a platform description file, so this setting may not be available!");
-
     public static string PerfCpuPowerTip => T("💡同时控制PL1与PL2，选择最大或过高的数值不一定生效，建议优先选择合适的数值而不是无脑最大。",
         "💡同時控制PL1與PL2，選擇最大或過高的數值不一定生效，建議優先選擇合適的數值而不是無腦最大。",
         "💡 Controls both PL1 and PL2. Setting maximum or very high values may not take effect. Choose an appropriate value.");

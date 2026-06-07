@@ -12,7 +12,6 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
-using HidSharp.Utility;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
@@ -95,6 +94,7 @@ namespace OmenSuperHub {
     static bool isSysInfoMenuOpen = false;
     static string systemSSID;
     static bool supportAni = false, supportDojo = false, supportLightbar = false;
+    static bool isCPUPowerControlSupported = false;
     static DeviceEnums.DeviceType deviceType;
     static PlatformSettings platformSettings;
     static GraphicsSwitcherMode NvGraphicsMode;
@@ -174,6 +174,7 @@ namespace OmenSuperHub {
         kbType = GetKeyboardType();
         systemSSID = DeviceModel.ThisSystemID; // DeviceModel.OmenPlatform.Name
         deviceType = DeviceModel.DeviceType;
+        isCPUPowerControlSupported = IsPowerControlSupported(deviceType);
         string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
         platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
         if (platformSettings != null) {
@@ -954,7 +955,7 @@ namespace OmenSuperHub {
               UpdateCheckedState("DBGroup", Strings.DbNormal);
             } else {
               SetGpuPowerState(true, true);
-              if (platformSettings != null)
+              if (isCPUPowerControlSupported)
                 SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
             }

@@ -143,7 +143,7 @@ namespace OmenSuperHub {
       ToolStripMenuItem presetsMenu = new ToolStripMenuItem(Strings.PresetsMenu);
 
       presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetNote) { Enabled = false });
-      if (platformSettings != null) {
+      if (isCPUPowerControlSupported) {
         presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetInternalNote) { Enabled = false });
         presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetExtreme, "presetsGroup", (s, e) => applyPresetLogic("PresetExtreme"), currentPreset == "PresetExtreme", Strings.PresetExtremeTooltip));
         presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetGpuPriority, "presetsGroup", (s, e) => applyPresetLogic("PresetGpuPriority"), currentPreset == "PresetGpuPriority", Strings.PresetGpuPriorityTooltip));
@@ -520,54 +520,55 @@ namespace OmenSuperHub {
         }
         performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
       }
-      ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
-      if (platformSettings == null) {
-        cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerNotSupportedTip) { Enabled = false });
+      
+      if (isCPUPowerControlSupported) {
+        ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
+
+        cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerTip) { Enabled = false });
+        cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
+        cpuPowerMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "cpuPowerGroup", (s, e) => {
+          cpuPower = "null";
+          SaveConfig("CpuPower");
+        }, true));
+        // 添加提示（只读）
+        ToolStripMenuItem cpuPowerSliderItem = CreateMenuItem(Strings.SetCpuPowerSlider, "cpuPowerGroup", (s, e) => { }, false);
+        cpuPowerMenu.DropDownItems.Add(cpuPowerSliderItem);
+
+        // 创建滑块项
+        cpuPowerTrackBar = new ToolStripTrackBar();
+        cpuPowerTrackBar.Minimum = 10;
+        cpuPowerTrackBar.Maximum = 254;
+        if (platformSettings != null) {
+          cpuPowerTrackBar.Value = platformSettings.NbPL1UpperBoundPerformance > 0 ? platformSettings.NbPL1UpperBoundPerformance : 100;
+        } else {
+          cpuPowerTrackBar.Value = 100;
+        }
+        cpuPowerTrackBar.TickFrequency = cpuPowerTrackBar.Maximum - cpuPowerTrackBar.Minimum;     // 设置刻度间隔
+        cpuPowerTrackBar.Width = 800;           // 设置宿主宽度，内部控件会自动填充
+
+        // 显示当前值的只读标签
+        cpuPowerValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{cpuPowerTrackBar.Value} W")) { Enabled = false };
+
+        // 滑块值改变时更新标签并应用设置
+        cpuPowerTrackBar.ValueChanged += (sender, e) => {
+          int val = cpuPowerTrackBar.Value;
+          cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
+          UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+        };
+
+        // 鼠标松开
+        cpuPowerTrackBar.MouseUp += (sender, e) => {
+          cpuPower = cpuPowerTrackBar.Value + " W";
+          if (isCPUPowerControlSupported)
+            SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
+          SaveConfig("CpuPower");
+          UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+        };
+
+        cpuPowerMenu.DropDownItems.Add(cpuPowerTrackBar);
+        cpuPowerMenu.DropDownItems.Add(cpuPowerValueLabel);
+        performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
       }
-      cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerTip) { Enabled = false });
-      cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
-      cpuPowerMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "cpuPowerGroup", (s, e) => {
-        cpuPower = "null";
-        SaveConfig("CpuPower");
-      }, true));
-      // 添加提示（只读）
-      ToolStripMenuItem cpuPowerSliderItem = CreateMenuItem(Strings.SetCpuPowerSlider, "cpuPowerGroup", (s, e) => { }, false);
-      cpuPowerMenu.DropDownItems.Add(cpuPowerSliderItem);
-
-      // 创建滑块项
-      cpuPowerTrackBar = new ToolStripTrackBar();
-      cpuPowerTrackBar.Minimum = 10;
-      cpuPowerTrackBar.Maximum = 254;
-      if (platformSettings != null) {
-        cpuPowerTrackBar.Value = platformSettings.NbPL1UpperBoundPerformance > 0 ? platformSettings.NbPL1UpperBoundPerformance : 100;
-      } else {
-        cpuPowerTrackBar.Value = 100;
-      }
-      cpuPowerTrackBar.TickFrequency = cpuPowerTrackBar.Maximum - cpuPowerTrackBar.Minimum;     // 设置刻度间隔
-      cpuPowerTrackBar.Width = 800;           // 设置宿主宽度，内部控件会自动填充
-
-      // 显示当前值的只读标签
-      cpuPowerValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{cpuPowerTrackBar.Value} W")) { Enabled = false };
-
-      // 滑块值改变时更新标签并应用设置
-      cpuPowerTrackBar.ValueChanged += (sender, e) => {
-        int val = cpuPowerTrackBar.Value;
-        cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
-        UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-      };
-
-      // 鼠标松开
-      cpuPowerTrackBar.MouseUp += (sender, e) => {
-        cpuPower = cpuPowerTrackBar.Value + " W";
-        if (platformSettings != null)
-          SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
-        SaveConfig("CpuPower");
-        UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-      };
-
-      cpuPowerMenu.DropDownItems.Add(cpuPowerTrackBar);
-      cpuPowerMenu.DropDownItems.Add(cpuPowerValueLabel);
-      performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
 
       ToolStripMenuItem gpuPowerMenu = new ToolStripMenuItem(Strings.GpuPowerControlMenu);
 
@@ -701,7 +702,7 @@ namespace OmenSuperHub {
           }
           if (MessageBox.Show(Strings.PerfDbUnlockWarning, Strings.DbUnlockTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
             SetGpuPowerState(true, true);
-            if (platformSettings != null)
+            if (isCPUPowerControlSupported)
               SetCpuPowerLimit((byte)CPULimitDB);
             DBVersion = 1;
             ChangeDBVersion(DBVersion);

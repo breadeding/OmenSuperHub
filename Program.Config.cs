@@ -201,7 +201,7 @@ namespace OmenSuperHub {
       // 恢复CPU功耗设定
       if (cpuPower.Contains(" W")) {
         int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-        if (platformSettings != null && value >= 10 && value <= 254) {
+        if (isCPUPowerControlSupported && value >= 10 && value <= 254) {
           SetCpuPowerLimit((byte)value);
         }
       }
@@ -718,10 +718,6 @@ namespace OmenSuperHub {
                 break;
             }
 
-            if (currentPreset != "PresetExtreme" && currentPreset != "PresetGpuPriority" && currentPreset != "PresetLightUse") {
-              LoadPresetFromRegistry(currentPreset);
-            }
-
             if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
               fanTable = (string)key.GetValue("FanTable", fanTable);
               fanControl = (string)key.GetValue("FanControl", "auto");
@@ -734,6 +730,8 @@ namespace OmenSuperHub {
               tppPower = (string)key.GetValue("TppPower", "null");
               iccMax = (string)key.GetValue("IccMax", "null");
               acLoadline = (string)key.GetValue("AcLoadLine", "null");
+            } else {
+              LoadPresetFromRegistry(currentPreset);
             }
               
             if (fanTable.Contains("cool")) {
@@ -844,22 +842,24 @@ namespace OmenSuperHub {
               UpdateCheckedState("acLoadLineGroup", llDisplay);
             }
 
-            if (cpuPower == "null") {
-              UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
-            } else if (cpuPower == "max") {
-              SetCpuPowerLimit(254);
-              if (cpuPowerTrackBar != null && 254 >= cpuPowerTrackBar.Minimum && 254 <= cpuPowerTrackBar.Maximum) {
-                cpuPowerTrackBar.Value = 254;
-              }
-              UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-            } else if (cpuPower.Contains(" W")) {
-              int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-              if (value >= 5 && value <= 254) {
-                SetCpuPowerLimit((byte)value);
-                if (cpuPowerTrackBar != null && value >= cpuPowerTrackBar.Minimum && value <= cpuPowerTrackBar.Maximum) {
-                  cpuPowerTrackBar.Value = value;
+            if (isCPUPowerControlSupported) {
+              if (cpuPower == "null") {
+                UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
+              } else if (cpuPower == "max") {
+                SetCpuPowerLimit(254);
+                if (cpuPowerTrackBar != null && 254 >= cpuPowerTrackBar.Minimum && 254 <= cpuPowerTrackBar.Maximum) {
+                  cpuPowerTrackBar.Value = 254;
                 }
                 UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+              } else if (cpuPower.Contains(" W")) {
+                int value = int.Parse(cpuPower.Replace(" W", "").Trim());
+                if (value >= 5 && value <= 254) {
+                  SetCpuPowerLimit((byte)value);
+                  if (cpuPowerTrackBar != null && value >= cpuPowerTrackBar.Minimum && value <= cpuPowerTrackBar.Maximum) {
+                    cpuPowerTrackBar.Value = value;
+                  }
+                  UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+                }
               }
             }
 
@@ -894,7 +894,7 @@ namespace OmenSuperHub {
                     }
                     DBVersion = 1;
                     SetGpuPowerState(true, true); // fallback for db state
-                    if (platformSettings != null)
+                    if (isCPUPowerControlSupported)
                       SetCpuPowerLimit((byte)CPULimitDB);
                     countDB = countDBInit;
                     DBMenu.Enabled = false;
