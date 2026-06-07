@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
-using HP.Omen.Core.Common.WMI;
 using HP.Omen.Core.Model.Device.Models;
 using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 

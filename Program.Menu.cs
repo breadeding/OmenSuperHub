@@ -1610,6 +1610,7 @@ namespace OmenSuperHub {
     static void RefreshMenu() {
       if (trayIcon == null || trayIcon.ContextMenuStrip == null) return;
       BuildTrayMenu(trayIcon.ContextMenuStrip);
+      RestoreConfig();
     }
 
     static ToolStripMenuItem CreateMenuItem(string text, string group, EventHandler action, bool isChecked, string toolTip = null) {
