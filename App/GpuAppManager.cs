@@ -78,17 +78,26 @@ namespace OmenSuperHub {
     public static List<string> GetAllGpuNamesList() {
       var gpuNames = new List<string>();
       try {
-        using (var searcher = new ManagementObjectSearcher("SELECT Name, AdapterCompatibility FROM Win32_VideoController"))
+        // 增加查询 PNPDeviceID 字段
+        using (var searcher = new ManagementObjectSearcher("SELECT Name, AdapterCompatibility, PNPDeviceID FROM Win32_VideoController"))
         using (var collection = searcher.Get()) {
           foreach (ManagementObject obj in collection) {
             string name = obj["Name"]?.ToString() ?? "";
             string compatibility = obj["AdapterCompatibility"]?.ToString() ?? "";
-            // 跳过 Microsoft 基本显示适配器
+            string pnpDeviceId = obj["PNPDeviceID"]?.ToString() ?? "";
+
+            // 1. 过滤物理硬件特征：必须是 PCI 设备（排除 ROOT\ 等虚拟根设备）
+            if (!pnpDeviceId.StartsWith("PCI\\", StringComparison.OrdinalIgnoreCase))
+              continue;
+
+            // 2. 过滤微软基础渲染/远程桌面代理
             if (name.Contains("Microsoft") || compatibility.Contains("Microsoft"))
               continue;
-            // 跳过显示适配器
-            if (name.Contains("Display"))
+
+            // 3. 常见的虚拟显卡黑名单关键字（双重保险）
+            if (name.Contains("Idd") || name.Contains("Virtual") || name.Contains("spacedesk"))
               continue;
+
             if (!string.IsNullOrWhiteSpace(name))
               gpuNames.Add(name.Trim());
           }
@@ -96,7 +105,7 @@ namespace OmenSuperHub {
       } catch (Exception ex) {
         Logger.Error($"GetAllGpuNamesList 异常: {ex.Message}");
       }
-      return gpuNames;
+      return gpuNames.Distinct().ToList(); // 去重，防止核显独显重复上报
     }
 
     /// <summary>
