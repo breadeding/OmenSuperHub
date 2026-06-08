@@ -294,7 +294,23 @@ namespace OmenSuperHub {
         //Console.WriteLine($"IsIntelGraphics: {OmenHsaClient.IsIntelGraphics()}");
 
         Logger.Info($"version: {version}");
+        SetBrowserEmulationForWebBrowser();
         Application.Run();
+      }
+    }
+
+    private static void SetBrowserEmulationForWebBrowser() {
+      string appName = Process.GetCurrentProcess().ProcessName + ".exe";
+      using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION", true)) {
+        if (key == null) {
+          // 如果键不存在则创建
+          Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION");
+          using (var newKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION", true)) {
+            newKey?.SetValue(appName, 11001, RegistryValueKind.DWord);
+          }
+        } else {
+          key.SetValue(appName, 11001, RegistryValueKind.DWord);
+        }
       }
     }
 
