@@ -46,7 +46,7 @@ namespace OmenSuperHub {
     static LightingControlInterface lbControlInterface = LightingControlInterface.Dojo;
     static int DBVersion = 2, countDB = 0, countDBInit = 5, tryTimes = 0, CPULimitDB = 25;
     static ToolStripMenuItem DBMenu;
-    static int textSize = 48;
+    static int textSize = 40;
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
@@ -87,8 +87,8 @@ namespace OmenSuperHub {
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
-    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuClockTrackBar;
-    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuClockValueLabel;
+    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuClockTrackBar, textSizeTrackBar;
+    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuClockValueLabel, textSizeLabel;
 
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;

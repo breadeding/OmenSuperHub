@@ -982,21 +982,33 @@ namespace OmenSuperHub {
         SaveConfig("FloatingBar");
       }, false));
       floatingBarMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem(Strings.FontSize24, "floatingBarSizeGroup", (s, e) => {
-        textSize = 24;
-        UpdateFloatingText();
+      floatingBarMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.SetTextSizeSlider) { Enabled = false });
+      textSizeTrackBar = new ToolStripTrackBar();
+      textSizeTrackBar.Minimum = 6;
+      textSizeTrackBar.Maximum = 18;
+      textSizeTrackBar.Value = 10;
+      textSizeTrackBar.TickFrequency = textSizeTrackBar.Maximum - textSizeTrackBar.Minimum;
+      textSizeTrackBar.Width = 400;
+
+      textSizeLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{textSizeTrackBar.Value * 4}")) { Enabled = false };
+
+      textSizeTrackBar.ValueChanged += (sender, e) => {
+        int calculatedSize = textSizeTrackBar.Value * 4; // 实际值 24 - 72
+        textSizeLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{textSizeTrackBar.Value * 4}");
+        textSize = calculatedSize;
+
+        // 即时刷新浮窗
+        if (floatingForm != null && floatingForm.Visible) {
+          floatingForm.SetText(monitorText(), textSize, floatingBarLoc, GetFloatingScreen());
+        }
+      };
+
+      textSizeTrackBar.MouseUp += (sender, e) => {
         SaveConfig("FloatingBarSize");
-      }, false));
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem(Strings.FontSize36, "floatingBarSizeGroup", (s, e) => {
-        textSize = 36;
-        UpdateFloatingText();
-        SaveConfig("FloatingBarSize");
-      }, false));
-      floatingBarMenu.DropDownItems.Add(CreateMenuItem(Strings.FontSize48, "floatingBarSizeGroup", (s, e) => {
-        textSize = 48;
-        UpdateFloatingText();
-        SaveConfig("FloatingBarSize");
-      }, true));
+      };
+
+      floatingBarMenu.DropDownItems.Add(textSizeTrackBar);
+      floatingBarMenu.DropDownItems.Add(textSizeLabel);
       floatingBarMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       floatingBarMenu.DropDownItems.Add(CreateMenuItem(Strings.FloatingLocLeft, "floatingBarLocGroup", (s, e) => {
         floatingBarLoc = "left";

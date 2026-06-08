@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
+using Newtonsoft.Json.Linq;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 
@@ -235,7 +236,7 @@ namespace OmenSuperHub {
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
         SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
-        if (fanTrackBar != null && rpmValue / 100 >= fanTrackBar.Minimum && rpmValue / 100 <= fanTrackBar.Maximum) {
+        if (fanTrackBar != null) {
           fanTrackBar.Value = rpmValue / 100;
         }
         UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
@@ -778,7 +779,7 @@ namespace OmenSuperHub {
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
               int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
               SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
-              if (fanTrackBar != null && rpmValue / 100 >= fanTrackBar.Minimum && rpmValue / 100 <= fanTrackBar.Maximum) {
+              if (fanTrackBar != null) {
                 fanTrackBar.Value = rpmValue / 100;
               }
               UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
@@ -810,14 +811,14 @@ namespace OmenSuperHub {
                 UpdateCheckedState("tppPowerGroup", Strings.NotSet);
               } else if (tppPowerSnapshot == "max") {
                 SetConcurrentTdp(254);
-                if (tppTrackBar != null && tppTrackBar.Minimum <= 254 && 254 <= tppTrackBar.Maximum) {
+                if (tppTrackBar != null) {
                   tppTrackBar.Value = 254;
                 }
               } else if (tppPowerSnapshot.Contains(" W")) {
                 int value = int.Parse(tppPowerSnapshot.Replace(" W", "").Trim());
                 if (value >= 20 && value <= 254) {
                   SetConcurrentTdp((byte)value);
-                  if (tppTrackBar != null && tppTrackBar.Minimum <= value && value <= tppTrackBar.Maximum) {
+                  if (tppTrackBar != null) {
                     tppTrackBar.Value = value;
                   }
                   UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
@@ -870,7 +871,7 @@ namespace OmenSuperHub {
                 UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
               } else if (cpuPower == "max") {
                 SetCpuPowerLimit(254);
-                if (cpuPowerTrackBar != null && 254 >= cpuPowerTrackBar.Minimum && 254 <= cpuPowerTrackBar.Maximum) {
+                if (cpuPowerTrackBar != null) {
                   cpuPowerTrackBar.Value = 254;
                 }
                 UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
@@ -878,7 +879,7 @@ namespace OmenSuperHub {
                 int value = int.Parse(cpuPower.Replace(" W", "").Trim());
                 if (value >= 5 && value <= 254) {
                   SetCpuPowerLimit((byte)value);
-                  if (cpuPowerTrackBar != null && value >= cpuPowerTrackBar.Minimum && value <= cpuPowerTrackBar.Maximum) {
+                  if (cpuPowerTrackBar != null) {
                     cpuPowerTrackBar.Value = value;
                   }
                   UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
@@ -893,7 +894,7 @@ namespace OmenSuperHub {
 
             if (hasNVIDIAGpu) {
               if (SetGPUClockLimit(gpuClock)) {
-                if (gpuClock > 0 && gpuClockTrackBar != null && gpuClockTrackBar.Minimum <= gpuClock / 10 && gpuClock / 10 <= gpuClockTrackBar.Maximum) {
+                if (gpuClock > 0 && gpuClockTrackBar != null) {
                   gpuClockTrackBar.Value = gpuClock / 10;
                   UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
                 } else if (gpuClock == 0) {
@@ -1055,18 +1056,10 @@ namespace OmenSuperHub {
               UpdateCheckedState("tempDisplayGroup", Strings.TempSmoothed);
             }
 
-            textSize = (int)key.GetValue("FloatingBarSize", 48);
+            textSize = (int)key.GetValue("FloatingBarSize", 40);
             UpdateFloatingText();
-            switch (textSize) {
-              case 24:
-                UpdateCheckedState("floatingBarSizeGroup", Strings.FontSize24);
-                break;
-              case 36:
-                UpdateCheckedState("floatingBarSizeGroup", Strings.FontSize36);
-                break;
-              case 48:
-                UpdateCheckedState("floatingBarSizeGroup", Strings.FontSize48);
-                break;
+            if (textSizeTrackBar != null) {
+              textSizeTrackBar.Value = textSize / 4;
             }
 
             floatingBarLoc = (string)key.GetValue("FloatingBarLoc", "left");

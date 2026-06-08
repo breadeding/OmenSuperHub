@@ -288,9 +288,7 @@
     // ─────────────────────────────────────────────────────────────────────────
     // 浮窗字体大小
     // ─────────────────────────────────────────────────────────────────────────
-    public static string FontSize24 => T("24号", "24號", "Size 24 font");
-    public static string FontSize36 => T("36号", "36號", "Size 36 font");
-    public static string FontSize48 => T("48号", "48號", "Size 48 font");
+    public static string SetTextSizeSlider => T("拖动滑块设置字号", "拖動滑塊設置字號", "Drag the slider to set font size");
 
     // ─────────────────────────────────────────────────────────────────────────
     // 灯光控制 — UI 文本

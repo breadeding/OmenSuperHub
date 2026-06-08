@@ -11,7 +11,7 @@ namespace OmenSuperHub {
 
     public HelpForm() {
       TopMost = true;
-      Text = "OmenSuperHub" + " v" + Assembly.GetExecutingAssembly().GetName().Version + Strings.HelpWindowTitle;
+      Text = Strings.HelpWindowTitle;
       Icon = Properties.Resources.fan;
 
       // 窗体大小和位置（屏幕的一半，居中）
@@ -142,13 +142,14 @@ namespace OmenSuperHub {
     // 简体中文 HTML 内容（注意内部双引号已转义为两个双引号）
     private static string GetHelpHtml_ZH(Version version) {
       return $@"
-<h2>📦 更新说明</h2>
+<h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
 <li>✨ 浮窗显示功能支持多显示器，新增显示器选择菜单</li>
 <li>✨ 风扇配置菜单添加高温自动保护选项，控制是否在温度过高时取消固定转速</li>
 <li>✨ 将硬件监控设置纳入自定义预设控制范围</li>
 <p><strong>优化：</strong></p>
+<li>⚡ 将浮窗显示的字号设置改为滑块操作并扩展上限至72号</li>
 <li>⚡ 使用WebBrowser美化帮助页面</li>
 <li>⚡ 根据机型自动识别是否支持CPU功率设置</li>
 <p><strong>修复：</strong></p>
@@ -209,17 +210,23 @@ namespace OmenSuperHub {
     // 繁体中文 HTML 内容
     private static string GetHelpHtml_TW(Version version) {
       return $@"
-<h1>OmenSuperHub 說明</h1>
-<p><strong>版本號：</strong> {version}</p>
-
-<h2>📦 更新說明</h2>
-<ul>
-<li>新增：程式啟動時新增機型校驗，本機資訊新增機型支援情況；</li>
-<li>修復：修復重新連接電源時的恢復功耗操作被其它電源事件誤觸發的問題；</li>
-<li>修復：在不支援CPU功率的機型上解鎖DB時不再自動調整CPU功率。</li>
-</ul>
+<h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
+<div class='update-list'>
+<p><strong>新增：</strong></p>
+<li>✨ 浮窗顯示功能支援多顯示器，新增顯示器選擇選單</li>
+<li>✨ 風扇配置選單增加高溫自動保護選項，控制是否在溫度過高時取消固定轉速</li>
+<li>✨ 將硬體監控設定納入自訂預設控制範圍</li>
+<p><strong>優化：</strong></p>
+<li>⚡ 將浮窗顯示的字號設定改為滑桿操作並擴展上限至72號</li>
+<li>⚡ 使用WebBrowser美化幫助頁面</li>
+<li>⚡ 根據機型自動辨識是否支援CPU功率設定</li>
+<p><strong>修復：</strong></p>
+<li>🐛 切換語言後選單狀態重設為預設值的問題</li>
+<li>🐛 本機資訊中顯示卡片清單可能辨識到虛擬顯示器的問題</li>
+</div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
+
 <hr/>
 
 <h2>一. 「風扇配置」選單說明</h2>
@@ -271,17 +278,23 @@ namespace OmenSuperHub {
     // 英文 HTML 内容
     private static string GetHelpHtml_EN(Version version) {
       return $@"
-<h1>OmenSuperHub Help</h1>
-<p><strong>Version:</strong> {version}</p>
-
-<h2>📦 Changelog</h2>
-<ul>
-<li>Added: Model verification has been introduced during program startup; device information now includes details regarding model compatibility support.</li>
-<li>Fixed: Resolved an issue where the power consumption restoration operation—intended to trigger upon reconnecting the power supply—was erroneously triggered by unrelated power-related events.</li>
-<li>Fixed: When unlocking the DB on models that do not support CPU power control, the system no longer automatically attempts to adjust the CPU power settings.</li>
-</ul>
+<h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
+<div class='update-list'>
+<p><strong>New Features:</strong></p>
+<li>✨ Floating window display now supports multi-monitor setups; added a monitor selection menu</li>
+<li>✨ Added an ""Auto-protection at High Temperatures"" option to the fan configuration menu, allowing users to toggle whether fixed fan speeds are overridden when temperatures get too high</li>
+<li>✨ Included hardware monitoring settings in the custom preset controls</li>
+<p><strong>Optimizations:</strong></p>
+<li>⚡ Changed the floating window font size setting to a slider control and increased the maximum size to 72</li>
+<li>⚡ Enhanced the help page appearance using the WebBrowser component</li>
+<li>⚡ Added automatic detection of CPU power setting support based on the device model</li>
+<p><strong>Fixes:</strong></p>
+<li>🐛 Fixed an issue where menu states would reset to default values ​​after changing the language</li>
+<li>🐛 Fixed an issue where virtual displays might be detected in the graphics card list within system information</li>
+</div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
+
 <hr/>
 
 <h2>1. Fan Config menu</h2>
