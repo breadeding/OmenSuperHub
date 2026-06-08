@@ -212,12 +212,21 @@ namespace OmenSuperHub {
         fanTable = "silent";
         LoadFanConfig("silent.txt");
         SaveConfig("FanTable");
-      }, false, Strings.FanSilentTooltip));
+      }, fanTable.Contains("silent"), Strings.FanSilentTooltip));
       fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanCoolMode, "fanTableGroup", (s, e) => {
         fanTable = "cool";
         LoadFanConfig("cool.txt");
         SaveConfig("FanTable");
-      }, true, Strings.FanCoolTooltip));
+      }, fanTable.Contains("cool"), Strings.FanCoolTooltip));
+      fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanCustomMode, "fanTableGroup", (s, e) => {
+        if (ShowCustomFanCurveEditor()) {
+          fanTable = "custom";
+          LoadFanConfig("custom.txt");
+          SaveConfig("FanTable");
+        } else {
+          skipCheckedUpdate = true;
+        }
+      }, fanTable.Contains("custom"), Strings.FanCustomTooltip));
       fanConfigMenu.DropDownItems.Add(new ToolStripSeparator());
       ToolStripMenuItem respondSpeedMenu = new ToolStripMenuItem(Strings.FanResponseSpeed);
       respondSpeedMenu.DropDownItems.Add(CreateMenuItem(Strings.FanRespRealtime, "tempSensitivityGroup", (s, e) => {
@@ -1733,6 +1742,47 @@ namespace OmenSuperHub {
       if (trayIcon == null || trayIcon.ContextMenuStrip == null) return;
       BuildTrayMenu(trayIcon.ContextMenuStrip);
       RestoreConfig();
+    }
+
+    static bool ShowCustomFanCurveEditor() {
+      string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+      string silentFilePath = System.IO.Path.Combine(baseDirectory, "silent.txt");
+      string customFilePath = System.IO.Path.Combine(baseDirectory, "custom.txt");
+
+      try {
+        FanCurveProfile initialProfile;
+        if (System.IO.File.Exists(customFilePath)) {
+          initialProfile = FanCurveProfile.Load(customFilePath);
+        } else {
+          if (!System.IO.File.Exists(silentFilePath))
+            CreateDefaultFanCurveProfile(true).Save(silentFilePath);
+          initialProfile = FanCurveProfile.Load(silentFilePath);
+        }
+
+        int cpuMaximum = maxCPUTemp ?? 100;
+        int gpuMaximum = maxGPUTemp ?? 90;
+        int detectedMaximum = platformMaxFanSpeed ?? 6400;
+        int fanMaximum = Math.Max(1000, (int)(Math.Ceiling(detectedMaximum * 1.1 / 100D) * 100D));
+        using (var editor = new MainForm(
+            initialProfile,
+            cpuMaximum,
+            gpuMaximum,
+            fanMaximum,
+            customFilePath)) {
+          return editor.ShowDialog() == DialogResult.OK;
+        }
+      } catch (Exception ex) when (
+          ex is System.IO.IOException ||
+          ex is UnauthorizedAccessException ||
+          ex is System.IO.InvalidDataException) {
+        MessageBox.Show(
+            Application.OpenForms.OfType<HelpForm>().FirstOrDefault(),
+            Strings.FanCurveLoadFailed + Environment.NewLine + ex.Message,
+            Strings.Error,
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Error);
+        return false;
+      }
     }
 
     static ToolStripMenuItem CreateMenuItem(string text, string group, EventHandler action, bool isChecked, string toolTip = null) {

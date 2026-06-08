@@ -324,8 +324,7 @@ namespace OmenSuperHub {
         platformMaxFanSpeed = maxFanSpeed.Value * 100;
     }
 
-    static void LoadDefaultFanConfig(string filePath) {
-      // ── 1. 获取 CPU 与 GPU 的允许最高温度差 ─────────────────────
+    static FanCurveProfile CreateDefaultFanCurveProfile(bool isSilent) {
       int? tempDelta = null;
       int maxGPUT = 87;
       if (maxGPUTemp.HasValue) {
@@ -335,15 +334,12 @@ namespace OmenSuperHub {
         tempDelta = maxCPUTemp.Value - maxGPUT;
       }
 
-      // ── 2. 若两个值均获取成功，则生成 silent / cool 转速表 ──────────────
       if (platformMaxFanSpeed.HasValue && maxCPUTemp.HasValue && tempDelta.HasValue) {
         int maxRpm = platformMaxFanSpeed.Value;
         int maxCpu = maxCPUTemp.Value;
         int delta = tempDelta.Value;
 
         List<int> cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList;
-
-        bool isSilent = filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0;
 
         if (isSilent) {
           // silent: cpu30/gpu20 → 0RPM, 60℃ → maxRpm/3, 87℃ → maxRpm*2/3, maxTemp → maxRpm
@@ -359,21 +355,57 @@ namespace OmenSuperHub {
           gpuSpeedList = new List<int> { maxRpm / 4, maxRpm, maxRpm + maxRpm / 10 };
         }
 
-        // 写入文件
-        var lines = new List<string> {
-      "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
-      "Fan_Table_CPU_Fan_Speed_List="   + string.Join(",", cpuSpeedList),
-      "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
-      "Fan_Table_GPU_Fan_Speed_List="   + string.Join(",", gpuSpeedList)
-    };
-        File.WriteAllLines(filePath, lines);
-
-        LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
-        return;
+        return new FanCurveProfile(
+            NormalizeDefaultFanCurve(cpuTempList, cpuSpeedList, maxCpu),
+            NormalizeDefaultFanCurve(gpuTempList, gpuSpeedList, maxGPUT));
       }
 
-      // ── 3. 兜底：无法提取参数时使用硬编码默认值 ─────────────────────────
-      GenerateDefaultMapping(filePath);
+      int fallbackCpuMaximum = maxCPUTemp ?? 100;
+      int fallbackGpuMaximum = maxGPUTemp ?? 90;
+      return new FanCurveProfile(
+          NormalizeDefaultFanCurve(
+              new List<int> { 50, 60, 85, 100 },
+              new List<int> { 1600, 2000, 4000, 5600 },
+              fallbackCpuMaximum),
+          NormalizeDefaultFanCurve(
+              new List<int> { 40, 50, 75, 90 },
+              new List<int> { 1600, 2000, 4000, 5600 },
+              fallbackGpuMaximum));
+    }
+
+    static IEnumerable<FanCurvePoint> NormalizeDefaultFanCurve(
+        IList<int> temperatures,
+        IList<int> fanSpeeds,
+        int temperatureMaximum) {
+      var points = temperatures
+          .Select((temperature, index) => new FanCurvePoint(
+              Math.Max(0, Math.Min(temperatureMaximum, temperature)),
+              Math.Max(0, fanSpeeds[index])))
+          .GroupBy(point => point.Temperature)
+          .Select(group => group.Last())
+          .OrderBy(point => point.Temperature)
+          .ToList();
+
+      if (points.Count < 2) {
+        int finalFanSpeed = fanSpeeds.Count > 0 ? Math.Max(0, fanSpeeds[fanSpeeds.Count - 1]) : 5600;
+        points.Clear();
+        points.Add(new FanCurvePoint(0, 0));
+        points.Add(new FanCurvePoint(Math.Max(1, temperatureMaximum), finalFanSpeed));
+      }
+      return points;
+    }
+
+    static void LoadDefaultFanConfig(string filePath) {
+      bool useSilentDefaults =
+          filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0 ||
+          filePath.IndexOf("custom", StringComparison.OrdinalIgnoreCase) >= 0;
+      FanCurveProfile profile = CreateDefaultFanCurveProfile(useSilentDefaults);
+      profile.Save(filePath);
+      LoadFanConfigFromLists(
+          profile.CpuPoints.Select(point => point.Temperature).ToList(),
+          profile.CpuPoints.Select(point => point.FanSpeed).ToList(),
+          profile.GpuPoints.Select(point => point.Temperature).ToList(),
+          profile.GpuPoints.Select(point => point.FanSpeed).ToList());
     }
 
     static void LoadFanConfig(string filePath) {
@@ -481,26 +513,6 @@ namespace OmenSuperHub {
 
         LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
       }
-    }
-
-    // Generate default temperature-fan speed mapping
-    static void GenerateDefaultMapping(string filePath) {
-      // 硬编码默认映射（与原逻辑一致，转换为新格式）
-      var cpuTempList = new List<int> { 50, 60, 85, 100 };
-      var cpuSpeedList = new List<int> { 1600, 2000, 4000, 5600 };   // RPM
-      var gpuTempList = new List<int> { 40, 50, 75, 90 };
-      var gpuSpeedList = new List<int> { 1600, 2000, 4000, 5600 };
-
-      var lines = new List<string>
-      {
-        "Fan_Table_CPU_Temperature_List=" + string.Join(",", cpuTempList),
-        "Fan_Table_CPU_Fan_Speed_List=" + string.Join(",", cpuSpeedList),
-        "Fan_Table_GPU_Temperature_List=" + string.Join(",", gpuTempList),
-        "Fan_Table_GPU_Fan_Speed_List=" + string.Join(",", gpuSpeedList)
-    };
-      File.WriteAllLines(filePath, lines);
-
-      LoadFanConfigFromLists(cpuTempList, cpuSpeedList, gpuTempList, gpuSpeedList);
     }
 
     static void LoadFanConfigFromLists(List<int> cpuTempList, List<int> cpuSpeedList,
@@ -812,6 +824,9 @@ namespace OmenSuperHub {
             } else if (fanTable.Contains("silent")) {
               LoadFanConfig("silent.txt");
               UpdateCheckedState("fanTableGroup", Strings.FanSilentMode);
+            } else if (fanTable.Contains("custom")) {
+              LoadFanConfig("custom.txt");
+              UpdateCheckedState("fanTableGroup", Strings.FanCustomMode);
             }
 
             if (fanControl == "auto") {

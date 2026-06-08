@@ -1,273 +1,368 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
 namespace OmenSuperHub {
-  public partial class MainForm : Form {
-    private static MainForm _instance;
-    private Chart cpuChart, gpuChart;
-    private CheckBox advancedControlCheckBox;
-    private ComboBox profileComboBox;
-    private Button createProfileButton, deleteProfileButton;
-    private PointF? nearestPoint = null;
-    private bool dragging = false;
-    private DataPoint selectedPoint = null;
+  public sealed class MainForm : Form {
+    private const string SeriesName = "FanSpeed";
+    private const int PointHitRadius = 10;
 
-    public MainForm() {
-      Text = "敬请期待";
+    private readonly Chart cpuChart;
+    private readonly Chart gpuChart;
+    private readonly int cpuTemperatureMaximum;
+    private readonly int gpuTemperatureMaximum;
+    private readonly int fanSpeedMaximum;
+    private readonly string customFilePath;
+    private readonly ToolTip pointToolTip = new ToolTip();
 
-      // 获取屏幕的大小
-      Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
+    private Chart draggingChart;
+    private DataPoint draggingPoint;
 
-      // 计算窗体的大小为屏幕大小的一半
-      Size formSize = new Size(screenBounds.Width / 2, screenBounds.Height / 2);
+    internal MainForm(
+        FanCurveProfile initialProfile,
+        int cpuTemperatureMaximum,
+        int gpuTemperatureMaximum,
+        int fanSpeedMaximum,
+        string customFilePath) {
+      this.cpuTemperatureMaximum = Math.Max(1, cpuTemperatureMaximum);
+      this.gpuTemperatureMaximum = Math.Max(1, gpuTemperatureMaximum);
+      this.fanSpeedMaximum = Math.Max(100, fanSpeedMaximum);
+      this.customFilePath = customFilePath;
 
-      // 设置窗体的大小
-      this.Size = formSize;
-
-      // 计算窗体的位置使其位于屏幕的中央
-      Point formLocation = new Point(
-          (screenBounds.Width - formSize.Width) / 2,
-          (screenBounds.Height - formSize.Height) / 2);
-
-      // 设置窗体的位置
-      this.StartPosition = FormStartPosition.Manual;
-      this.Location = formLocation;
-
+      Text = Strings.FanCurveEditorTitle;
       Icon = Properties.Resources.fan;
+      StartPosition = FormStartPosition.CenterScreen;
+      FormBorderStyle = FormBorderStyle.Sizable;
+      MinimumSize = new Size(980, 560);
+      Size = new Size(1180, 650);
+      MaximizeBox = true;
+      MinimizeBox = false;
 
-      InitializeFanConfigUI();
+      var rootLayout = new TableLayoutPanel {
+        Dock = DockStyle.Fill,
+        ColumnCount = 3,
+        RowCount = 2,
+        Padding = new Padding(12)
+      };
+      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126F));
+      rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
+      rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+      var instructions = new Label {
+        AutoSize = false,
+        Dock = DockStyle.Fill,
+        Text = Strings.FanCurveInstructions,
+        TextAlign = ContentAlignment.MiddleLeft,
+        Padding = new Padding(6, 0, 6, 0)
+      };
+      rootLayout.Controls.Add(instructions, 0, 0);
+      rootLayout.SetColumnSpan(instructions, 2);
+
+      cpuChart = CreateChart(Strings.FanCurveCpuTitle, this.cpuTemperatureMaximum);
+      gpuChart = CreateChart(Strings.FanCurveGpuTitle, this.gpuTemperatureMaximum);
+      rootLayout.Controls.Add(cpuChart, 0, 1);
+      rootLayout.Controls.Add(gpuChart, 1, 1);
+
+      var buttonLayout = new FlowLayoutPanel {
+        Dock = DockStyle.Fill,
+        FlowDirection = FlowDirection.TopDown,
+        WrapContents = false,
+        Padding = new Padding(10, 8, 0, 0)
+      };
+      Button saveButton = CreateButton(Strings.FanCurveSave);
+      Button cancelButton = CreateButton(Strings.FanCurveCancel);
+      Button loadButton = CreateButton(Strings.FanCurveLoad);
+      saveButton.Click += SaveButton_Click;
+      cancelButton.Click += (sender, args) => {
+        DialogResult = DialogResult.Cancel;
+        Close();
+      };
+      loadButton.Click += LoadButton_Click;
+      buttonLayout.Controls.Add(saveButton);
+      buttonLayout.Controls.Add(cancelButton);
+      buttonLayout.Controls.Add(loadButton);
+      rootLayout.Controls.Add(buttonLayout, 2, 0);
+      rootLayout.SetRowSpan(buttonLayout, 2);
+
+      Controls.Add(rootLayout);
+      AcceptButton = saveButton;
+      CancelButton = cancelButton;
+
+      ApplyProfile(initialProfile);
     }
 
-    private void InitializeFanConfigUI() {
-      // CPU Chart
-      cpuChart = new Chart { Dock = DockStyle.Top };
-      ConfigureChart(cpuChart, "CPU Fan Speed vs Temperature");
-      this.Controls.Add(cpuChart);
-
-      // GPU Chart
-      gpuChart = new Chart { Dock = DockStyle.Top };
-      ConfigureChart(gpuChart, "GPU Fan Speed vs Temperature");
-      this.Controls.Add(gpuChart);
-
-      // Advanced Control CheckBox
-      advancedControlCheckBox = new CheckBox {
-        Text = "Enable Advanced Control",
-        Dock = DockStyle.Top,
-        Height = 30,
+    private Chart CreateChart(string title, int temperatureMaximum) {
+      var chart = new Chart {
+        Dock = DockStyle.Fill,
+        BackColor = SystemColors.Control,
+        Margin = new Padding(4, 4, 8, 4),
+        Cursor = Cursors.Cross
       };
-      advancedControlCheckBox.CheckedChanged += AdvancedControlCheckBox_CheckedChanged;
-      this.Controls.Add(advancedControlCheckBox);
-
-      // Profile Management
-      profileComboBox = new ComboBox { Dock = DockStyle.Top, Height = 30 };
-      createProfileButton = new Button { Text = "Create New Profile", Dock = DockStyle.Top, Height = 30 };
-      deleteProfileButton = new Button { Text = "Delete Profile", Dock = DockStyle.Top, Height = 30 };
-
-      this.Controls.Add(profileComboBox);
-      this.Controls.Add(createProfileButton);
-      this.Controls.Add(deleteProfileButton);
-
-      // Set up event handlers for profile management
-      createProfileButton.Click += CreateProfileButton_Click;
-      deleteProfileButton.Click += DeleteProfileButton_Click;
-    }
-
-    private void ConfigureChart(Chart chart, string title) {
-      chart.Titles.Add(title);
-      var chartArea = new ChartArea("FanSpeedArea") {
-        AxisX = { Minimum = 0, Maximum = 100, Title = "Temperature (°C)" },
-        AxisY = { Minimum = 0, Maximum = 7000, Title = "Fan Speed (RPM)" }
-      };
-      chart.ChartAreas.Add(chartArea);
-      chart.Series.Add(new Series("FanSpeed") {
-        ChartType = SeriesChartType.Line,
-        BorderWidth = 4,
-        MarkerStyle = MarkerStyle.Circle, // 设置转折点样式
-        MarkerSize = 8, // 设置转折点大小
-        MarkerColor = System.Drawing.Color.Red, // 设置转折点颜色
+      chart.Titles.Add(new Title(title) {
+        Font = new Font(Font.FontFamily, 11F, FontStyle.Bold)
       });
 
-      // Add some default points
-      chart.Series["FanSpeed"].Points.AddXY(50, 1600);
-      chart.Series["FanSpeed"].Points.AddXY(60, 2000);
-      chart.Series["FanSpeed"].Points.AddXY(85, 4000);
-      chart.Series["FanSpeed"].Points.AddXY(100, 6100);
+      var chartArea = new ChartArea("FanSpeedArea");
+      chartArea.BackColor = Color.White;
+      chartArea.AxisX.Minimum = 0;
+      chartArea.AxisX.Maximum = temperatureMaximum;
+      chartArea.AxisX.Interval = 10;
+      chartArea.AxisX.Title = Strings.FanCurveTemperatureAxis;
+      chartArea.AxisX.MajorGrid.LineColor = Color.Gainsboro;
+      chartArea.AxisY.Minimum = 0;
+      chartArea.AxisY.Maximum = fanSpeedMaximum;
+      chartArea.AxisY.Interval = GetFanSpeedInterval(fanSpeedMaximum);
+      chartArea.AxisY.Title = Strings.FanCurveFanSpeedAxis;
+      chartArea.AxisY.LabelStyle.Format = "0";
+      chartArea.AxisY.MajorGrid.LineColor = Color.Gainsboro;
+      chart.ChartAreas.Add(chartArea);
 
-      chart.ChartAreas[0].AxisX.Title = "Temperature (°C)";
-      chart.ChartAreas[0].AxisY.Title = "Fan Speed (RPM)";
+      chart.Series.Add(new Series(SeriesName) {
+        ChartType = SeriesChartType.Line,
+        BorderWidth = 3,
+        Color = Color.FromArgb(0, 122, 204),
+        MarkerStyle = MarkerStyle.Circle,
+        MarkerSize = 9,
+        MarkerColor = Color.FromArgb(220, 53, 69),
+        MarkerBorderColor = Color.White,
+        MarkerBorderWidth = 1,
+        ToolTip = "#VALX°C, #VALY RPM"
+      });
 
-      // Attach event handlers for mouse interactions
-      chart.MouseMove += Chart_MouseMove;
       chart.MouseDown += Chart_MouseDown;
+      chart.MouseMove += Chart_MouseMove;
       chart.MouseUp += Chart_MouseUp;
+      chart.MouseLeave += (sender, args) => pointToolTip.Hide(chart);
+      return chart;
     }
 
-    private void Chart_MouseMove(object sender, MouseEventArgs e) {
-      if (dragging) {
-        Chart_MouseMove_Drag(sender, e);
-      } else {
-        Chart chart = sender as Chart;
-        if (chart == null) return;
-
-        var chartArea = chart.ChartAreas[0];
-        double xValue = chartArea.AxisX.PixelPositionToValue(e.X);
-        double yValue = chartArea.AxisY.PixelPositionToValue(e.Y);
-
-        // 查找最近的点或线段上的点
-        nearestPoint = FindNearestPointOrLine(chart, xValue, yValue);
-
-        // 如果找到最近点，显示其坐标
-        if (nearestPoint != null) {
-          // 在鼠标附近显示坐标
-          ToolTip tt = new ToolTip();
-          tt.Show($"({nearestPoint.Value.X} °C, {nearestPoint.Value.Y} RPM)", chart, e.Location.X + 15, e.Location.Y - 15, 1000);
-        }
-
-        chart.Invalidate();
-      }
+    private static Button CreateButton(string text) {
+      return new Button {
+        Text = text,
+        Width = 104,
+        Height = 38,
+        Margin = new Padding(0, 0, 0, 10)
+      };
     }
 
-    private PointF? FindNearestPointOrLine(Chart chart, double xValue, double yValue) {
-      Series series = chart.Series["FanSpeed"];
-      PointF? nearest = null;
-      double minDist = double.MaxValue;
-
-      for (int i = 0; i < series.Points.Count - 1; i++) {
-        var p1 = series.Points[i];
-        var p2 = series.Points[i + 1];
-
-        // 计算鼠标到线段的最短距离
-        var (dist, projX, projY) = GetDistanceToSegment(
-            new PointF((float)p1.XValue, (float)p1.YValues[0]),
-            new PointF((float)p2.XValue, (float)p2.YValues[0]),
-            new PointF((float)xValue, (float)yValue)
-        );
-
-        if (dist < minDist) {
-          minDist = dist;
-          nearest = new PointF(projX, projY);
-        }
-      }
-
-      // 如果最近点不是已有的点，则新增这个点
-      if (nearest.HasValue && !series.Points.Any(p => p.XValue == nearest.Value.X && p.YValues[0] == nearest.Value.Y)) {
-        // 添加新点
-        series.Points.AddXY(nearest.Value.X, nearest.Value.Y);
-
-        // 将 DataPoints 转换为 List，然后排序
-        var sortedPoints = series.Points.OrderBy(p => p.XValue).ToList();
-
-        // 清除旧点并添加排序后的新点
-        series.Points.Clear();
-        foreach (var point in sortedPoints) {
-          series.Points.Add(point);
-        }
-      }
-
-      return nearest;
+    private static int GetFanSpeedInterval(int maximum) {
+      if (maximum <= 3000) return 500;
+      if (maximum <= 7000) return 1000;
+      return 2000;
     }
 
+    private void ApplyProfile(FanCurveProfile profile) {
+      ValidateProfileForMachine(profile);
+      SetSeriesPoints(cpuChart, profile.CpuPoints);
+      SetSeriesPoints(gpuChart, profile.GpuPoints);
+    }
 
-    private (double dist, float projX, float projY) GetDistanceToSegment(PointF p1, PointF p2, PointF p) {
-      float dx = p2.X - p1.X;
-      float dy = p2.Y - p1.Y;
-
-      if ((dx == 0) && (dy == 0)) {
-        dx = p.X - p1.X;
-        dy = p.Y - p1.Y;
-        return (Math.Sqrt(dx * dx + dy * dy), p1.X, p1.Y);
-      }
-
-      float t = ((p.X - p1.X) * dx + (p.Y - p1.Y) * dy) / (dx * dx + dy * dy);
-
-      if (t < 0) {
-        dx = p.X - p1.X;
-        dy = p.Y - p1.Y;
-        return (Math.Sqrt(dx * dx + dy * dy), p1.X, p1.Y);
-      } else if (t > 1) {
-        dx = p.X - p2.X;
-        dy = p.Y - p2.Y;
-        return (Math.Sqrt(dx * dx + dy * dy), p2.X, p2.Y);
-      } else {
-        var projX = p1.X + t * dx;
-        var projY = p1.Y + t * dy;
-        dx = p.X - projX;
-        dy = p.Y - projY;
-        return (Math.Sqrt(dx * dx + dy * dy), projX, projY);
-      }
+    private static void SetSeriesPoints(Chart chart, IEnumerable<FanCurvePoint> points) {
+      Series series = chart.Series[SeriesName];
+      series.Points.Clear();
+      foreach (FanCurvePoint point in points.OrderBy(point => point.Temperature))
+        series.Points.AddXY(point.Temperature, point.FanSpeed);
+      chart.Invalidate();
     }
 
     private void Chart_MouseDown(object sender, MouseEventArgs e) {
-      if (nearestPoint != null) {
-        dragging = true;
+      var chart = sender as Chart;
+      if (chart == null) return;
+
+      DataPoint point = FindPoint(chart, e.Location);
+      if (e.Button == MouseButtons.Right) {
+        if (point != null && chart.Series[SeriesName].Points.Count > 2) {
+          chart.Series[SeriesName].Points.Remove(point);
+          chart.Invalidate();
+        }
+        return;
       }
+
+      if (e.Button != MouseButtons.Left) return;
+      if (point != null) {
+        draggingChart = chart;
+        draggingPoint = point;
+        chart.Cursor = Cursors.SizeAll;
+        return;
+      }
+
+      double temperature;
+      double fanSpeed;
+      if (!TryGetChartValues(chart, e.Location, out temperature, out fanSpeed)) return;
+
+      int roundedTemperature = Clamp((int)Math.Round(temperature), 0, GetTemperatureMaximum(chart));
+      int roundedFanSpeed = Clamp(RoundFanSpeed(fanSpeed), 0, fanSpeedMaximum);
+      DataPoint existingPoint = chart.Series[SeriesName].Points
+          .FirstOrDefault(candidate => (int)Math.Round(candidate.XValue) == roundedTemperature);
+      if (existingPoint != null) {
+        draggingChart = chart;
+        draggingPoint = existingPoint;
+        return;
+      }
+
+      var points = GetPoints(chart);
+      points.Add(new FanCurvePoint(roundedTemperature, roundedFanSpeed));
+      SetSeriesPoints(chart, points);
+    }
+
+    private void Chart_MouseMove(object sender, MouseEventArgs e) {
+      var chart = sender as Chart;
+      if (chart == null) return;
+
+      if (draggingChart == chart && draggingPoint != null) {
+        DragPoint(chart, e.Location);
+        return;
+      }
+
+      DataPoint point = FindPoint(chart, e.Location);
+      if (point == null) {
+        pointToolTip.Hide(chart);
+        chart.Cursor = Cursors.Cross;
+        return;
+      }
+
+      chart.Cursor = Cursors.Hand;
+      pointToolTip.Show(
+          string.Format("{0}°C, {1} RPM", (int)Math.Round(point.XValue), (int)Math.Round(point.YValues[0])),
+          chart,
+          e.X + 14,
+          e.Y - 28,
+          500);
     }
 
     private void Chart_MouseUp(object sender, MouseEventArgs e) {
-      dragging = false;
-      selectedPoint = null;
+      var chart = sender as Chart;
+      if (chart != null) chart.Cursor = Cursors.Cross;
+      draggingChart = null;
+      draggingPoint = null;
     }
 
-    private void Chart_MouseMove_Drag(object sender, MouseEventArgs e) {
-      if (dragging && selectedPoint != null) {
-        Chart chart = sender as Chart;
-        var chartArea = chart.ChartAreas[0];
-        double newXValue = chartArea.AxisX.PixelPositionToValue(e.X);
-        double newYValue = chartArea.AxisY.PixelPositionToValue(e.Y);
+    private void DragPoint(Chart chart, Point location) {
+      double temperature;
+      double fanSpeed;
+      if (!TryGetChartValues(chart, location, out temperature, out fanSpeed)) return;
 
-        // 限制坐标范围
-        newXValue = Math.Max(0, Math.Min(100, newXValue));
-        newYValue = Math.Max(0, Math.Min(7000, newYValue));
+      List<DataPoint> orderedPoints = chart.Series[SeriesName].Points
+          .OrderBy(point => point.XValue)
+          .ToList();
+      int pointIndex = orderedPoints.IndexOf(draggingPoint);
+      if (pointIndex < 0) return;
 
-        // 更新点的位置并重绘图表
-        selectedPoint.XValue = Math.Floor(newXValue); // 横坐标取整
-        selectedPoint.YValues[0] = Math.Floor(newYValue / 100) * 100; // 纵坐标按100取整
-        chart.Invalidate();
+      int minimumTemperature = pointIndex == 0
+          ? 0
+          : (int)Math.Round(orderedPoints[pointIndex - 1].XValue) + 1;
+      int maximumTemperature = pointIndex == orderedPoints.Count - 1
+          ? GetTemperatureMaximum(chart)
+          : (int)Math.Round(orderedPoints[pointIndex + 1].XValue) - 1;
+
+      draggingPoint.XValue = Clamp((int)Math.Round(temperature), minimumTemperature, maximumTemperature);
+      draggingPoint.YValues[0] = Clamp(RoundFanSpeed(fanSpeed), 0, fanSpeedMaximum);
+      chart.Invalidate();
+    }
+
+    private DataPoint FindPoint(Chart chart, Point mouseLocation) {
+      foreach (DataPoint point in chart.Series[SeriesName].Points) {
+        double pointX = chart.ChartAreas[0].AxisX.ValueToPixelPosition(point.XValue);
+        double pointY = chart.ChartAreas[0].AxisY.ValueToPixelPosition(point.YValues[0]);
+        double distance = Math.Sqrt(
+            Math.Pow(pointX - mouseLocation.X, 2) +
+            Math.Pow(pointY - mouseLocation.Y, 2));
+        if (distance <= PointHitRadius)
+          return point;
+      }
+      return null;
+    }
+
+    private static bool TryGetChartValues(Chart chart, Point location, out double xValue, out double yValue) {
+      xValue = 0;
+      yValue = 0;
+      try {
+        ChartArea area = chart.ChartAreas[0];
+        xValue = area.AxisX.PixelPositionToValue(location.X);
+        yValue = area.AxisY.PixelPositionToValue(location.Y);
+        return xValue >= area.AxisX.Minimum && xValue <= area.AxisX.Maximum &&
+               yValue >= area.AxisY.Minimum && yValue <= area.AxisY.Maximum;
+      } catch (ArgumentException) {
+        return false;
       }
     }
 
-    private void AdvancedControlCheckBox_CheckedChanged(object sender, EventArgs e) {
-      if (advancedControlCheckBox.Checked) {
-        // Enable advanced control: show four charts
-        ShowAdvancedCharts();
-      } else {
-        // Disable advanced control: show two charts
-        HideAdvancedCharts();
-      }
-    }
+    private void LoadButton_Click(object sender, EventArgs e) {
+      using (var dialog = new OpenFileDialog {
+        Filter = Strings.FanCurveFileFilter,
+        InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
+        CheckFileExists = true,
+        Multiselect = false
+      }) {
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
-    private void ShowAdvancedCharts() {
-      // Add additional charts for advanced control
-      // Implement additional chart initialization for Fan 1 and Fan 2 if advanced control is enabled
-    }
-
-    private void HideAdvancedCharts() {
-      // Remove additional charts for basic control
-      // Implement hiding logic for extra charts
-    }
-
-    private void CreateProfileButton_Click(object sender, EventArgs e) {
-      // Implement logic to create a new profile
-    }
-
-    private void DeleteProfileButton_Click(object sender, EventArgs e) {
-      // Implement logic to delete the selected profile
-    }
-
-    public static MainForm Instance {
-      get {
-        if (_instance == null || _instance.IsDisposed) {
-          _instance = new MainForm();
+        try {
+          ApplyProfile(FanCurveProfile.Load(dialog.FileName));
+        } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException) {
+          MessageBox.Show(this, Strings.FanCurveLoadFailed + Environment.NewLine + ex.Message, Strings.Error,
+              MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
-        return _instance;
       }
     }
 
-    private void MainForm_FormClosed(object sender, FormClosedEventArgs e) {
-      _instance = null;
+    private void SaveButton_Click(object sender, EventArgs e) {
+      try {
+        FanCurveProfile profile = GetProfile();
+        ValidateProfileForMachine(profile);
+        profile.Save(customFilePath);
+        DialogResult = DialogResult.OK;
+        Close();
+      } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException) {
+        MessageBox.Show(this, Strings.FanCurveSaveFailed + Environment.NewLine + ex.Message, Strings.Error,
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
+    }
+
+    private FanCurveProfile GetProfile() {
+      return new FanCurveProfile(GetPoints(cpuChart), GetPoints(gpuChart));
+    }
+
+    private static List<FanCurvePoint> GetPoints(Chart chart) {
+      return chart.Series[SeriesName].Points
+          .Select(point => new FanCurvePoint(
+              (int)Math.Round(point.XValue),
+              (int)Math.Round(point.YValues[0])))
+          .OrderBy(point => point.Temperature)
+          .ToList();
+    }
+
+    private void ValidateProfileForMachine(FanCurveProfile profile) {
+      ValidatePointsForMachine(profile.CpuPoints, cpuTemperatureMaximum);
+      ValidatePointsForMachine(profile.GpuPoints, gpuTemperatureMaximum);
+    }
+
+    private void ValidatePointsForMachine(IList<FanCurvePoint> points, int temperatureMaximum) {
+      if (points.Count < 2 ||
+          points.Any(point =>
+              point.Temperature < 0 ||
+              point.Temperature > temperatureMaximum ||
+              point.FanSpeed < 0 ||
+              point.FanSpeed > fanSpeedMaximum) ||
+          points.GroupBy(point => point.Temperature).Any(group => group.Count() > 1))
+        throw new InvalidDataException(Strings.FanCurveOutOfRange);
+    }
+
+    private int GetTemperatureMaximum(Chart chart) {
+      return chart == cpuChart ? cpuTemperatureMaximum : gpuTemperatureMaximum;
+    }
+
+    private static int RoundFanSpeed(double fanSpeed) {
+      return (int)(Math.Round(fanSpeed / 100D) * 100D);
+    }
+
+    private static int Clamp(int value, int minimum, int maximum) {
+      return Math.Max(minimum, Math.Min(maximum, value));
     }
   }
 }
