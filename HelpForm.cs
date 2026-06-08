@@ -151,7 +151,6 @@ namespace OmenSuperHub {
 <p><strong>优化：</strong></p>
 <li>⚡ 将浮窗显示的字号设置改为滑块操作并扩展上限至72号</li>
 <li>⚡ 使用WebBrowser美化帮助页面</li>
-<li>⚡ 根据机型自动识别是否支持CPU功率设置</li>
 <p><strong>修复：</strong></p>
 <li>🐛 切换语言后菜单状态重置为默认值的问题</li>
 <li>🐛 本机信息中显卡列表可能识别到虚拟显示器的问题</li>
@@ -219,7 +218,6 @@ namespace OmenSuperHub {
 <p><strong>優化：</strong></p>
 <li>⚡ 將浮窗顯示的字號設定改為滑桿操作並擴展上限至72號</li>
 <li>⚡ 使用WebBrowser美化幫助頁面</li>
-<li>⚡ 根據機型自動辨識是否支援CPU功率設定</li>
 <p><strong>修復：</strong></p>
 <li>🐛 切換語言後選單狀態重設為預設值的問題</li>
 <li>🐛 本機資訊中顯示卡片清單可能辨識到虛擬顯示器的問題</li>
@@ -287,7 +285,6 @@ namespace OmenSuperHub {
 <p><strong>Optimizations:</strong></p>
 <li>⚡ Changed the floating window font size setting to a slider control and increased the maximum size to 72</li>
 <li>⚡ Enhanced the help page appearance using the WebBrowser component</li>
-<li>⚡ Added automatic detection of CPU power setting support based on the device model</li>
 <p><strong>Fixes:</strong></p>
 <li>🐛 Fixed an issue where menu states would reset to default values ​​after changing the language</li>
 <li>🐛 Fixed an issue where virtual displays might be detected in the graphics card list within system information</li>

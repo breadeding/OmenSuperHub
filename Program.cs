@@ -174,11 +174,12 @@ namespace OmenSuperHub {
         kbType = GetKeyboardType();
         systemSSID = DeviceModel.ThisSystemID; // DeviceModel.OmenPlatform.Name
         deviceType = DeviceModel.DeviceType;
-        isCPUPowerControlSupported = IsPowerControlSupported(deviceType);
+        //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
         string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
         platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
         if (platformSettings != null) {
           currentPreset = "PresetExtreme";
+          isCPUPowerControlSupported = true;
         }
         if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
           supportAni = true;
