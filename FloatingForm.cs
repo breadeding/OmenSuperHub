@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -8,7 +7,7 @@ namespace OmenSuperHub {
   public partial class FloatingForm : Form {
     private PictureBox displayPictureBox;
 
-    public FloatingForm(string text, int textSize, string loc) {
+    public FloatingForm(string text, int textSize, string loc, Screen screen = null) {
       this.FormBorderStyle = FormBorderStyle.None;
       this.TopMost = true;
       this.ShowInTaskbar = false;
@@ -21,9 +20,9 @@ namespace OmenSuperHub {
       ApplySupersampling(text, textSize);
 
       if (loc == "left") {
-        SetPositionTopLeft();
+        SetPositionTopLeft(screen);
       } else {
-        SetPositionTopRight(textSize);
+        SetPositionTopRight(textSize, screen);
       }
 
       this.Controls.Add(displayPictureBox);
@@ -92,18 +91,18 @@ namespace OmenSuperHub {
       }
     }
 
-    public void SetText(string text, int textSize, string loc) {
+    public void SetText(string text, int textSize, string loc, Screen screen = null) {
       if (InvokeRequired) {
-        BeginInvoke(new Action(() => SetText(text, textSize, loc)));
+        BeginInvoke(new Action(() => SetText(text, textSize, loc, screen)));
         return;
       }
       if (textSize <= 0) return;
       ApplySupersampling(text, textSize);
       AdjustFormSize();
       if (loc == "left") {
-        SetPositionTopLeft();
+        SetPositionTopLeft(screen);
       } else {
-        SetPositionTopRight(textSize);
+        SetPositionTopRight(textSize, screen);
       }
     }
 
@@ -129,13 +128,17 @@ namespace OmenSuperHub {
       }
     }
 
-    public void SetPositionTopLeft() {
-      this.Location = new Point(10, 10);
+    public void SetPositionTopLeft(Screen screen = null) {
+      var wa = (screen ?? Screen.PrimaryScreen).WorkingArea;
+      this.Location = new Point(wa.Left + 10, wa.Top + 10);
     }
 
-    public void SetPositionTopRight(int textSize) {
-      var screenWidth = Screen.PrimaryScreen.WorkingArea.Width;
-      this.Location = new Point((int)(screenWidth - textSize * screenWidth / 256 + 10), 10);
+    public void SetPositionTopRight(int textSize, Screen screen = null) {
+      var wa = (screen ?? Screen.PrimaryScreen).WorkingArea;
+      this.Location = new Point(
+        wa.Left + (int)(wa.Width - textSize * wa.Width / 256 + 10),
+        wa.Top + 10
+      );
     }
 
     private void RenderLayered(Bitmap bitmap) {

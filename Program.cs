@@ -50,7 +50,7 @@ namespace OmenSuperHub {
     static int countRestore = 0, gpuClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
-    static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", omenKey = "default", dataLocalize = "off", appLanguage = "zh-CN";
+    static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", floatingBarScreen = "", omenKey = "default", dataLocalize = "off", appLanguage = "zh-CN", autoFanProtect = "on";
     static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
@@ -1086,7 +1086,7 @@ namespace OmenSuperHub {
         GPUTemp = (tempDisplayMode == "raw") ? rawTempGPU : smoothedGPUTemp;
 
       int currentMaxCPUTemp = maxCPUTemp ?? 97;
-      if (platformMaxFanSpeed.HasValue && (monitorCPU || monitorGPU) && smoothedCPUTemp > currentMaxCPUTemp - 2 && fanControl.Contains(" RPM")) {
+      if (autoFanProtect == "on" && platformMaxFanSpeed.HasValue && (monitorCPU || monitorGPU) && smoothedCPUTemp > currentMaxCPUTemp - 2 && fanControl.Contains(" RPM")) {
         // 检查是否满足转速低于平台最大转速80%的条件
         bool fanSpeedCondition = true;
         if (platformMaxFanSpeed.Value > 0) {
@@ -1255,12 +1255,22 @@ namespace OmenSuperHub {
       }, token);
     }
 
+    // 根据 floatingBarScreen 获取目标显示器，找不到时回退主屏幕
+    static Screen GetFloatingScreen() {
+      if (!string.IsNullOrEmpty(floatingBarScreen)) {
+        foreach (var s in Screen.AllScreens) {
+          if (s.DeviceName == floatingBarScreen) return s;
+        }
+      }
+      return Screen.PrimaryScreen;
+    }
+
     static readonly object _floatingLock = new object();
     // 显示浮窗
     static void ShowFloatingForm() {
       lock (_floatingLock) {
         if (floatingForm == null || floatingForm.IsDisposed) {
-          floatingForm = new FloatingForm(monitorText(), textSize, floatingBarLoc);
+          floatingForm = new FloatingForm(monitorText(), textSize, floatingBarLoc, GetFloatingScreen());
           floatingForm.Show();
         } else {
           floatingForm.BringToFront();
@@ -1289,7 +1299,7 @@ namespace OmenSuperHub {
         //  return;
         //}
         floatingForm.TopMost = true;
-        floatingForm.SetText(monitorText(), textSize, floatingBarLoc);
+        floatingForm.SetText(monitorText(), textSize, floatingBarLoc, GetFloatingScreen());
       }
     }
 

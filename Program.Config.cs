@@ -533,8 +533,10 @@ namespace OmenSuperHub {
               key.SetValue("TempDisplayMode", tempDisplayMode);
               key.SetValue("FloatingBarLoc", floatingBarLoc);
               key.SetValue("FloatingBar", floatingBar);
+              key.SetValue("FloatingBarScreen", floatingBarScreen);
               key.SetValue("DataLocalize", dataLocalize);
               key.SetValue("AppLanguage", appLanguage);
+              key.SetValue("AutoFanProtect", autoFanProtect);
               key.SetValue("TppPower", tppPower);
               //key.SetValue("PL4Power", powerLimit4);
               key.SetValue("IccMax", iccMax);
@@ -614,6 +616,9 @@ namespace OmenSuperHub {
                 case "FloatingBarLoc":
                   key.SetValue("FloatingBarLoc", floatingBarLoc);
                   break;
+                case "FloatingBarScreen":
+                  key.SetValue("FloatingBarScreen", floatingBarScreen);
+                  break;
                 case "FloatingBar":
                   key.SetValue("FloatingBar", floatingBar);
                   break;
@@ -635,8 +640,12 @@ namespace OmenSuperHub {
                 case "AppLanguage":
                   key.SetValue("AppLanguage", appLanguage);
                   break;
+                case "AutoFanProtect":
+                  key.SetValue("AutoFanProtect", autoFanProtect);
+                  break;
               }
-              if (configName == "FanTable" || configName == "FanControl" || configName == "TempSensitivity" || configName == "CpuPower" || configName == "TgpPower" || configName == "PpabPower" || configName == "DState" || configName == "GpuClock" || configName == "TppPower" || configName == "IccMax" || configName == "AcLoadLine") {
+              if (configName == "FanTable" || configName == "FanControl" || configName == "TempSensitivity" || configName == "CpuPower" || configName == "TgpPower" || configName == "PpabPower" || configName == "DState" || configName == "GpuClock" || configName == "TppPower" || configName == "IccMax" || configName == "AcLoadLine" ||
+                  configName == "MonitorCPU" || configName == "MonitorGPU" || configName == "MonitorFan" || configName == "MonitorRefreshRate" || configName == "TempDisplayMode") {
                 SavePresetToRegistry(currentPreset);
               }
             }
@@ -663,6 +672,13 @@ namespace OmenSuperHub {
             key.SetValue("TppPower", tppPower);
             key.SetValue("IccMax", iccMax);
             key.SetValue("AcLoadLine", acLoadline);
+            // 硬件监控设置
+            key.SetValue("MonitorCPU", monitorCPU);
+            if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+              key.SetValue("MonitorGPU", monitorGPU);
+            key.SetValue("MonitorFan", monitorFan);
+            key.SetValue("MonitorRefreshRate", monitorRefreshRate);
+            key.SetValue("TempDisplayMode", tempDisplayMode);
           }
         }
       } catch { }
@@ -683,6 +699,13 @@ namespace OmenSuperHub {
             tppPower = (string)key.GetValue("TppPower", tppPower);
             iccMax = (string)key.GetValue("IccMax", iccMax);
             acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
+            // 硬件监控设置
+            monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", monitorCPU));
+            if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+              monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", monitorGPU));
+            monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", monitorFan));
+            monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", monitorRefreshRate);
+            tempDisplayMode = (string)key.GetValue("TempDisplayMode", tempDisplayMode);
           }
         }
       } catch { }
@@ -733,7 +756,7 @@ namespace OmenSuperHub {
             } else {
               LoadPresetFromRegistry(currentPreset);
             }
-              
+
             if (fanTable.Contains("cool")) {
               LoadFanConfig("cool.txt");
               UpdateCheckedState("fanTableGroup", Strings.FanCoolMode);
@@ -974,9 +997,29 @@ namespace OmenSuperHub {
               UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
             }
 
-            // 仅当至少一个监控开启时才启动 libre 进程；进程启动后再发送 CPU/GPU 状态
+            // 根据监控进程是否已在运行，决定如何应用新的监控状态
+            bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
             if (monitorCPU || monitorGPU) {
-              StartHardwareMonitor(); // 内部已调用 SetCpuMonitorState / SetGpuMonitorState
+              if (!wasMonitorRunning) {
+                // 进程未启动：从头初始化
+                cpuTempReady = false;
+                gpuTempReady = false;
+                tempReady = false;
+                StartHardwareMonitor(); // 内部已调用 SetCpuMonitorState / SetGpuMonitorState
+              } else {
+                // 进程已在运行：仅发送状态更新命令
+                if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
+                if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
+                SetCpuMonitorState(monitorCPU);
+                SetGpuMonitorState(monitorGPU);
+              }
+            } else {
+              if (wasMonitorRunning) {
+                cpuTempReady = false;
+                gpuTempReady = false;
+                tempReady = false;
+                StopHardwareMonitor();
+              }
             }
 
             bool monitorFanCache = Convert.ToBoolean(key.GetValue("MonitorFan", false));
@@ -1034,6 +1077,9 @@ namespace OmenSuperHub {
               UpdateCheckedState("floatingBarLocGroup", Strings.FloatingLocRight);
             }
 
+            // 必须在 floatingBar 还原前加载，ShowFloatingForm 需要此值定位
+            floatingBarScreen = (string)key.GetValue("FloatingBarScreen", "");
+
             floatingBar = (string)key.GetValue("FloatingBar", "off");
             if (floatingBar == "on") {
               ShowFloatingForm();
@@ -1049,6 +1095,9 @@ namespace OmenSuperHub {
             } else {
               UpdateCheckedState("dataLocalizeGroup", Strings.Disable);
             }
+
+            autoFanProtect = (string)key.GetValue("AutoFanProtect", "on");
+            UpdateCheckedState("autoFanProtectGroup", autoFanProtect == "on" ? Strings.FanAutoProtectOn : Strings.FanAutoProtectOff);
 
             // 恢复语言设置菜单勾选（语言本身已在 LoadLanguageSetting 中生效）
             appLanguage = (string)key.GetValue("AppLanguage", "zh-CN");

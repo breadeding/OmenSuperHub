@@ -240,6 +240,20 @@ namespace OmenSuperHub {
         SaveConfig("TempSensitivity");
       }, false));
       fanConfigMenu.DropDownItems.Add(respondSpeedMenu);
+
+      // 高温自动保护开关
+      ToolStripMenuItem autoFanProtectMenu = new ToolStripMenuItem(Strings.FanAutoProtect);
+      autoFanProtectMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.FanAutoProtectNote) { Enabled = false });
+      autoFanProtectMenu.DropDownItems.Add(CreateMenuItem(Strings.FanAutoProtectOn, "autoFanProtectGroup", (s, e) => {
+        autoFanProtect = "on";
+        SaveConfig("AutoFanProtect");
+      }, autoFanProtect == "on"));
+      autoFanProtectMenu.DropDownItems.Add(CreateMenuItem(Strings.FanAutoProtectOff, "autoFanProtectGroup", (s, e) => {
+        autoFanProtect = "off";
+        SaveConfig("AutoFanProtect");
+      }, autoFanProtect == "off"));
+      fanConfigMenu.DropDownItems.Add(autoFanProtectMenu);
+
       menu.Items.Add(fanConfigMenu);
 
       ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl);
@@ -520,7 +534,7 @@ namespace OmenSuperHub {
         }
         performanceControlMenu.DropDownItems.Add(acLoadLineMenu);
       }
-      
+
       if (isCPUPowerControlSupported) {
         ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
 
@@ -994,6 +1008,45 @@ namespace OmenSuperHub {
         UpdateFloatingText();
         SaveConfig("FloatingBarLoc");
       }, false));
+      floatingBarMenu.DropDownItems.Add(new ToolStripSeparator());
+
+      // ---- 显示器选择 ----
+      ToolStripMenuItem floatingScreenMenu = new ToolStripMenuItem(Strings.FloatingScreen);
+      // 每次打开时动态枚举当前所有显示器，并标记当前选中项
+      floatingScreenMenu.DropDownOpening += (s, e) => {
+        floatingScreenMenu.DropDownItems.Clear();
+        var screens = Screen.AllScreens
+            .OrderBy(sc => sc.Primary ? 0 : 1)
+            .ThenBy(sc => sc.Bounds.Left)
+            .ToArray();
+        for (int idx = 0; idx < screens.Length; idx++) {
+          var sc = screens[idx];
+          int displayNum = idx + 1;
+          string deviceName = sc.DeviceName;
+          string label = $"{Strings.FloatingScreen} {displayNum}";
+          if (sc.Primary) label += $"  ({Strings.FloatingScreenPrimary})";
+          bool isCurrent = floatingBarScreen == deviceName
+                        || (string.IsNullOrEmpty(floatingBarScreen) && sc.Primary);
+          var screenItem = new ToolStripMenuItem(label) {
+            Tag = "floatingScreenGroup",
+            Checked = isCurrent
+          };
+          screenItem.Click += (sender, args) => {
+            floatingBarScreen = deviceName;
+            // 同步取消其他项的勾选
+            foreach (ToolStripMenuItem mi in floatingScreenMenu.DropDownItems.OfType<ToolStripMenuItem>())
+              mi.Checked = (mi == screenItem);
+            // 移动浮窗到新显示器（若已显示则关闭重建以确保跨屏幕渲染正确）
+            if (floatingBar == "on") {
+              CloseFloatingForm();
+              ShowFloatingForm();
+            }
+            SaveConfig("FloatingBarScreen");
+          };
+          floatingScreenMenu.DropDownItems.Add(screenItem);
+        }
+      };
+      floatingBarMenu.DropDownItems.Add(floatingScreenMenu);
       menu.Items.Add(floatingBarMenu);
       ToolStripMenuItem omenKeyMenu = new ToolStripMenuItem(Strings.OmenKeyMenu);
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyDefault, "omenKeyGroup", (s, e) => {
