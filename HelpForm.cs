@@ -13,6 +13,7 @@ namespace OmenSuperHub {
       TopMost = true;
       Text = Strings.HelpWindowTitle;
       Icon = Properties.Resources.fan;
+      this.FormClosed += HelpForm_FormClosed;
 
       // 窗体大小和位置（屏幕的一半，居中）
       Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
@@ -60,6 +61,11 @@ namespace OmenSuperHub {
     }
 
     private void HelpForm_FormClosed(object sender, FormClosedEventArgs e) {
+      // 停止任何正在进行的导航
+      webBrowser?.Stop();
+      // 清空文档，释放内部缓存
+      webBrowser?.Dispose();
+      webBrowser = null;
       _instance = null;
     }
 
