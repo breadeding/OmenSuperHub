@@ -108,9 +108,9 @@
     public static string FanCoolMode => T("降温模式", "降溫模式", "Cool Mode");
     public static string FanCustomMode => T("自定义", "自訂", "Custom");
     public static string FanCustomTooltip => T(
-        "编辑 CPU 和 GPU 的温度-转速曲线，保存到 custom.txt。",
-        "編輯 CPU 和 GPU 的溫度-轉速曲線，儲存至 custom.txt。",
-        "Edit CPU and GPU temperature-to-fan-speed curves and save them to custom.txt.");
+        "左键应用 custom.txt，右键编辑 CPU 和 GPU 风扇曲线。",
+        "左鍵套用 custom.txt，右鍵編輯 CPU 和 GPU 風扇曲線。",
+        "Left-click to apply custom.txt; right-click to edit CPU and GPU fan curves.");
     public static string FanCurveEditorTitle => T("自定义风扇曲线", "自訂風扇曲線", "Custom Fan Curves");
     public static string FanCurveCpuTitle => T("CPU 风扇曲线", "CPU 風扇曲線", "CPU Fan Curve");
     public static string FanCurveGpuTitle => T("GPU 风扇曲线", "GPU 風扇曲線", "GPU Fan Curve");

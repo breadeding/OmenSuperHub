@@ -218,15 +218,20 @@ namespace OmenSuperHub {
         LoadFanConfig("cool.txt");
         SaveConfig("FanTable");
       }, fanTable.Contains("cool"), Strings.FanCoolTooltip));
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanCustomMode, "fanTableGroup", (s, e) => {
-        if (ShowCustomFanCurveEditor()) {
-          fanTable = "custom";
-          LoadFanConfig("custom.txt");
-          SaveConfig("FanTable");
-        } else {
-          skipCheckedUpdate = true;
+      var customFanItem = new ToolStripMenuItem(Strings.FanCustomMode) {
+        Tag = "fanTableGroup",
+        Checked = fanTable.Contains("custom"),
+        ToolTipText = Strings.FanCustomTooltip
+      };
+      customFanItem.MouseUp += (s, e) => {
+        if (e.Button == MouseButtons.Left) {
+          if (ApplyCustomFanConfig())
+            UpdateCheckedState("fanTableGroup", null, customFanItem);
+        } else if (e.Button == MouseButtons.Right) {
+          ShowCustomFanCurveEditor();
         }
-      }, fanTable.Contains("custom"), Strings.FanCustomTooltip));
+      };
+      fanConfigMenu.DropDownItems.Add(customFanItem);
       fanConfigMenu.DropDownItems.Add(new ToolStripSeparator());
       ToolStripMenuItem respondSpeedMenu = new ToolStripMenuItem(Strings.FanResponseSpeed);
       respondSpeedMenu.DropDownItems.Add(CreateMenuItem(Strings.FanRespRealtime, "tempSensitivityGroup", (s, e) => {
@@ -1771,6 +1776,36 @@ namespace OmenSuperHub {
             customFilePath)) {
           return editor.ShowDialog() == DialogResult.OK;
         }
+      } catch (Exception ex) when (
+          ex is System.IO.IOException ||
+          ex is UnauthorizedAccessException ||
+          ex is System.IO.InvalidDataException) {
+        MessageBox.Show(
+            Application.OpenForms.OfType<HelpForm>().FirstOrDefault(),
+            Strings.FanCurveLoadFailed + Environment.NewLine + ex.Message,
+            Strings.Error,
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Error);
+        return false;
+      }
+    }
+
+    static bool ApplyCustomFanConfig() {
+      string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+      string coolFilePath = System.IO.Path.Combine(baseDirectory, "cool.txt");
+      string customFilePath = System.IO.Path.Combine(baseDirectory, "custom.txt");
+
+      try {
+        if (!System.IO.File.Exists(customFilePath)) {
+          if (!System.IO.File.Exists(coolFilePath))
+            CreateDefaultFanCurveProfile(false).Save(coolFilePath);
+          System.IO.File.Copy(coolFilePath, customFilePath);
+        }
+
+        fanTable = "custom";
+        LoadFanConfig("custom.txt");
+        SaveConfig("FanTable");
+        return true;
       } catch (Exception ex) when (
           ex is System.IO.IOException ||
           ex is UnauthorizedAccessException ||
