@@ -61,10 +61,10 @@ namespace OmenSuperHub {
     }
 
     private void HelpForm_FormClosed(object sender, FormClosedEventArgs e) {
-      // 停止任何正在进行的导航
-      webBrowser?.Stop();
-      // 清空文档，释放内部缓存
-      webBrowser?.Dispose();
+      try {
+        webBrowser?.Stop();
+      } catch { }
+
       webBrowser = null;
       _instance = null;
     }

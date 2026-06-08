@@ -157,15 +157,15 @@ namespace OmenSuperHub {
         // 每版本仅显示一次
         if (alreadyRead != alreadyReadCode) {
           if (Validation() == Strings.ValidationUnsupported) {
-            var result = MessageBox.Show(Strings.ProductUnsupported, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductUnsupported, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
               return; // 退出程序
           } else if (Validation() == Strings.ValidationUnsupportedHPProduct) {
-            var result = MessageBox.Show(Strings.ProductUnsupportedHP, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductUnsupportedHP, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
               return; // 退出程序
           } else if (Validation() == Strings.ValidationOldOmenProduct) {
-            var result = MessageBox.Show(Strings.ProductOldOmen, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductOldOmen, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
               return; // 退出程序
           }
@@ -260,6 +260,9 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
 
+        //int setRet = NvApiWrapper.NVAPI_SetMaxFrameRate(0); // 0 success
+        //Console.WriteLine($"GetMaxFrameRate: {NvApiWrapper.NVAPI_GetMaxFrameRate()}");
+
         //Console.WriteLine($"DeviceType: {deviceType}");
         //Console.WriteLine($"PlatformSku: {sku}");
         //Console.WriteLine($"TppMaxValue: {platformSettings.TppMaxValue}");
@@ -313,24 +316,6 @@ namespace OmenSuperHub {
           key.SetValue(appName, 11001, RegistryValueKind.DWord);
         }
       }
-    }
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate int NvidiaAPI_SYS_UIControl_Delegate(bool on);
-
-    public static int LaunchDDS() {
-      IntPtr hModule = GetModuleHandle("NvidiaApi.dll");
-      if (hModule == IntPtr.Zero) return -1;
-      IntPtr proc = GetProcAddress(hModule, "NvidiaAPI_SYS_UIControl");
-      if (proc == IntPtr.Zero) return -1;
-      var fn = (NvidiaAPI_SYS_UIControl_Delegate)Marshal.GetDelegateForFunctionPointer(proc, typeof(NvidiaAPI_SYS_UIControl_Delegate));
-      return fn(true);
     }
 
     static string GetBiosVersion() {
@@ -831,7 +816,7 @@ namespace OmenSuperHub {
       if (File.Exists(iconPath)) {
         return true;
       } else {
-        MessageBox.Show(Strings.NoCustomIcon, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.NoCustomIcon, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
       }
     }
@@ -843,7 +828,7 @@ namespace OmenSuperHub {
       if (File.Exists(iconPath)) {
         trayIcon.Icon = new Icon(iconPath);
       } else {
-        MessageBox.Show(Strings.NoCustomIcon, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.NoCustomIcon, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
       }
     }
 
@@ -960,9 +945,9 @@ namespace OmenSuperHub {
             if (tryTimes == 2) {
               tryTimes = 0;
               if (CPUPower > CPULimitDB + 10)
-                MessageBox.Show(Strings.DbUnlockCpuHighWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockCpuHighWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
               else
-                MessageBox.Show(Strings.DbUnlockFailed(limits[0]), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockFailed(limits[0]), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
               command = $"pnputil /enable-device {deviceId}";
               ExecuteCommand(command);
               DBVersion = 2;
@@ -980,7 +965,7 @@ namespace OmenSuperHub {
             tryTimes = 0;
             DBMenu.Enabled = true;
             if (autoStart == "off") {
-              MessageBox.Show(Strings.DbUnlockSuccessNoAutoStart, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+              MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockSuccessNoAutoStart, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             //MessageBox.Show($"解锁成功！\n当前最大显卡功耗锁定为：{-powerLimits:F2} W ！", Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
           }
@@ -1354,12 +1339,12 @@ namespace OmenSuperHub {
 
     static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) {
       Logger.Error($"CurrentDomain_UnhandledException: {e.ExceptionObject}");
-      MessageBox.Show(Strings.CrashMessage);
+      MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CrashMessage);
     }
 
     static void Application_ThreadException(object sender, ThreadExceptionEventArgs e) {
       Logger.Error($"Application_ThreadException: {e.Exception}");
-      MessageBox.Show(Strings.CrashMessage);
+      MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CrashMessage);
     }
   }
 }

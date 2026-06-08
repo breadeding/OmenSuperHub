@@ -55,7 +55,7 @@ namespace OmenSuperHub {
         }
 
         if (string.IsNullOrEmpty(instanceId)) {
-          MessageBox.Show(Strings.DeviceNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DeviceNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           return;
         }
 
@@ -65,10 +65,10 @@ namespace OmenSuperHub {
 
         // 可选：根据结果给出提示
         if (result.ExitCode != 0) {
-          MessageBox.Show($"{Strings.RestartGPUFailed} {Strings.Error}：{result.Error}", Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), $"{Strings.RestartGPUFailed} {Strings.Error}：{result.Error}", Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
       } catch {
-        MessageBox.Show(Strings.RestartGPUFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.RestartGPUFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
       }
     }
 
@@ -212,15 +212,15 @@ namespace OmenSuperHub {
           if (v1 >= v2 && v1 < v3) {
             return true;
           } else {
-            MessageBox.Show(Strings.DriverNotAllow + version, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DriverNotAllow + version, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
           }
         } else {
-          MessageBox.Show(Strings.DriverNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DriverNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           return false;
         }
       } else {
-        MessageBox.Show(Strings.CheckDriverFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CheckDriverFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
       }
     }

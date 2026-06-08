@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.McuSDK2.Common.DataStructure;
+using HP.Omen.Core.Common.NVidiaApi;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
@@ -186,7 +187,7 @@ namespace OmenSuperHub {
               if (presetKey == "PresetCustom2") { presetCustom2Name = result; SaveConfig("PresetCustom2Name"); }
               if (presetKey == "PresetCustom3") { presetCustom3Name = result; SaveConfig("PresetCustom3Name"); }
             } else if (string.IsNullOrWhiteSpace(result)) {
-              MessageBox.Show(Strings.RenamePresetError, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+              MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.RenamePresetError, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
           }
         };
@@ -262,7 +263,7 @@ namespace OmenSuperHub {
         if (!isFanCleanSupported && isFanLegacyCleanSupported)
           menuText = Strings.CleanCreekLegacyMenuItem;
         fanControlMenu.DropDownItems.Add(CreateMenuItem(menuText, null, (s, e) => {
-          if (MessageBox.Show(Strings.CleanCreekConfirmMessage, Strings.CleanCreekTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK) {
+          if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CleanCreekConfirmMessage, Strings.CleanCreekTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK) {
             fanControlMenu.Enabled = false;
             if (isFanCleanSupported) {
               SetMaxFanSpeedOff();
@@ -339,8 +340,8 @@ namespace OmenSuperHub {
       // 图形模式
       if (NvGraphicsMode == GraphicsSwitcherMode.Optimus || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
         var hotSwitchItem = CreateMenuItem(Strings.HotSwitch, null, (s, e) => {
-          if (LaunchDDS() != 0)
-            MessageBox.Show(Strings.DdsInitFail, Strings.Warning, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          if (NvApiWrapper.NVAPI_SYS_UIControl(true) != 0)
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DdsInitFail, Strings.Warning, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }, false);
         hotSwitchItem.CheckOnClick = false;
         performanceControlMenu.DropDownItems.Add(hotSwitchItem);
@@ -370,31 +371,31 @@ namespace OmenSuperHub {
           if (supportsDDS || NvGraphicsMode == GraphicsSwitcherMode.Optimus) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("NVIDIA Advanced Optimus", "graphicsModeGroup", (s, e) => {
               if (SetGfxMode(GraphicsSwitcherMode.Optimus))
-                MessageBox.Show(Strings.GfxSwitchedTo("NVIDIA Advanced Optimus"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxSwitchedTo("NVIDIA Advanced Optimus"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               else {
                 SetGfxMode(NvGraphicsMode);
-                MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               }
             }, NvGraphicsMode == GraphicsSwitcherMode.Optimus));
           }
           if (supportsDiscrete || NvGraphicsMode == GraphicsSwitcherMode.Discrete) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("Discrete", "graphicsModeGroup", (s, e) => {
               if (SetGfxMode(GraphicsSwitcherMode.Discrete))
-                MessageBox.Show(Strings.GfxSwitchedTo("Discrete"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxSwitchedTo("Discrete"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               else {
                 SetGfxMode(NvGraphicsMode);
-                MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               }
             }, NvGraphicsMode == GraphicsSwitcherMode.Discrete));
           }
           if (supportsUMA || NvGraphicsMode == GraphicsSwitcherMode.UMAMode) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("UMA", "graphicsModeGroup", (s, e) => {
-              if (MessageBox.Show(Strings.GfxUMAConfirm, Strings.GfxUMATitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+              if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxUMAConfirm, Strings.GfxUMATitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
                 if (SetGfxMode(GraphicsSwitcherMode.UMAMode))
-                  MessageBox.Show(Strings.GfxSwitchedTo("UMA"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                  MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxSwitchedTo("UMA"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 else {
                   SetGfxMode(NvGraphicsMode);
-                  MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                  MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
               }
             }, NvGraphicsMode == GraphicsSwitcherMode.UMAMode));
@@ -402,10 +403,10 @@ namespace OmenSuperHub {
           if (supportsHybrid || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
             graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem("Hybrid", "graphicsModeGroup", (s, e) => {
               if (SetGfxMode(GraphicsSwitcherMode.Hybrid))
-                MessageBox.Show(Strings.GfxSwitchedTo("Hybrid"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxSwitchedTo("Hybrid"), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               else {
                 SetGfxMode(NvGraphicsMode);
-                MessageBox.Show(Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GfxUnsupported, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
               }
             }, NvGraphicsMode == GraphicsSwitcherMode.Hybrid));
           }
@@ -442,11 +443,11 @@ namespace OmenSuperHub {
             foreach (var app in apps) {
               var appItem = new ToolStripMenuItem($"{app.ProcessName} (PID: {app.ProcessId})");
               appItem.Click += (sender, args) => {
-                if (MessageBox.Show(Strings.GpuCloseConfirm(app.ProcessName), Strings.GpuCloseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+                if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseConfirm(app.ProcessName), Strings.GpuCloseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
                   try {
                     Process.GetProcessById(app.ProcessId).Kill();
                   } catch (Exception ex) {
-                    MessageBox.Show(Strings.GpuCloseError(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseError(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                   }
                 }
               };
@@ -459,7 +460,7 @@ namespace OmenSuperHub {
         ToolStripMenuItem restartGpuMenu = new ToolStripMenuItem(Strings.GpuRestartMenu);
         restartGpuMenu.ToolTipText = Strings.GpuRestartTooltip;
         restartGpuMenu.Click += (s, e) => {
-          if (MessageBox.Show(Strings.GpuRestartConfirm, Strings.GpuRestartTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+          if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuRestartConfirm, Strings.GpuRestartTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
             RestartGpu();
           }
         };
@@ -706,7 +707,7 @@ namespace OmenSuperHub {
         }
         DBMenu.DropDownItems.Add(CreateMenuItem(Strings.DbUnlocked, "DBGroup", (s, e) => {
           if (IsAbove50Series()) {
-            MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DBVersion = 2;
             countDB = 0;
             DBMenu.Enabled = true;
@@ -714,7 +715,7 @@ namespace OmenSuperHub {
             UpdateCheckedState("DBGroup", Strings.DbNormal);
             return;
           }
-          if (MessageBox.Show(Strings.PerfDbUnlockWarning, Strings.DbUnlockTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
+          if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.PerfDbUnlockWarning, Strings.DbUnlockTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
             SetGpuPowerState(true, true);
             if (isCPUPowerControlSupported)
               SetCpuPowerLimit((byte)CPULimitDB);
@@ -866,7 +867,7 @@ namespace OmenSuperHub {
       monitorCPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorCpuOff, "monitorCPUGroup", (s, e) => {
         // 自动转速模式下禁止彻底关闭监控
         if (!monitorGPU && fanControl == "auto") {
-          MessageBox.Show(Strings.MonitorAutoFanWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.MonitorAutoFanWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
           skipCheckedUpdate = true;
           return;
@@ -912,7 +913,7 @@ namespace OmenSuperHub {
         monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOff, "monitorGPUGroup", (s, e) => {
           // 自动转速模式下禁止彻底关闭监控
           if (!monitorCPU && fanControl == "auto") {
-            MessageBox.Show(Strings.MonitorAutoFanWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.MonitorAutoFanWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
             skipCheckedUpdate = true;
             return;
@@ -1596,7 +1597,7 @@ namespace OmenSuperHub {
                 mi.Checked = (mi == cpItem);
             } catch (Exception ex) { Logger.Error(ex.Message); } finally { CloseDeviceAsync(handle).Wait(); }
           } else
-            MessageBox.Show(Strings.KeyboardConnectFail, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.KeyboardConnectFail, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         };
         staticColorMenu.DropDownItems.Add(cpItem);
       }
@@ -1643,7 +1644,7 @@ namespace OmenSuperHub {
                 mi.Checked = (mi == animItem);
             } catch (Exception ex) { Logger.Error(ex.Message); } finally { CloseDeviceAsync(handle).Wait(); }
           } else
-            MessageBox.Show(Strings.KeyboardConnectFail, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.KeyboardConnectFail, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         };
         animMenu.DropDownItems.Add(animItem);
       }
@@ -1666,7 +1667,7 @@ namespace OmenSuperHub {
                 mi.Checked = (mi == brightItem);
             } catch (Exception ex) { Logger.Error(ex.Message); } finally { CloseDeviceAsync(handle).Wait(); }
           } else
-            MessageBox.Show(Strings.KeyboardConnectFail, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.KeyboardConnectFail, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         };
         brightMenu.DropDownItems.Add(brightItem);
       }
@@ -1688,7 +1689,7 @@ namespace OmenSuperHub {
       item.Click += (s, e) => {
         if (item.Text == Strings.DbUnlocked) {
           if (IsAbove50Series()) {
-            MessageBox.Show(Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DBVersion = 2;
             countDB = 0;
             DBMenu.Enabled = true;
@@ -1698,7 +1699,7 @@ namespace OmenSuperHub {
           }
 
           if (!powerOnline) {
-            MessageBox.Show(Strings.PleaseConnectAC, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.PleaseConnectAC, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DBVersion = 2;
             countDB = 0;
             DBMenu.Enabled = true;
@@ -1715,7 +1716,7 @@ namespace OmenSuperHub {
             return;
           }
           //if(CPUPower > CPULimitDB + 1) {
-          //  MessageBox.Show(Strings.DbUnlockCpuHighWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          //  MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockCpuHighWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
           //  DBVersion = 2;
           //  countDB = 0;
           //  DBMenu.Enabled = true;
