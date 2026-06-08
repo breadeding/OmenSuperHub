@@ -151,15 +151,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 浮窗显示功能支持多显示器，新增显示器选择菜单</li>
-<li>✨ 风扇配置菜单添加高温自动保护选项，控制是否在温度过高时取消固定转速</li>
-<li>✨ 将硬件监控设置纳入自定义预设控制范围</li>
+<li>✨ 新增最大帧率菜单，0~1000 FPS可调</li>
 <p><strong>优化：</strong></p>
-<li>⚡ 将浮窗显示的字号设置改为滑块操作并扩展上限至72号</li>
-<li>⚡ 使用WebBrowser美化帮助页面</li>
+<li>⚡ 关闭帮助页面后释放内存占用</li>
 <p><strong>修复：</strong></p>
-<li>🐛 切换语言后菜单状态重置为默认值的问题</li>
-<li>🐛 本机信息中显卡列表可能识别到虚拟显示器的问题</li>
+<li>🐛 帮助页面打开时触发弹窗将导致卡死的问题</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>

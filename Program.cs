@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
+using HP.Omen.Core.Common.NVidiaApi;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
@@ -47,7 +48,7 @@ namespace OmenSuperHub {
     static int DBVersion = 2, countDB = 0, countDBInit = 5, tryTimes = 0, CPULimitDB = 25;
     static ToolStripMenuItem DBMenu;
     static int textSize = 40;
-    static int countRestore = 0, gpuClock = 0;
+    static int countRestore = 0, gpuClock = 0, maxFrameRate = -1;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
     static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", floatingBarScreen = "", omenKey = "default", dataLocalize = "off", appLanguage = "zh-CN", autoFanProtect = "on";
@@ -87,8 +88,8 @@ namespace OmenSuperHub {
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
-    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuClockTrackBar, textSizeTrackBar;
-    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuClockValueLabel, textSizeLabel;
+    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuClockTrackBar, maxFrameRateTrackBar, textSizeTrackBar;
+    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuClockValueLabel, maxFrameRateValueLabel, textSizeLabel;
 
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
@@ -193,8 +194,10 @@ namespace OmenSuperHub {
         NvGraphicsMode = GetGfxMode();
         hasAMDDiscreteGpu = HasAmdDiscreteGpu();
         hasNVIDIAGpu = HasNvidiaGpu();
-        if (hasNVIDIAGpu && (NvGraphicsMode == GraphicsSwitcherMode.Hybrid || NvGraphicsMode == GraphicsSwitcherMode.Optimus))
+        if (hasNVIDIAGpu) {
           ExtractAndPreloadNativeDll("NvidiaApi.dll");
+          maxFrameRate = NvApiWrapper.NVAPI_GetMaxFrameRate();
+        }
         // 固定为释放全部性能模式
         SetUnleashMode();
         Is3FanNb = IsThreeFanSupported();
@@ -259,9 +262,6 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipText = $"消息测试";
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
-
-        //int setRet = NvApiWrapper.NVAPI_SetMaxFrameRate(0); // 0 success
-        //Console.WriteLine($"GetMaxFrameRate: {NvApiWrapper.NVAPI_GetMaxFrameRate()}");
 
         //Console.WriteLine($"DeviceType: {deviceType}");
         //Console.WriteLine($"PlatformSku: {sku}");

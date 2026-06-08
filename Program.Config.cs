@@ -4,14 +4,55 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using HP.Omen.Core.Common.NVidiaApi;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
-using Newtonsoft.Json.Linq;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
 
 namespace OmenSuperHub {
   static partial class Program {
+    private static List<int> frameRateMap = new List<int>();
+
+    private static void InitFrameRateMap() {
+      frameRateMap.Clear();
+
+      frameRateMap.Add(0); // index 0 = 0
+
+      for (int v = 1; v <= 5; v += 1)
+        frameRateMap.Add(v);
+
+      for (int v = 5; v <= 60; v += 5)
+        frameRateMap.Add(v);
+
+      for (int v = 60; v <= 240; v += 10)
+        frameRateMap.Add(v);
+
+      for (int v = 240; v <= 1000; v += 20)
+        frameRateMap.Add(v);
+    }
+
+    private static int IndexToFrameRate(int index) {
+      if (index < 0) return 0;
+      if (index >= frameRateMap.Count) return frameRateMap[frameRateMap.Count - 1];
+      return frameRateMap[index];
+    }
+
+    private static int FrameRateToIndex(int value) {
+      int bestIndex = 0;
+      int bestDiff = int.MaxValue;
+
+      for (int i = 0; i < frameRateMap.Count; i++) {
+        int diff = Math.Abs(frameRateMap[i] - value);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestIndex = i;
+        }
+      }
+
+      return bestIndex;
+    }
+
     /// <summary>
     /// 获取当前系统 UI 语言对应的语言代码（zh-CN / zh-TW / en）
     /// 若无法匹配，返回 "en"
@@ -520,6 +561,7 @@ namespace OmenSuperHub {
               key.SetValue("DState", dState);
               if (hasNVIDIAGpu) {
                 key.SetValue("GpuClock", gpuClock);
+                key.SetValue("MaxFrameRate", maxFrameRate);
                 key.SetValue("DBVersion", DBVersion);
               }
               key.SetValue("AutoStart", autoStart);
@@ -580,6 +622,9 @@ namespace OmenSuperHub {
                   break;
                 case "GpuClock":
                   key.SetValue("GpuClock", gpuClock);
+                  break;
+                case "MaxFrameRate":
+                  key.SetValue("MaxFrameRate", maxFrameRate);
                   break;
                 case "DBVersion":
                   key.SetValue("DBVersion", DBVersion);
@@ -645,7 +690,7 @@ namespace OmenSuperHub {
                   key.SetValue("AutoFanProtect", autoFanProtect);
                   break;
               }
-              if (configName == "FanTable" || configName == "FanControl" || configName == "TempSensitivity" || configName == "CpuPower" || configName == "TgpPower" || configName == "PpabPower" || configName == "DState" || configName == "GpuClock" || configName == "TppPower" || configName == "IccMax" || configName == "AcLoadLine" ||
+              if (configName == "FanTable" || configName == "FanControl" || configName == "TempSensitivity" || configName == "CpuPower" || configName == "TgpPower" || configName == "PpabPower" || configName == "DState" || configName == "GpuClock" || configName == "MaxFrameRate" || configName == "TppPower" || configName == "IccMax" || configName == "AcLoadLine" ||
                   configName == "MonitorCPU" || configName == "MonitorGPU" || configName == "MonitorFan" || configName == "MonitorRefreshRate" || configName == "TempDisplayMode") {
                 SavePresetToRegistry(currentPreset);
               }
@@ -670,6 +715,7 @@ namespace OmenSuperHub {
             key.SetValue("PpabPower", ppabPower);
             key.SetValue("DState", dState);
             key.SetValue("GpuClock", gpuClock);
+            key.SetValue("MaxFrameRate", maxFrameRate);
             key.SetValue("TppPower", tppPower);
             key.SetValue("IccMax", iccMax);
             key.SetValue("AcLoadLine", acLoadline);
@@ -697,6 +743,7 @@ namespace OmenSuperHub {
             ppabPower = (string)key.GetValue("PpabPower", ppabPower);
             dState = (string)key.GetValue("DState", dState);
             gpuClock = (int)key.GetValue("GpuClock", gpuClock);
+            maxFrameRate = (int)key.GetValue("MaxFrameRate", maxFrameRate);
             tppPower = (string)key.GetValue("TppPower", tppPower);
             iccMax = (string)key.GetValue("IccMax", iccMax);
             acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
@@ -751,6 +798,7 @@ namespace OmenSuperHub {
               ppabPower = (string)key.GetValue("PpabPower", "on");
               dState = (string)key.GetValue("DState", "normal");
               gpuClock = (int)key.GetValue("GpuClock", 0);
+              maxFrameRate = (int)key.GetValue("MaxFrameRate", -1);
               tppPower = (string)key.GetValue("TppPower", "null");
               iccMax = (string)key.GetValue("IccMax", "null");
               acLoadline = (string)key.GetValue("AcLoadLine", "null");
@@ -893,15 +941,32 @@ namespace OmenSuperHub {
             UpdateCheckedState("dStateGroup", dState == "normal" ? Strings.Normal : Strings.LowPower);
 
             if (hasNVIDIAGpu) {
-              if (SetGPUClockLimit(gpuClock)) {
-                if (gpuClock > 0 && gpuClockTrackBar != null) {
-                  gpuClockTrackBar.Value = gpuClock / 10;
-                  UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
-                } else if (gpuClock == 0) {
-                  UpdateCheckedState("gpuClockGroup", Strings.Restore);
+              if (gpuClockTrackBar != null) {
+                if (SetGPUClockLimit(gpuClock)) {
+                  if (gpuClock > 0) {
+                    gpuClockTrackBar.Value = gpuClock / 10;
+                    UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
+                  } else if (gpuClock == 0) {
+                    UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
+                  }
+                } else {
+                  UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
                 }
-              } else {
-                UpdateCheckedState("gpuClockGroup", Strings.Restore);
+              }
+
+              if (maxFrameRateTrackBar != null) {
+                if (maxFrameRate > 0) {
+                  NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+                  maxFrameRateTrackBar.Value = FrameRateToIndex(maxFrameRate);
+                  UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
+                } else if (maxFrameRate == 0) {
+                  NvApiWrapper.NVAPI_SetMaxFrameRate(0);
+                  maxFrameRateTrackBar.Value = FrameRateToIndex(NvApiWrapper.NVAPI_GetMaxFrameRate());
+                  UpdateCheckedState("maxFrameRateGroup", Strings.Unlimited);
+                } else {
+                  maxFrameRateTrackBar.Value = FrameRateToIndex(NvApiWrapper.NVAPI_GetMaxFrameRate());
+                  UpdateCheckedState("maxFrameRateGroup", Strings.NotSet);
+                }
               }
 
               if (DBMenu.Enabled && !isPreset) {
@@ -1137,9 +1202,11 @@ namespace OmenSuperHub {
         if (targetPreset == "PresetExtreme") {
           cpuPower = $"{targetPL1Perf} W";
           tppPower = $"{targetPL1Perf} W";
+          maxFrameRate = 0;
         } else if (targetPreset == "PresetGpuPriority") {
           cpuPower = $"{targetPL1Default} W";
           tppPower = $"{targetPL1Perf} W";
+          maxFrameRate = 0;
         } else if (targetPreset == "PresetLightUse") {
           fanTable = "silent";
           cpuPower = $"{(int)(targetPL1Default * 0.6)} W";
@@ -1147,6 +1214,7 @@ namespace OmenSuperHub {
           tppPower = "null";
           tgpPower = "off";
           ppabPower = "off";
+          maxFrameRate = 60;
         }
       } else {
         LoadPresetFromRegistry(targetPreset);

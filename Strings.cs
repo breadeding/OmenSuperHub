@@ -201,7 +201,7 @@
     public static string Disable => T("关闭", "關閉", "Disable");
     public static string Normal => T("正常", "正常", "Normal");
     public static string LowPower => T("低功耗", "低功耗", "Low Power");
-    public static string Restore => T("无限制", "無限制", "Unlimited");
+    public static string Unlimited => T("无限制", "無限制", "Unlimited");
 
     public static string IccMaxMenu => T("IccMax", "IccMax", "IccMax");
     public static string AcLoadLineMenu => T("AC Load Line", "AC Load Line", "AC Load Line");
@@ -211,12 +211,14 @@
     public static string SetFanSpeedSlider => T("拖动滑块设置转速 (RPM)", "拖動滑桿設定轉速 (RPM)", "Drag slider to set speed (RPM)");
     public static string SetTppSlider => T("拖动滑块设置功率 (W)", "拖動滑桿設定功率 (W)", "Drag slider to set power (W)");
     public static string SetGpuClockSlider => T("拖动滑块设置频率 (MHz)", "拖動滑桿設定頻率 (MHz)", "Drag slider to set clock (MHz)");
+    public static string SetMaxFrameRateSlider => T("拖动滑块设置最大帧率", "拖動滑桿設定最大幀率", "Drag slider to set max frame rate");
     public static string PpabPowerMenu => T("PPab条件(Tpp)", "PPab條件(Tpp)", "PPab (Tpp)");
     public static string DStateSubMenu => T("dState", "dState", "dState");
     public static string DbVersionMenu => T("DB版本", "DB版本", "DB Version");
     public static string DbNormal => T("普通版本", "普通版本", "Normal");
     public static string DbUnlocked => T("解锁版本", "解鎖版本", "Unlocked");
     public static string GpuClockMenu => T("GPU频率限制", "GPU頻率限制", "GPU Clock Limit");
+    public static string MaxFrameRateMenu => T("最大帧率", "最大幀率", "Max Frame Rate");
 
     // DB 解锁相关
     public static string DbUnlockCpuHighWarning => T("请在CPU低负载下解锁",

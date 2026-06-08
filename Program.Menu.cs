@@ -670,7 +670,7 @@ namespace OmenSuperHub {
       performanceControlMenu.DropDownItems.Add(gpuPowerMenu);
       if (hasNVIDIAGpu) {
         ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem(Strings.GpuClockMenu);
-        gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.Restore, "gpuClockGroup", (s, e) => {
+        gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.Unlimited, "gpuClockGroup", (s, e) => {
           gpuClock = 0;
           SetGPUClockLimit(gpuClock);
           SaveConfig("GpuClock");
@@ -685,9 +685,17 @@ namespace OmenSuperHub {
 
         gpuClockValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{gpuClockTrackBar.Value * 10} MHz")) { Enabled = false };
 
-        gpuClockTrackBar.ValueChanged += (sender, e) => {
-          gpuClockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{gpuClockTrackBar.Value * 10} MHz");
+        gpuClockTrackBar.MouseDown += (sender, e) => {
+          gpuClock = gpuClockTrackBar.Value * 10;
+          SetGPUClockLimit(gpuClock);
+          SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
+        };
+
+        gpuClockTrackBar.ValueChanged += (sender, e) => {
+          gpuClock = gpuClockTrackBar.Value * 10;
+          gpuClockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{gpuClockTrackBar.Value * 10} MHz");
+          SaveConfig("GpuClock");
         };
 
         gpuClockTrackBar.MouseUp += (sender, e) => {
@@ -700,6 +708,53 @@ namespace OmenSuperHub {
         gpuClockMenu.DropDownItems.Add(gpuClockTrackBar);
         gpuClockMenu.DropDownItems.Add(gpuClockValueLabel);
         performanceControlMenu.DropDownItems.Add(gpuClockMenu);
+
+        InitFrameRateMap();
+        ToolStripMenuItem maxFrameRateMenu = new ToolStripMenuItem(Strings.MaxFrameRateMenu);
+        maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "maxFrameRateGroup", (s, e) => {
+          maxFrameRate = -1;
+          NvApiWrapper.NVAPI_SetMaxFrameRate(0);
+          SaveConfig("MaxFrameRate");
+        }, true));
+        maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.Unlimited, "maxFrameRateGroup", (s, e) => {
+          maxFrameRate = 0;
+          NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+          SaveConfig("MaxFrameRate");
+        }, false));
+        maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.SetMaxFrameRateSlider, "maxFrameRateGroup", (s, e) => { }, false));
+        maxFrameRateTrackBar = new ToolStripTrackBar();
+        maxFrameRateTrackBar.Minimum = 0;
+        maxFrameRateTrackBar.Maximum = frameRateMap.Count - 1;
+        maxFrameRateTrackBar.Value = maxFrameRateTrackBar.Maximum;
+        maxFrameRateTrackBar.TickFrequency = maxFrameRateTrackBar.Maximum - maxFrameRateTrackBar.Minimum;
+        maxFrameRateTrackBar.Width = 800;
+
+        maxFrameRateValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{IndexToFrameRate(maxFrameRateTrackBar.Value)} FPS")) { Enabled = false };
+
+        maxFrameRateTrackBar.MouseDown += (sender, e) => {
+          maxFrameRate = IndexToFrameRate(maxFrameRateTrackBar.Value);
+          NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+          SaveConfig("MaxFrameRate");
+          UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
+        };
+
+        maxFrameRateTrackBar.ValueChanged += (sender, e) => {
+          maxFrameRate = IndexToFrameRate(maxFrameRateTrackBar.Value);
+          maxFrameRateValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{IndexToFrameRate(maxFrameRateTrackBar.Value)} FPS");
+          SaveConfig("MaxFrameRate");
+        };
+
+        maxFrameRateTrackBar.MouseUp += (sender, e) => {
+          maxFrameRate = IndexToFrameRate(maxFrameRateTrackBar.Value);
+          NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+          SaveConfig("MaxFrameRate");
+          UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
+        };
+
+        maxFrameRateMenu.DropDownItems.Add(maxFrameRateTrackBar);
+        maxFrameRateMenu.DropDownItems.Add(maxFrameRateValueLabel);
+        performanceControlMenu.DropDownItems.Add(maxFrameRateMenu);
+
         DBMenu = new ToolStripMenuItem(Strings.DbVersionMenu);
         if (platformSettings != null && platformSettings.TppSupport) {
           DBMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfDbTip) { Enabled = false });
