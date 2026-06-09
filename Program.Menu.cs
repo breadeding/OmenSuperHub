@@ -151,15 +151,24 @@ namespace OmenSuperHub {
       presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetNote) { Enabled = false });
       if (isCPUPowerControlSupported) {
         presetsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PresetInternalNote) { Enabled = false });
-        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetExtreme, "presetsGroup", (s, e) => applyPresetLogic("PresetExtreme"), currentPreset == "PresetExtreme", Strings.PresetExtremeTooltip));
-        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetGpuPriority, "presetsGroup", (s, e) => applyPresetLogic("PresetGpuPriority"), currentPreset == "PresetGpuPriority", Strings.PresetGpuPriorityTooltip));
-        presetsMenu.DropDownItems.Add(CreateMenuItem(Strings.PresetLightUse, "presetsGroup", (s, e) => applyPresetLogic("PresetLightUse"), currentPreset == "PresetLightUse", Strings.PresetLightUseTooltip));
+        var extremeItem = CreateMenuItem(Strings.PresetExtreme, "presetsGroup", (s, e) => applyPresetLogic("PresetExtreme"), currentPreset == "PresetExtreme", Strings.PresetExtremeTooltip);
+        extremeItem.Name = "PresetExtreme";
+        presetsMenu.DropDownItems.Add(extremeItem);
+        var gpuPriorityItem = CreateMenuItem(Strings.PresetGpuPriority, "presetsGroup", (s, e) => applyPresetLogic("PresetGpuPriority"), currentPreset == "PresetGpuPriority", Strings.PresetGpuPriorityTooltip);
+        gpuPriorityItem.Name = "PresetGpuPriority";
+        presetsMenu.DropDownItems.Add(gpuPriorityItem);
+        var lightUseItem = CreateMenuItem(Strings.PresetLightUse, "presetsGroup", (s, e) => applyPresetLogic("PresetLightUse"), currentPreset == "PresetLightUse", Strings.PresetLightUseTooltip);
+        lightUseItem.Name = "PresetLightUse";
+        presetsMenu.DropDownItems.Add(lightUseItem);
         presetsMenu.DropDownItems.Add(new ToolStripSeparator());
       }
 
       var custom1Item = CreateMenuItem(presetCustom1Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom1"), currentPreset == "PresetCustom1");
+      custom1Item.Name = "PresetCustom1";
       var custom2Item = CreateMenuItem(presetCustom2Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom2"), currentPreset == "PresetCustom2");
+      custom2Item.Name = "PresetCustom2";
       var custom3Item = CreateMenuItem(presetCustom3Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom3"), currentPreset == "PresetCustom3");
+      custom3Item.Name = "PresetCustom3";
       presetsMenu.DropDownOpening += (s, e) => {
         custom1Item.Text = presetCustom1Name;
         custom2Item.Text = presetCustom2Name;
@@ -765,7 +774,7 @@ namespace OmenSuperHub {
           } else {
             maxFrameRateValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, Strings.Unlimited);
           }
-          
+
           SaveConfig("MaxFrameRate");
         };
 
@@ -1359,7 +1368,17 @@ namespace OmenSuperHub {
       // 其余原因（失焦、ESC、AppClicked 等）全部放行，不设 e.Cancel
     }
 
-    // 在合适的位置添加此方法
+    static ToolStripMenuItem FindMenuItemByName(ToolStripItemCollection items, string name) {
+      foreach (ToolStripMenuItem item in items.OfType<ToolStripMenuItem>()) {
+        if (item.Name == name) return item;
+        if (item.HasDropDownItems) {
+          var found = FindMenuItemByName(item.DropDownItems, name);
+          if (found != null) return found;
+        }
+      }
+      return null;
+    }
+
     public static void StartCleanCreekWithProgress(int durationMs, string title, Action startCleanAction, Action stopCleanAction) {
       // 创建进度窗体
       Form progressForm = new Form();

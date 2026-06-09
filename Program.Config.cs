@@ -722,39 +722,33 @@ namespace OmenSuperHub {
       }
     }
 
-    static void SavePresetToRegistry(string presetKey) {
-      if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") return;
+    /// <summary>
+    /// 将指定预设的字段值加载到内存变量。
+    /// 内置预设直接从主注册表键读取；自定义预设从各自子键读取。
+    /// 不执行任何硬件操作，不更新 UI。
+    /// </summary>
+    static void LoadPresetFields(string presetKey) {
       try {
-        using (RegistryKey key = Registry.CurrentUser.CreateSubKey($@"Software\OmenSuperHub\{presetKey}")) {
-          if (key != null) {
-            key.SetValue("FanTable", fanTable);
-            key.SetValue("FanControl", fanControl);
-            key.SetValue("TempSensitivity", tempSensitivity);
-            key.SetValue("CpuPower", cpuPower);
-            key.SetValue("TgpPower", tgpPower);
-            key.SetValue("PpabPower", ppabPower);
-            key.SetValue("DState", dState);
-            key.SetValue("GpuClock", gpuClock);
-            key.SetValue("MaxFrameRate", maxFrameRate);
-            key.SetValue("TppPower", tppPower);
-            key.SetValue("IccMax", iccMax);
-            key.SetValue("AcLoadLine", acLoadline);
-            // 硬件监控设置
-            key.SetValue("MonitorCPU", monitorCPU);
-            if (hasNVIDIAGpu || hasAMDDiscreteGpu)
-              key.SetValue("MonitorGPU", monitorGPU);
-            key.SetValue("MonitorFan", monitorFan);
-            key.SetValue("MonitorRefreshRate", monitorRefreshRate);
-            key.SetValue("TempDisplayMode", tempDisplayMode);
+        if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") {
+          using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+            if (key == null) return;
+            fanTable = (string)key.GetValue("FanTable", fanTable);
+            fanControl = (string)key.GetValue("FanControl", "auto");
+            tempSensitivity = (string)key.GetValue("TempSensitivity", "high");
+            cpuPower = (string)key.GetValue("CpuPower", "null");
+            tgpPower = (string)key.GetValue("TgpPower", "on");
+            ppabPower = (string)key.GetValue("PpabPower", "on");
+            dState = (string)key.GetValue("DState", "normal");
+            gpuClock = (int)key.GetValue("GpuClock", 0);
+            maxFrameRate = (int)key.GetValue("MaxFrameRate", -1);
+            tppPower = (string)key.GetValue("TppPower", "null");
+            iccMax = (string)key.GetValue("IccMax", "null");
+            acLoadline = (string)key.GetValue("AcLoadLine", "null");
           }
-        }
-      } catch { }
-    }
-
-    static void LoadPresetFromRegistry(string presetKey) {
-      try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey($@"Software\OmenSuperHub\{presetKey}")) {
-          if (key != null) {
+        } else {
+          // 自定义预设：从子键读取
+          using (RegistryKey key = Registry.CurrentUser.OpenSubKey($@"Software\OmenSuperHub\{presetKey}")) {
+            if (key == null) return;
             fanTable = (string)key.GetValue("FanTable", fanTable);
             fanControl = (string)key.GetValue("FanControl", fanControl);
             tempSensitivity = (string)key.GetValue("TempSensitivity", tempSensitivity);
@@ -767,7 +761,6 @@ namespace OmenSuperHub {
             tppPower = (string)key.GetValue("TppPower", tppPower);
             iccMax = (string)key.GetValue("IccMax", iccMax);
             acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
-            // 硬件监控设置
             monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", monitorCPU));
             if (hasNVIDIAGpu || hasAMDDiscreteGpu)
               monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", monitorGPU));
@@ -776,467 +769,417 @@ namespace OmenSuperHub {
             tempDisplayMode = (string)key.GetValue("TempDisplayMode", tempDisplayMode);
           }
         }
-      } catch { }
+      } catch (Exception ex) {
+        Logger.Error($"LoadPresetFields({presetKey}): {ex.Message}");
+      }
     }
 
-    static void RestoreConfig(bool isPreset = false) {
-      try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
-          if (key != null) {
-            currentPreset = (string)key.GetValue("CurrentPreset", platformSettings != null ? "PresetExtreme" : "PresetCustom1");
-            presetCustom1Name = (string)key.GetValue("PresetCustom1Name", Strings.PresetCustom1);
-            presetCustom2Name = (string)key.GetValue("PresetCustom2Name", Strings.PresetCustom2);
-            presetCustom3Name = (string)key.GetValue("PresetCustom3Name", Strings.PresetCustom3);
+    /// <summary>
+    /// 将当前内存中的预设字段应用到硬件，并同步更新菜单勾选状态。
+    /// 不读写注册表，可以在启动恢复和运行时切换预设时复用。
+    /// </summary>
+    static void ApplyPresetSettings() {
+      // 风扇曲线
+      if (fanTable.Contains("cool")) {
+        LoadFanConfig("cool.txt");
+        UpdateCheckedState("fanTableGroup", Strings.FanCoolMode);
+      } else if (fanTable.Contains("silent")) {
+        LoadFanConfig("silent.txt");
+        UpdateCheckedState("fanTableGroup", Strings.FanSilentMode);
+      } else if (fanTable.Contains("custom")) {
+        LoadFanConfig("custom.txt");
+        UpdateCheckedState("fanTableGroup", Strings.FanCustomMode);
+      }
 
-            UpdateCheckedState("presetsGroup", GetPresetDisplayName(currentPreset));
+      // 风扇控制模式
+      if (fanControl == "auto") {
+        SetMaxFanSpeedOff();
+        fanControlTimer.Change(0, 1000);
+        UpdateCheckedState("fanControlGroup", Strings.FanAuto);
+      } else if (fanControl.Contains("max")) {
+        SetMaxFanSpeedOn();
+        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        UpdateCheckedState("fanControlGroup", Strings.FanMax);
+      } else if (fanControl.Contains(" RPM")) {
+        SetMaxFanSpeedOff();
+        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
+        SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
+        if (fanTrackBar != null) fanTrackBar.Value = rpmValue / 100;
+        UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
+      }
 
-            if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
-              fanTable = (string)key.GetValue("FanTable", fanTable);
-              fanControl = (string)key.GetValue("FanControl", "auto");
-              tempSensitivity = (string)key.GetValue("TempSensitivity", "high");
-              cpuPower = (string)key.GetValue("CpuPower", "null");
-              tgpPower = (string)key.GetValue("TgpPower", "on");
-              ppabPower = (string)key.GetValue("PpabPower", "on");
-              dState = (string)key.GetValue("DState", "normal");
-              gpuClock = (int)key.GetValue("GpuClock", 0);
-              maxFrameRate = (int)key.GetValue("MaxFrameRate", -1);
-              tppPower = (string)key.GetValue("TppPower", "null");
-              iccMax = (string)key.GetValue("IccMax", "null");
-              acLoadline = (string)key.GetValue("AcLoadLine", "null");
-            } else {
-              LoadPresetFromRegistry(currentPreset);
-            }
+      // 风扇响应速度
+      switch (tempSensitivity) {
+        case "realtime": respondSpeed = 1; UpdateCheckedState("tempSensitivityGroup", Strings.FanRespRealtime); break;
+        case "high": respondSpeed = 0.4f; UpdateCheckedState("tempSensitivityGroup", Strings.FanRespHigh); break;
+        case "medium": respondSpeed = 0.1f; UpdateCheckedState("tempSensitivityGroup", Strings.FanRespMedium); break;
+        case "low": respondSpeed = 0.04f; UpdateCheckedState("tempSensitivityGroup", Strings.FanRespLow); break;
+      }
 
-            if (fanTable.Contains("cool")) {
-              LoadFanConfig("cool.txt");
-              UpdateCheckedState("fanTableGroup", Strings.FanCoolMode);
-            } else if (fanTable.Contains("silent")) {
-              LoadFanConfig("silent.txt");
-              UpdateCheckedState("fanTableGroup", Strings.FanSilentMode);
-            } else if (fanTable.Contains("custom")) {
-              LoadFanConfig("custom.txt");
-              UpdateCheckedState("fanTableGroup", Strings.FanCustomMode);
-            }
-
-            if (fanControl == "auto") {
-              SetMaxFanSpeedOff();
-              fanControlTimer.Change(0, 1000);
-              UpdateCheckedState("fanControlGroup", Strings.FanAuto);
-            } else if (fanControl.Contains("max")) {
-              SetMaxFanSpeedOn();
-              fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-              UpdateCheckedState("fanControlGroup", Strings.FanMax);
-            } else if (fanControl.Contains(" RPM")) {
-              SetMaxFanSpeedOff();
-              fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-              int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-              SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
-              if (fanTrackBar != null) {
-                fanTrackBar.Value = rpmValue / 100;
-              }
-              UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
-            }
-
-            switch (tempSensitivity) {
-              case "realtime":
-                respondSpeed = 1;
-                UpdateCheckedState("tempSensitivityGroup", Strings.FanRespRealtime);
-                break;
-              case "high":
-                respondSpeed = 0.4f;
-                UpdateCheckedState("tempSensitivityGroup", Strings.FanRespHigh);
-                break;
-              case "medium":
-                respondSpeed = 0.1f;
-                UpdateCheckedState("tempSensitivityGroup", Strings.FanRespMedium);
-                break;
-              case "low":
-                respondSpeed = 0.04f;
-                UpdateCheckedState("tempSensitivityGroup", Strings.FanRespLow);
-                break;
-            }
-
-            // TPP 设置单独延迟 1s 应用，避免启动时与其他设置冲突
-            string tppPowerSnapshot = tppPower;
-            System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
-              if (tppPowerSnapshot == "null") {
-                UpdateCheckedState("tppPowerGroup", Strings.NotSet);
-              } else if (tppPowerSnapshot == "max") {
-                SetConcurrentTdp(254);
-                if (tppTrackBar != null) {
-                  tppTrackBar.Value = 254;
-                }
-              } else if (tppPowerSnapshot.Contains(" W")) {
-                int value = int.Parse(tppPowerSnapshot.Replace(" W", "").Trim());
-                if (value >= 20 && value <= 254) {
-                  SetConcurrentTdp((byte)value);
-                  if (tppTrackBar != null) {
-                    tppTrackBar.Value = value;
-                  }
-                  UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
-                }
-              }
-            });
-
-            //powerLimit4 = (string)key.GetValue("PL4Power", "null");
-            //if (powerLimit4 == "null") {
-            //  UpdateCheckedState("pl4PowerGroup", "不设置");
-            //} else if (powerLimit4 == "max") {
-            //  if (isTwoBytePL4) {
-            //    SetPL4DoubleByte(500);
-            //  } else {
-            //    SetCpuPowerLimit4(254);
-            //  }
-            //  UpdateCheckedState("pl4PowerGroup", "最大");
-            //} else if (powerLimit4.Contains(" W")) {
-            //  int value = int.Parse(powerLimit4.Replace(" W", "").Trim());
-            //  int doubleFactor = isTwoBytePL4 ? 2 : 1;
-            //  if (value >= 40 && value <= 240 * doubleFactor) {
-            //    if (isTwoBytePL4) {
-            //      SetPL4DoubleByte((ushort)value);
-            //    } else {
-            //      SetCpuPowerLimit4((byte)value);
-            //    }
-            //    UpdateCheckedState("pl4PowerGroup", powerLimit4);
-            //  }
-            //}
-
-            if (iccMax == "null") {
-              UpdateCheckedState("iccMaxGroup", Strings.NotSet);
-            } else if (iccMax.Contains(" A")) {
-              if (int.TryParse(iccMax.Replace(" A", "").Trim(), out int ampVal) && ampVal >= 150 && ampVal <= 350) {
-                SetIccMaxByWmi((decimal)ampVal);
-                UpdateCheckedState("iccMaxGroup", iccMax);
-              }
-            }
-
-            if (acLoadline == "null") {
-              UpdateCheckedState("acLoadLineGroup", Strings.NotSet);
-            } else if (int.TryParse(acLoadline, out int llVal) && llVal >= 1) {
-              SetLoadLine(llVal);
-              string llDisplay = (180 - 10 * llVal).ToString();
-              UpdateCheckedState("acLoadLineGroup", llDisplay);
-            }
-
-            if (isCPUPowerControlSupported) {
-              if (cpuPower == "null") {
-                UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
-              } else if (cpuPower == "max") {
-                SetCpuPowerLimit(254);
-                if (cpuPowerTrackBar != null) {
-                  cpuPowerTrackBar.Value = 254;
-                }
-                UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-              } else if (cpuPower.Contains(" W")) {
-                int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-                if (value >= 5 && value <= 254) {
-                  SetCpuPowerLimit((byte)value);
-                  if (cpuPowerTrackBar != null) {
-                    cpuPowerTrackBar.Value = value;
-                  }
-                  UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-                }
-              }
-            }
-
-            SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
-            UpdateCheckedState("tgpPowerGroup", tgpPower == "on" ? Strings.Enable : Strings.Disable);
-            UpdateCheckedState("ppabPowerGroup", ppabPower == "on" ? Strings.Enable : Strings.Disable);
-            UpdateCheckedState("dStateGroup", dState == "normal" ? Strings.Normal : Strings.LowPower);
-
-            if (hasNVIDIAGpu) {
-              if (gpuClockTrackBar != null) {
-                if (SetGPUClockLimit(gpuClock)) {
-                  if (gpuClock > 0) {
-                    gpuClockTrackBar.Value = gpuClock / 10;
-                    UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
-                  } else if (gpuClock == 0) {
-                    UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
-                  }
-                } else {
-                  UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
-                }
-              }
-
-              if (maxFrameRateTrackBar != null) {
-                if (maxFrameRate >= 0) {
-                  NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
-                  maxFrameRateTrackBar.Value = FrameRateToIndex(maxFrameRate);
-                  UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
-                } else {
-                  maxFrameRateTrackBar.Value = FrameRateToIndex(NvApiWrapper.NVAPI_GetMaxFrameRate());
-                  UpdateCheckedState("maxFrameRateGroup", Strings.NotSet);
-                }
-              }
-
-              if (DBMenu.Enabled && !isPreset) {
-                DBVersion = (int)key.GetValue("DBVersion", 2);
-                switch (DBVersion) {
-                  case 1:
-                    if (IsAbove50Series()) {
-                      DBVersion = 2;
-                      string deviceId50 = "\"ACPI\\NVDA0820\\NPCF\"";
-                      string command50 = $"pnputil /enable-device {deviceId50}";
-                      ExecuteCommand(command50);
-                      UpdateCheckedState("DBGroup", Strings.DbNormal);
-                      break;
-                    }
-                    DBVersion = 1;
-                    SetGpuPowerState(true, true); // fallback for db state
-                    if (isCPUPowerControlSupported)
-                      SetCpuPowerLimit((byte)CPULimitDB);
-                    countDB = countDBInit;
-                    DBMenu.Enabled = false;
-                    UpdateCheckedState("DBGroup", Strings.DbUnlocked);
-                    break;
-                  case 2:
-                    string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
-                    string command = $"pnputil /enable-device {deviceId}";
-                    ExecuteCommand(command);
-                    DBVersion = 2;
-                    UpdateCheckedState("DBGroup", Strings.DbNormal);
-                    break;
-                }
-              }
-            }
-
-            autoStart = (string)key.GetValue("AutoStart", "off");
-            switch (autoStart) {
-              case "on":
-                AutoStartEnable();
-                UpdateCheckedState("autoStartGroup", Strings.Enable);
-                break;
-              case "off":
-                UpdateCheckedState("autoStartGroup", Strings.Disable);
-                break;
-            }
-
-            alreadyRead = (int)key.GetValue("AlreadyRead", 0);
-
-            customIcon = (string)key.GetValue("CustomIcon", "original");
-            switch (customIcon) {
-              case "original":
-                trayIcon.Icon = Properties.Resources.smallfan;
-                UpdateCheckedState("customIconGroup", Strings.IconOriginal);
-                break;
-              case "custom":
-                SetCustomIcon();
-                UpdateCheckedState("customIconGroup", Strings.IconCustom);
-                break;
-              case "dynamic":
-                UpdateDynamicIcon();
-                UpdateCheckedState("customIconGroup", Strings.IconDynamic);
-                break;
-            }
-
-            omenKey = (string)key.GetValue("OmenKey", "default");
-            omenKeyAppPath = (string)key.GetValue("OmenKeyAppPath", "");
-            omenKeyPresetCandidates = (string)key.GetValue("OmenKeyPresetCandidates", GetDefaultOmenKeyPresetCandidates());
-            GetOmenKeyPresetCandidateKeys();
-            switch (omenKey) {
-              case "default":
-                checkFloatingTimer.Enabled = false;
-                OmenKeyOff();
-                OmenKeyOn(omenKey);
-                UpdateCheckedState("omenKeyGroup", Strings.OmenKeyDefault);
-                break;
-              case "custom":
-                checkFloatingTimer.Enabled = true;
-                OmenKeyOff();
-                OmenKeyOn(omenKey);
-                UpdateCheckedState("omenKeyGroup", Strings.OmenKeyToggle);
-                break;
-              case "app":
-                checkFloatingTimer.Enabled = true;
-                OmenKeyOff();
-                OmenKeyOn(omenKey);
-                UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
-                break;
-              case "preset":
-                checkFloatingTimer.Enabled = true;
-                OmenKeyOff();
-                OmenKeyOn(omenKey);
-                UpdateCheckedState("omenKeyGroup", Strings.OmenKeySwitchPreset);
-                break;
-              case "none":
-                checkFloatingTimer.Enabled = false;
-                OmenKeyOff();
-                UpdateCheckedState("omenKeyGroup", Strings.OmenKeyNone);
-                break;
-            }
-
-            bool monitorCPUCache = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
-            monitorCPU = monitorCPUCache;
-            UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
-
-            if (hasNVIDIAGpu || hasAMDDiscreteGpu) {
-              bool monitorGPUCache = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
-              monitorGPU = monitorGPUCache;
-              UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
-            } else {
-              monitorGPU = false;
-              UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
-            }
-
-            // 根据监控进程是否已在运行，决定如何应用新的监控状态
-            bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
-            if (monitorCPU || monitorGPU) {
-              if (!wasMonitorRunning) {
-                // 进程未启动：从头初始化
-                cpuTempReady = false;
-                gpuTempReady = false;
-                tempReady = false;
-                StartHardwareMonitor(); // 内部已调用 SetCpuMonitorState / SetGpuMonitorState
-              } else {
-                // 进程已在运行：仅发送状态更新命令
-                if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
-                if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
-                SetCpuMonitorState(monitorCPU);
-                SetGpuMonitorState(monitorGPU);
-              }
-            } else {
-              if (wasMonitorRunning) {
-                cpuTempReady = false;
-                gpuTempReady = false;
-                tempReady = false;
-                StopHardwareMonitor();
-              }
-            }
-
-            bool monitorFanCache = Convert.ToBoolean(key.GetValue("MonitorFan", false));
-            if (monitorFanCache == true) {
-              monitorFan = true;
-              UpdateCheckedState("monitorFanGroup", Strings.MonitorFanOn);
-            } else {
-              monitorFan = false;
-              UpdateCheckedState("monitorFanGroup", Strings.MonitorFanOff);
-            }
-
-            monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", "low");
-            switch (monitorRefreshRate) {
-              case "high":
-                tooltipUpdateTimer.Interval = 250;
-                SetMonitorInterval(250);
-                UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshHigh);
-                break;
-              case "low":
-              default:
-                monitorRefreshRate = "low";
-                tooltipUpdateTimer.Interval = 1000;
-                SetMonitorInterval(1000);
-                UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshLow);
-                break;
-            }
-
-            tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
-            if (tempDisplayMode == "raw") {
-              UpdateCheckedState("tempDisplayGroup", Strings.TempRaw);
-            } else {
-              tempDisplayMode = "smoothed";
-              UpdateCheckedState("tempDisplayGroup", Strings.TempSmoothed);
-            }
-
-            textSize = (int)key.GetValue("FloatingBarSize", 40);
-            UpdateFloatingText();
-            if (textSizeTrackBar != null) {
-              textSizeTrackBar.Value = textSize / 4;
-            }
-
-            floatingBarLoc = (string)key.GetValue("FloatingBarLoc", "left");
-            UpdateFloatingText();
-            if (floatingBarLoc == "left") {
-              UpdateCheckedState("floatingBarLocGroup", Strings.FloatingLocLeft);
-            } else {
-              UpdateCheckedState("floatingBarLocGroup", Strings.FloatingLocRight);
-            }
-
-            // 必须在 floatingBar 还原前加载，ShowFloatingForm 需要此值定位
-            floatingBarScreen = (string)key.GetValue("FloatingBarScreen", "");
-
-            floatingBar = (string)key.GetValue("FloatingBar", "off");
-            if (floatingBar == "on") {
-              ShowFloatingForm();
-              UpdateCheckedState("floatingBarGroup", Strings.FloatingShow);
-            } else {
-              CloseFloatingForm();
-              UpdateCheckedState("floatingBarGroup", Strings.FloatingHide);
-            }
-
-            dataLocalize = (string)key.GetValue("DataLocalize", "off");
-            if (dataLocalize == "on") {
-              UpdateCheckedState("dataLocalizeGroup", Strings.Enable);
-            } else {
-              UpdateCheckedState("dataLocalizeGroup", Strings.Disable);
-            }
-
-            autoFanProtect = (string)key.GetValue("AutoFanProtect", "on");
-            UpdateCheckedState("autoFanProtectGroup", autoFanProtect == "on" ? Strings.FanAutoProtectOn : Strings.FanAutoProtectOff);
-
-            // 恢复语言设置菜单勾选（语言本身已在 LoadLanguageSetting 中生效）
-            appLanguage = (string)key.GetValue("AppLanguage", "zh-CN");
-            RestoreLanguageChecked();
-
-            // 旧版升级兼容：不存在预设键时，将当前设置迁移为自定义预设1
-            if (key.GetValue("CurrentPreset") == null) {
-              currentPreset = "PresetCustom1";
-              SavePresetToRegistry(currentPreset);
-              SaveConfig("CurrentPreset");
-            }
-          } else {
-            // 如果注册表键不存在
-            if (platformSettings != null) {
-              applyPresetLogic("PresetExtreme");
-            } else {
-              applyPresetLogic("PresetCustom1");
-            }
+      // CPU 功耗
+      if (isCPUPowerControlSupported) {
+        if (cpuPower == "null") {
+          UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
+        } else if (cpuPower == "max") {
+          SetCpuPowerLimit(254);
+          if (cpuPowerTrackBar != null) cpuPowerTrackBar.Value = 254;
+          UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
+        } else if (cpuPower.Contains(" W")) {
+          int value = int.Parse(cpuPower.Replace(" W", "").Trim());
+          if (value >= 5 && value <= 254) {
+            SetCpuPowerLimit((byte)value);
+            if (cpuPowerTrackBar != null) cpuPowerTrackBar.Value = value;
+            UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
           }
         }
-      } catch (Exception ex) {
-        Logger.Error($"Error restoring configuration: {ex.Message}");
       }
 
-      // 保证应用启动时如果不包含 DataLocalize 键（第一次运行或旧版升级），菜单项UI依然能被初始化选中
-      if (dataLocalize == "on") {
-        UpdateCheckedState("dataLocalizeGroup", Strings.Enable);
-      } else {
-        UpdateCheckedState("dataLocalizeGroup", Strings.Disable);
+      // GPU 电源状态
+      SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
+      UpdateCheckedState("tgpPowerGroup", tgpPower == "on" ? Strings.Enable : Strings.Disable);
+      UpdateCheckedState("ppabPowerGroup", ppabPower == "on" ? Strings.Enable : Strings.Disable);
+      UpdateCheckedState("dStateGroup", dState == "normal" ? Strings.Normal : Strings.LowPower);
+
+      // NVIDIA 专属
+      if (hasNVIDIAGpu) {
+        if (gpuClockTrackBar != null) {
+          if (SetGPUClockLimit(gpuClock)) {
+            if (gpuClock > 0) {
+              gpuClockTrackBar.Value = gpuClock / 10;
+              UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
+            } else {
+              UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
+            }
+          } else {
+            UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
+          }
+        }
+
+        if (maxFrameRateTrackBar != null) {
+          if (maxFrameRate >= 0) {
+            NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+            maxFrameRateTrackBar.Value = FrameRateToIndex(maxFrameRate);
+            UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
+          } else {
+            maxFrameRateTrackBar.Value = FrameRateToIndex(NvApiWrapper.NVAPI_GetMaxFrameRate());
+            UpdateCheckedState("maxFrameRateGroup", Strings.NotSet);
+          }
+        }
       }
+
+      // IccMax
+      if (iccMax == "null") {
+        UpdateCheckedState("iccMaxGroup", Strings.NotSet);
+      } else if (iccMax.Contains(" A")) {
+        if (int.TryParse(iccMax.Replace(" A", "").Trim(), out int ampVal) && ampVal >= 150 && ampVal <= 350) {
+          SetIccMaxByWmi((decimal)ampVal);
+          UpdateCheckedState("iccMaxGroup", iccMax);
+        }
+      }
+
+      // AC Loadline
+      if (acLoadline == "null") {
+        UpdateCheckedState("acLoadLineGroup", Strings.NotSet);
+      } else if (int.TryParse(acLoadline, out int llVal) && llVal >= 1) {
+        SetLoadLine(llVal);
+        UpdateCheckedState("acLoadLineGroup", (180 - 10 * llVal).ToString());
+      }
+
+      // TPP 延迟 1s 应用，避免与其他设置冲突
+      string tppSnapshot = tppPower;
+      System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+        if (tppSnapshot == "null") {
+          UpdateCheckedState("tppPowerGroup", Strings.NotSet);
+        } else if (tppSnapshot == "max") {
+          SetConcurrentTdp(254);
+          if (tppTrackBar != null) tppTrackBar.Value = 254;
+        } else if (tppSnapshot.Contains(" W")) {
+          int value = int.Parse(tppSnapshot.Replace(" W", "").Trim());
+          if (value >= 20 && value <= 254) {
+            SetConcurrentTdp((byte)value);
+            if (tppTrackBar != null) tppTrackBar.Value = value;
+            UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
+          }
+        }
+      });
     }
 
+    /// <summary>
+    /// 切换预设时调用。设置内置预设的默认字段值（或从注册表读取自定义预设），
+    /// 保存到注册表，然后应用到硬件。
+    /// </summary>
     static void applyPresetLogic(string targetPreset) {
       currentPreset = targetPreset;
-      SaveConfig("CurrentPreset");
-      // Reload preset and save values natively
+
       if (targetPreset == "PresetExtreme" || targetPreset == "PresetGpuPriority" || targetPreset == "PresetLightUse") {
-        fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
-        tgpPower = "on"; ppabPower = "on"; dState = "normal";
-        gpuClock = 0; iccMax = "null"; acLoadline = "null";
+        // 内置预设：先写入默认值，再走通用保存路径
         int targetPL1Perf = (platformSettings?.NbPL1UpperBoundPerformance > 0) ? platformSettings.NbPL1UpperBoundPerformance : 160;
         int targetPL1Default = (platformSettings?.NbPL1UpperBoundDefault > 0) ? platformSettings.NbPL1UpperBoundDefault : 55;
 
-        if (targetPreset == "PresetExtreme") {
-          cpuPower = $"{targetPL1Perf} W";
-          tppPower = $"{targetPL1Perf} W";
-          maxFrameRate = 0;
-        } else if (targetPreset == "PresetGpuPriority") {
-          cpuPower = $"{targetPL1Default} W";
-          tppPower = $"{targetPL1Perf} W";
-          maxFrameRate = 0;
-        } else if (targetPreset == "PresetLightUse") {
-          fanTable = "silent";
-          cpuPower = $"{(int)(targetPL1Default * 0.6)} W";
-          if (currentPreset == "PresetLightUse" && platformSettings?.NbPL1UpperBoundDefault == null) cpuPower = "30 W";
-          tppPower = "null";
-          tgpPower = "off";
-          ppabPower = "off";
-          maxFrameRate = 60;
+        fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
+        tgpPower = "on"; ppabPower = "on"; dState = "normal";
+        gpuClock = 0; iccMax = "null"; acLoadline = "null";
+
+        switch (targetPreset) {
+          case "PresetExtreme":
+            cpuPower = $"{targetPL1Perf} W";
+            tppPower = $"{targetPL1Perf} W";
+            maxFrameRate = 0;
+            break;
+          case "PresetGpuPriority":
+            cpuPower = $"{targetPL1Default} W";
+            tppPower = $"{targetPL1Perf} W";
+            maxFrameRate = 0;
+            break;
+          case "PresetLightUse":
+            fanTable = "silent";
+            cpuPower = $"{(int)(targetPL1Default * 0.6)} W";
+            tppPower = "null";
+            tgpPower = "off"; ppabPower = "off";
+            maxFrameRate = 60;
+            break;
         }
       } else {
-        LoadPresetFromRegistry(targetPreset);
+        // 自定义预设：从注册表读取
+        LoadPresetFields(targetPreset);
       }
-      SaveConfig();
-      RestoreConfig(isPreset: true);
+
+      SaveConfig();                                          // 持久化到注册表
+      var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
+      if (item != null)
+        UpdateCheckedState("presetsGroup", null, item);
+      ApplyPresetSettings();                                 // 应用到硬件 + 刷新其余菜单
       UpdateTrayIconText();
+    }
+
+    /// <summary>
+    /// 启动时从注册表还原全部配置，包含预设字段和所有非预设配置项。
+    /// 仅在程序初始化阶段调用一次。
+    /// </summary>
+    static void RestoreConfig() {
+      try {
+        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+          if (key == null) {
+            // 全新安装，无注册表键：应用默认预设
+            applyPresetLogic(platformSettings != null ? "PresetExtreme" : "PresetCustom1");
+            return;
+          }
+
+          // ── 预设字段 ─────────────────────────────────────────────────────────
+          currentPreset = (string)key.GetValue("CurrentPreset", platformSettings != null ? "PresetExtreme" : "PresetCustom1");
+          presetCustom1Name = (string)key.GetValue("PresetCustom1Name", Strings.PresetCustom1);
+          presetCustom2Name = (string)key.GetValue("PresetCustom2Name", Strings.PresetCustom2);
+          presetCustom3Name = (string)key.GetValue("PresetCustom3Name", Strings.PresetCustom3);
+
+          // 旧版升级兼容：不存在 CurrentPreset 键时迁移
+          if (key.GetValue("CurrentPreset") == null) {
+            currentPreset = "PresetCustom1";
+            SavePresetToRegistry(currentPreset);
+            SaveConfig("CurrentPreset");
+          }
+
+          // 内置预设：先按预设逻辑写入默认字段，再用注册表已保存的值覆盖
+          // 自定义预设：直接从子键读取
+          if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
+            int targetPL1Perf = (platformSettings?.NbPL1UpperBoundPerformance > 0) ? platformSettings.NbPL1UpperBoundPerformance : 160;
+            int targetPL1Default = (platformSettings?.NbPL1UpperBoundDefault > 0) ? platformSettings.NbPL1UpperBoundDefault : 55;
+            fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
+            tgpPower = "on"; ppabPower = "on"; dState = "normal";
+            gpuClock = 0; iccMax = "null"; acLoadline = "null";
+            switch (currentPreset) {
+              case "PresetExtreme":
+                cpuPower = $"{targetPL1Perf} W"; tppPower = $"{targetPL1Perf} W"; maxFrameRate = 0;
+                break;
+              case "PresetGpuPriority":
+                cpuPower = $"{targetPL1Default} W"; tppPower = $"{targetPL1Perf} W"; maxFrameRate = 0;
+                break;
+              case "PresetLightUse":
+                fanTable = "silent";
+                cpuPower = $"{(int)(targetPL1Default * 0.6)} W"; tppPower = "null";
+                tgpPower = "off"; ppabPower = "off"; maxFrameRate = 60;
+                break;
+            }
+            // 用注册表中已保存的值覆盖（上次修改过的字段会被保留）
+            fanTable = (string)key.GetValue("FanTable", fanTable);
+            fanControl = (string)key.GetValue("FanControl", fanControl);
+            tempSensitivity = (string)key.GetValue("TempSensitivity", tempSensitivity);
+            cpuPower = (string)key.GetValue("CpuPower", cpuPower);
+            tgpPower = (string)key.GetValue("TgpPower", tgpPower);
+            ppabPower = (string)key.GetValue("PpabPower", ppabPower);
+            dState = (string)key.GetValue("DState", dState);
+            gpuClock = (int)key.GetValue("GpuClock", gpuClock);
+            maxFrameRate = (int)key.GetValue("MaxFrameRate", maxFrameRate);
+            tppPower = (string)key.GetValue("TppPower", tppPower);
+            iccMax = (string)key.GetValue("IccMax", iccMax);
+            acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
+          } else {
+            LoadPresetFields(currentPreset);
+          }
+
+          var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
+          if (item != null)
+            UpdateCheckedState("presetsGroup", null, item);
+          ApplyPresetSettings();
+
+          // ── DB 版本（仅启动时处理）────────────────────────────────────────────
+          if (hasNVIDIAGpu && DBMenu.Enabled) {
+            DBVersion = (int)key.GetValue("DBVersion", 2);
+            switch (DBVersion) {
+              case 1:
+                if (IsAbove50Series()) {
+                  DBVersion = 2;
+                  ExecuteCommand($"pnputil /enable-device \"ACPI\\NVDA0820\\NPCF\"");
+                  UpdateCheckedState("DBGroup", Strings.DbNormal);
+                } else {
+                  SetGpuPowerState(true, true);
+                  if (isCPUPowerControlSupported) SetCpuPowerLimit((byte)CPULimitDB);
+                  countDB = countDBInit;
+                  DBMenu.Enabled = false;
+                  UpdateCheckedState("DBGroup", Strings.DbUnlocked);
+                }
+                break;
+              case 2:
+                ExecuteCommand($"pnputil /enable-device \"ACPI\\NVDA0820\\NPCF\"");
+                UpdateCheckedState("DBGroup", Strings.DbNormal);
+                break;
+            }
+          }
+
+          // ── 非预设配置项 ──────────────────────────────────────────────────────
+          autoStart = (string)key.GetValue("AutoStart", "off");
+          if (autoStart == "on") {
+            AutoStartEnable();
+            UpdateCheckedState("autoStartGroup", Strings.Enable);
+          } else {
+            UpdateCheckedState("autoStartGroup", Strings.Disable);
+          }
+
+          alreadyRead = (int)key.GetValue("AlreadyRead", 0);
+
+          customIcon = (string)key.GetValue("CustomIcon", "original");
+          switch (customIcon) {
+            case "original": trayIcon.Icon = Properties.Resources.smallfan; UpdateCheckedState("customIconGroup", Strings.IconOriginal); break;
+            case "custom": SetCustomIcon(); UpdateCheckedState("customIconGroup", Strings.IconCustom); break;
+            case "dynamic": UpdateDynamicIcon(); UpdateCheckedState("customIconGroup", Strings.IconDynamic); break;
+          }
+
+          omenKey = (string)key.GetValue("OmenKey", "default");
+          omenKeyAppPath = (string)key.GetValue("OmenKeyAppPath", "");
+          omenKeyPresetCandidates = (string)key.GetValue("OmenKeyPresetCandidates", GetDefaultOmenKeyPresetCandidates());
+          GetOmenKeyPresetCandidateKeys();
+          switch (omenKey) {
+            case "default": checkFloatingTimer.Enabled = false; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyDefault); break;
+            case "custom": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyToggle); break;
+            case "app": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp); break;
+            case "preset": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeySwitchPreset); break;
+            case "none": checkFloatingTimer.Enabled = false; OmenKeyOff(); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyNone); break;
+          }
+
+          // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
+          if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
+            monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
+            if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+              monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
+            else
+              monitorGPU = false;
+            monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", false));
+            monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", "low");
+            tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
+          }
+          UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
+          UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
+          UpdateCheckedState("monitorFanGroup", monitorFan ? Strings.MonitorFanOn : Strings.MonitorFanOff);
+
+          bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
+          if (monitorCPU || monitorGPU) {
+            if (!wasMonitorRunning) {
+              cpuTempReady = gpuTempReady = tempReady = false;
+              StartHardwareMonitor();
+            } else {
+              if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
+              if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
+              SetCpuMonitorState(monitorCPU);
+              SetGpuMonitorState(monitorGPU);
+            }
+          } else {
+            if (wasMonitorRunning) {
+              cpuTempReady = gpuTempReady = tempReady = false;
+              StopHardwareMonitor();
+            }
+          }
+
+          switch (monitorRefreshRate) {
+            case "high":
+              tooltipUpdateTimer.Interval = 250; SetMonitorInterval(250);
+              UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshHigh);
+              break;
+            default:
+              monitorRefreshRate = "low";
+              tooltipUpdateTimer.Interval = 1000; SetMonitorInterval(1000);
+              UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshLow);
+              break;
+          }
+
+          tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
+          UpdateCheckedState("tempDisplayGroup", tempDisplayMode == "raw" ? Strings.TempRaw : Strings.TempSmoothed);
+          if (tempDisplayMode != "raw") tempDisplayMode = "smoothed";
+
+          textSize = (int)key.GetValue("FloatingBarSize", 40);
+          UpdateFloatingText();
+          if (textSizeTrackBar != null) textSizeTrackBar.Value = textSize / 4;
+
+          floatingBarLoc = (string)key.GetValue("FloatingBarLoc", "left");
+          UpdateFloatingText();
+          UpdateCheckedState("floatingBarLocGroup", floatingBarLoc == "left" ? Strings.FloatingLocLeft : Strings.FloatingLocRight);
+
+          floatingBarScreen = (string)key.GetValue("FloatingBarScreen", "");
+          floatingBar = (string)key.GetValue("FloatingBar", "off");
+          if (floatingBar == "on") { ShowFloatingForm(); UpdateCheckedState("floatingBarGroup", Strings.FloatingShow); } else { CloseFloatingForm(); UpdateCheckedState("floatingBarGroup", Strings.FloatingHide); }
+
+          dataLocalize = (string)key.GetValue("DataLocalize", "off");
+          UpdateCheckedState("dataLocalizeGroup", dataLocalize == "on" ? Strings.Enable : Strings.Disable);
+
+          autoFanProtect = (string)key.GetValue("AutoFanProtect", "on");
+          UpdateCheckedState("autoFanProtectGroup", autoFanProtect == "on" ? Strings.FanAutoProtectOn : Strings.FanAutoProtectOff);
+
+          appLanguage = (string)key.GetValue("AppLanguage", "zh-CN");
+          RestoreLanguageChecked();
+        }
+      } catch (Exception ex) {
+        Logger.Error($"RestoreConfig: {ex.Message}");
+      }
+    }
+
+    /// <summary>
+    /// 将自定义预设的当前字段值持久化到注册表子键。
+    /// 内置预设不需要单独子键，直接跳过。
+    /// </summary>
+    static void SavePresetToRegistry(string presetKey) {
+      if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") return;
+      try {
+        using (RegistryKey key = Registry.CurrentUser.CreateSubKey($@"Software\OmenSuperHub\{presetKey}")) {
+          if (key == null) return;
+          key.SetValue("FanTable", fanTable);
+          key.SetValue("FanControl", fanControl);
+          key.SetValue("TempSensitivity", tempSensitivity);
+          key.SetValue("CpuPower", cpuPower);
+          key.SetValue("TgpPower", tgpPower);
+          key.SetValue("PpabPower", ppabPower);
+          key.SetValue("DState", dState);
+          key.SetValue("GpuClock", gpuClock);
+          key.SetValue("MaxFrameRate", maxFrameRate);
+          key.SetValue("TppPower", tppPower);
+          key.SetValue("IccMax", iccMax);
+          key.SetValue("AcLoadLine", acLoadline);
+          key.SetValue("MonitorCPU", monitorCPU);
+          if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+            key.SetValue("MonitorGPU", monitorGPU);
+          key.SetValue("MonitorFan", monitorFan);
+          key.SetValue("MonitorRefreshRate", monitorRefreshRate);
+          key.SetValue("TempDisplayMode", tempDisplayMode);
+        }
+      } catch { }
     }
   }
 }
