@@ -581,6 +581,7 @@ namespace OmenSuperHub {
               key.SetValue("CustomIcon", customIcon);
               key.SetValue("OmenKey", omenKey);
               key.SetValue("OmenKeyAppPath", omenKeyAppPath);
+              key.SetValue("OmenKeyPresetCandidates", omenKeyPresetCandidates);
               if (hasNVIDIAGpu || hasAMDDiscreteGpu)
                 key.SetValue("MonitorGPU", monitorGPU);
               key.SetValue("MonitorCPU", monitorCPU);
@@ -656,6 +657,9 @@ namespace OmenSuperHub {
                   break;
                 case "OmenKeyAppPath":
                   key.SetValue("OmenKeyAppPath", omenKeyAppPath);
+                  break;
+                case "OmenKeyPresetCandidates":
+                  key.SetValue("OmenKeyPresetCandidates", omenKeyPresetCandidates);
                   break;
                 case "MonitorGPU":
                   key.SetValue("MonitorGPU", monitorGPU);
@@ -784,26 +788,7 @@ namespace OmenSuperHub {
             presetCustom2Name = (string)key.GetValue("PresetCustom2Name", Strings.PresetCustom2);
             presetCustom3Name = (string)key.GetValue("PresetCustom3Name", Strings.PresetCustom3);
 
-            switch (currentPreset) {
-              case "PresetExtreme":
-                UpdateCheckedState("presetsGroup", Strings.PresetExtreme);
-                break;
-              case "PresetGpuPriority":
-                UpdateCheckedState("presetsGroup", Strings.PresetGpuPriority);
-                break;
-              case "PresetLightUse":
-                UpdateCheckedState("presetsGroup", Strings.PresetLightUse);
-                break;
-              case "PresetCustom1":
-                UpdateCheckedState("presetsGroup", Strings.PresetCustom1);
-                break;
-              case "PresetCustom2":
-                UpdateCheckedState("presetsGroup", Strings.PresetCustom2);
-                break;
-              case "PresetCustom3":
-                UpdateCheckedState("presetsGroup", Strings.PresetCustom3);
-                break;
-            }
+            UpdateCheckedState("presetsGroup", GetPresetDisplayName(currentPreset));
 
             if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
               fanTable = (string)key.GetValue("FanTable", fanTable);
@@ -1046,6 +1031,8 @@ namespace OmenSuperHub {
 
             omenKey = (string)key.GetValue("OmenKey", "default");
             omenKeyAppPath = (string)key.GetValue("OmenKeyAppPath", "");
+            omenKeyPresetCandidates = (string)key.GetValue("OmenKeyPresetCandidates", GetDefaultOmenKeyPresetCandidates());
+            GetOmenKeyPresetCandidateKeys();
             switch (omenKey) {
               case "default":
                 checkFloatingTimer.Enabled = false;
@@ -1064,6 +1051,12 @@ namespace OmenSuperHub {
                 OmenKeyOff();
                 OmenKeyOn(omenKey);
                 UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
+                break;
+              case "preset":
+                checkFloatingTimer.Enabled = true;
+                OmenKeyOff();
+                OmenKeyOn(omenKey);
+                UpdateCheckedState("omenKeyGroup", Strings.OmenKeySwitchPreset);
                 break;
               case "none":
                 checkFloatingTimer.Enabled = false;
@@ -1243,6 +1236,7 @@ namespace OmenSuperHub {
       }
       SaveConfig();
       RestoreConfig(isPreset: true);
+      UpdateTrayIconText();
     }
   }
 }

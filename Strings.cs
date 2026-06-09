@@ -59,6 +59,7 @@
     public static string PresetCustom1 => T("自定义预设1", "自定義預設1", "Custom 1");
     public static string PresetCustom2 => T("自定义预设2", "自定義預設2", "Custom 2");
     public static string PresetCustom3 => T("自定义预设3", "自定義預設3", "Custom 3");
+    public static string ActiveProfile => T("当前档案", "目前檔案", "Active Profile");
     public static string RenamePreset => T("重命名", "重新命名", "Rename");
     public static string RenamePresetTitle => T("重命名预设", "重新命名預設", "Rename Preset");
     public static string RenamePresetPrompt => T("请输入新的预设名称：", "請輸入新的預設名稱：", "Please enter new preset name:");
@@ -462,6 +463,13 @@
     // ─────────────────────────────────────────────────────────────────────────
     public static string OmenKeyDefault => T("默认", "預設", "Default");
     public static string OmenKeyToggle => T("切换浮窗显示", "切換浮窗顯示", "Toggle Overlay");
+    public static string OmenKeySwitchPreset => T("切换预设", "切換預設", "Switch Preset");
+    public static string OmenKeyPresetCandidates => T("切换候选预设", "切換候選預設", "Preset Candidates");
+    public static string OmenKeyPresetBalloonTitle => T("已切换预设", "已切換預設", "Preset Switched");
+    public static string OmenKeyPresetBalloonText(string name) => T(
+        $"当前预设：{name}",
+        $"目前預設：{name}",
+        $"Current preset: {name}");
     public static string OmenKeyLaunchApp => T("打开应用", "開啟應用程式", "Open App");
     public static string OmenKeySelectApp => T("选择应用", "選擇應用程式", "Select App");
     public static string OmenKeyClearApp => T("清除应用绑定", "清除應用程式綁定", "Clear App Binding");

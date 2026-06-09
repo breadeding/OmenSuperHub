@@ -53,6 +53,7 @@ namespace OmenSuperHub {
       }
 
       BuildTrayMenu(trayIcon.ContextMenuStrip);
+      UpdateTrayIconText();
 
       // Initialize tooltip update timer
       tooltipUpdateTimer = new System.Timers.Timer(1000); // Set interval to 1 second (low, default)
@@ -187,6 +188,9 @@ namespace OmenSuperHub {
               if (presetKey == "PresetCustom1") { presetCustom1Name = result; SaveConfig("PresetCustom1Name"); }
               if (presetKey == "PresetCustom2") { presetCustom2Name = result; SaveConfig("PresetCustom2Name"); }
               if (presetKey == "PresetCustom3") { presetCustom3Name = result; SaveConfig("PresetCustom3Name"); }
+              if (currentPreset == presetKey) {
+                UpdateTrayIconText();
+              }
             } else if (string.IsNullOrWhiteSpace(result)) {
               MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.RenamePresetError, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -1149,6 +1153,13 @@ namespace OmenSuperHub {
         OmenKeyOn(omenKey);
         SaveConfig("OmenKey");
       }, false));
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySwitchPreset, "omenKeyGroup", (s, e) => {
+        omenKey = "preset";
+        checkFloatingTimer.Enabled = true;
+        OmenKeyOff();
+        OmenKeyOn(omenKey);
+        SaveConfig("OmenKey");
+      }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyLaunchApp, "omenKeyGroup", (s, e) => {
         if (string.IsNullOrWhiteSpace(omenKeyAppPath) || !File.Exists(omenKeyAppPath)) {
           if (!SelectOmenKeyApp()) {
@@ -1164,6 +1175,58 @@ namespace OmenSuperHub {
         SaveConfig("OmenKey");
       }, false));
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
+
+      bool keepOmenKeyPresetCandidatesMenuOpen = false;
+      ToolStripMenuItem omenKeyPresetCandidatesMenu = new ToolStripMenuItem(Strings.OmenKeyPresetCandidates);
+      omenKeyPresetCandidatesMenu.DropDownItems.Add(new ToolStripMenuItem());
+      ToolStripDropDownClosingEventHandler keepPresetCandidatesMenuOpen = (s, e) => {
+        if (keepOmenKeyPresetCandidatesMenuOpen && e.CloseReason == ToolStripDropDownCloseReason.ItemClicked) {
+          e.Cancel = true;
+        }
+      };
+      menu.Closing += keepPresetCandidatesMenuOpen;
+      omenKeyMenu.DropDown.Closing += keepPresetCandidatesMenuOpen;
+      omenKeyPresetCandidatesMenu.DropDown.Closing += keepPresetCandidatesMenuOpen;
+      omenKeyPresetCandidatesMenu.DropDown.Closed += (s, e) => {
+        keepOmenKeyPresetCandidatesMenuOpen = false;
+      };
+      omenKeyPresetCandidatesMenu.DropDown.MouseLeave += (s, e) => {
+        var dropDown = omenKeyPresetCandidatesMenu.DropDown;
+        if (!dropDown.ClientRectangle.Contains(dropDown.PointToClient(Control.MousePosition))) {
+          dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
+        }
+      };
+      omenKeyPresetCandidatesMenu.DropDownOpening += (s, e) => {
+        omenKeyPresetCandidatesMenu.DropDownItems.Clear();
+        var selectedPresetKeys = GetOmenKeyPresetCandidateKeys();
+        foreach (string presetKey in GetAvailablePresetKeys()) {
+          string localPresetKey = presetKey;
+          var presetItem = new ToolStripMenuItem(GetPresetDisplayName(localPresetKey)) {
+            Checked = selectedPresetKeys.Contains(localPresetKey),
+            CheckOnClick = false
+          };
+          presetItem.MouseDown += (sender, args) => {
+            if (args.Button == MouseButtons.Left) {
+              keepOmenKeyPresetCandidatesMenuOpen = true;
+            }
+          };
+          presetItem.Click += (sender, args) => {
+            keepOmenKeyPresetCandidatesMenuOpen = true;
+            bool nextState = !presetItem.Checked;
+            if (SetOmenKeyPresetCandidate(localPresetKey, nextState)) {
+              presetItem.Checked = nextState;
+              SaveConfig("OmenKeyPresetCandidates");
+            } else {
+              presetItem.Checked = true;
+            }
+            menu.BeginInvoke(new Action(() => keepOmenKeyPresetCandidatesMenuOpen = false));
+          };
+          omenKeyPresetCandidatesMenu.DropDownItems.Add(presetItem);
+        }
+      };
+      omenKeyMenu.DropDownItems.Add(omenKeyPresetCandidatesMenu);
+      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
+
       string appDisplayName = string.IsNullOrWhiteSpace(omenKeyAppPath)
         ? Strings.OmenKeyNoAppSelected
         : Path.GetFileName(omenKeyAppPath);
