@@ -1348,28 +1348,16 @@ namespace OmenSuperHub {
 
     static void ShowOmenKeyPresetNotification() {
       if (trayIcon == null) return;
-      ShowTrayBalloonTip(
-        Strings.OmenKeyPresetBalloonTitle,
-        Strings.OmenKeyPresetBalloonText(GetCurrentPresetDisplayName()),
-        ToolTipIcon.Info,
-        3000,
-        replaceExisting: true
-      );
-    }
 
-    static void ShowTrayBalloonTip(string title, string text, ToolTipIcon icon, int timeout, bool replaceExisting = false) {
-      if (trayIcon == null) return;
-
-      if (replaceExisting && trayIcon.Visible) {
-        trayIcon.Visible = false;
-        trayIcon.Visible = true;
-        UpdateTrayIconText();
+      // 如果右键菜单当前处于展开状态，则直接拦截不通知
+      if (trayIcon.ContextMenuStrip != null && trayIcon.ContextMenuStrip.Visible) {
+        return;
       }
 
-      trayIcon.BalloonTipTitle = title;
-      trayIcon.BalloonTipText = text;
-      trayIcon.BalloonTipIcon = icon;
-      trayIcon.ShowBalloonTip(timeout);
+      trayIcon.BalloonTipTitle = Strings.OmenKeyPresetBalloonTitle;
+      trayIcon.BalloonTipText = Strings.OmenKeyPresetBalloonText(GetCurrentPresetDisplayName());
+      trayIcon.BalloonTipIcon = ToolTipIcon.Info;
+      trayIcon.ShowBalloonTip(3000);
     }
 
     static bool SelectOmenKeyApp() {

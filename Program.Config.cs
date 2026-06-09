@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows.Input;
 using HP.Omen.Core.Common.NVidiaApi;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
@@ -778,7 +779,7 @@ namespace OmenSuperHub {
     /// 将当前内存中的预设字段应用到硬件，并同步更新菜单勾选状态。
     /// 不读写注册表，可以在启动恢复和运行时切换预设时复用。
     /// </summary>
-    static void ApplyPresetSettings() {
+    static void ApplyPresetSettings(string presetKey) {
       // 风扇曲线
       if (fanTable.Contains("cool")) {
         LoadFanConfig("cool.txt");
@@ -903,6 +904,69 @@ namespace OmenSuperHub {
           }
         }
       });
+
+      // 自定义预设特有字段：监控项、温度显示模式等
+      if (presetKey == "Restore" || presetKey == "PresetCustom1" || presetKey == "PresetCustom2" || presetKey == "PresetCustom3") {
+        if (presetKey == "Restore") {
+          try {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+              // Restore时已经判断过key
+              if (key != null) {
+                // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
+                if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
+                  monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
+                  if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+                    monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
+                  else
+                    monitorGPU = false;
+                  monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", false));
+                  monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", "low");
+                  tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
+                }
+              }
+            }
+          } catch (Exception ex) {
+            Logger.Error($"RestoreConfig: {ex.Message}");
+          }
+        }
+        
+        UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
+        UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
+        UpdateCheckedState("monitorFanGroup", monitorFan ? Strings.MonitorFanOn : Strings.MonitorFanOff);
+
+        bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
+        if (monitorCPU || monitorGPU) {
+          if (!wasMonitorRunning) {
+            cpuTempReady = gpuTempReady = tempReady = false;
+            StartHardwareMonitor();
+          } else {
+            if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
+            if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
+            SetCpuMonitorState(monitorCPU);
+            SetGpuMonitorState(monitorGPU);
+          }
+        } else {
+          if (wasMonitorRunning) {
+            cpuTempReady = gpuTempReady = tempReady = false;
+            StopHardwareMonitor();
+          }
+        }
+
+        switch (monitorRefreshRate) {
+          case "high":
+            tooltipUpdateTimer.Interval = 250; SetMonitorInterval(250);
+            UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshHigh);
+            break;
+          default:
+            monitorRefreshRate = "low";
+            tooltipUpdateTimer.Interval = 1000; SetMonitorInterval(1000);
+            UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshLow);
+            break;
+        }
+
+        UpdateCheckedState("tempDisplayGroup", tempDisplayMode == "raw" ? Strings.TempRaw : Strings.TempSmoothed);
+        if (tempDisplayMode != "raw") tempDisplayMode = "smoothed";
+      }
     }
 
     /// <summary>
@@ -949,7 +1013,7 @@ namespace OmenSuperHub {
       var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
       if (item != null)
         UpdateCheckedState("presetsGroup", null, item);
-      ApplyPresetSettings();                                 // 应用到硬件 + 刷新其余菜单
+      ApplyPresetSettings(targetPreset);                                 // 应用到硬件 + 刷新其余菜单
       UpdateTrayIconText();
     }
 
@@ -1020,7 +1084,7 @@ namespace OmenSuperHub {
           var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
           if (item != null)
             UpdateCheckedState("presetsGroup", null, item);
-          ApplyPresetSettings();
+          ApplyPresetSettings("Restore");
 
           // ── DB 版本（仅启动时处理）────────────────────────────────────────────
           if (hasNVIDIAGpu && DBMenu.Enabled) {
@@ -1075,55 +1139,6 @@ namespace OmenSuperHub {
             case "preset": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeySwitchPreset); break;
             case "none": checkFloatingTimer.Enabled = false; OmenKeyOff(); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyNone); break;
           }
-
-          // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
-          if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
-            monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
-            if (hasNVIDIAGpu || hasAMDDiscreteGpu)
-              monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
-            else
-              monitorGPU = false;
-            monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", false));
-            monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", "low");
-            tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
-          }
-          UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
-          UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
-          UpdateCheckedState("monitorFanGroup", monitorFan ? Strings.MonitorFanOn : Strings.MonitorFanOff);
-
-          bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
-          if (monitorCPU || monitorGPU) {
-            if (!wasMonitorRunning) {
-              cpuTempReady = gpuTempReady = tempReady = false;
-              StartHardwareMonitor();
-            } else {
-              if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
-              if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
-              SetCpuMonitorState(monitorCPU);
-              SetGpuMonitorState(monitorGPU);
-            }
-          } else {
-            if (wasMonitorRunning) {
-              cpuTempReady = gpuTempReady = tempReady = false;
-              StopHardwareMonitor();
-            }
-          }
-
-          switch (monitorRefreshRate) {
-            case "high":
-              tooltipUpdateTimer.Interval = 250; SetMonitorInterval(250);
-              UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshHigh);
-              break;
-            default:
-              monitorRefreshRate = "low";
-              tooltipUpdateTimer.Interval = 1000; SetMonitorInterval(1000);
-              UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshLow);
-              break;
-          }
-
-          tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
-          UpdateCheckedState("tempDisplayGroup", tempDisplayMode == "raw" ? Strings.TempRaw : Strings.TempSmoothed);
-          if (tempDisplayMode != "raw") tempDisplayMode = "smoothed";
 
           textSize = (int)key.GetValue("FloatingBarSize", 40);
           UpdateFloatingText();
