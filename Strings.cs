@@ -108,8 +108,8 @@
     public static string FanCoolMode => T("降温模式", "降溫模式", "Cool Mode");
     public static string FanCustomMode => T("自定义", "自訂", "Custom");
     public static string FanCustomTooltip => T(
-        "左键应用 custom.txt，右键编辑 CPU 和 GPU 风扇曲线。",
-        "左鍵套用 custom.txt，右鍵編輯 CPU 和 GPU 風扇曲線。",
+        "左键应用 custom.txt；右键编辑 CPU 和 GPU 风扇曲线。",
+        "左鍵套用 custom.txt；右鍵編輯 CPU 和 GPU 風扇曲線。",
         "Left-click to apply custom.txt; right-click to edit CPU and GPU fan curves.");
     public static string FanCurveEditorTitle => T("自定义风扇曲线", "自訂風扇曲線", "Custom Fan Curves");
     public static string FanCurveCpuTitle => T("CPU 风扇曲线", "CPU 風扇曲線", "CPU Fan Curve");
@@ -121,6 +121,7 @@
         "左鍵空白處新增節點；拖曳節點調整；右鍵節點刪除（至少保留兩個節點）。",
         "Left-click empty space to add; drag to adjust; right-click to delete (keep at least two points).");
     public static string FanCurveSave => T("保存", "儲存", "Save");
+    public static string FanCurveSaveAndApply => T("保存并应用", "儲存並套用", "Save & Apply");
     public static string FanCurveCancel => T("取消", "取消", "Cancel");
     public static string FanCurveLoad => T("加载", "載入", "Load");
     public static string FanCurveFileFilter => T(

@@ -7,6 +7,12 @@ using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
 namespace OmenSuperHub {
+  internal enum FanCurveEditorResult {
+    Cancelled,
+    Saved,
+    SavedAndApplied
+  }
+
   public sealed class MainForm : Form {
     private const string SeriesName = "FanSpeed";
     private const int PointHitRadius = 10;
@@ -21,6 +27,8 @@ namespace OmenSuperHub {
 
     private Chart draggingChart;
     private DataPoint draggingPoint;
+
+    internal FanCurveEditorResult EditorResult { get; private set; }
 
     internal MainForm(
         FanCurveProfile initialProfile,
@@ -76,15 +84,18 @@ namespace OmenSuperHub {
         Padding = new Padding(10, 8, 0, 0)
       };
       Button saveButton = CreateButton(Strings.FanCurveSave);
+      Button saveAndApplyButton = CreateButton(Strings.FanCurveSaveAndApply);
       Button cancelButton = CreateButton(Strings.FanCurveCancel);
       Button loadButton = CreateButton(Strings.FanCurveLoad);
-      saveButton.Click += SaveButton_Click;
+      saveButton.Click += (sender, args) => SaveAndClose(FanCurveEditorResult.Saved);
+      saveAndApplyButton.Click += (sender, args) => SaveAndClose(FanCurveEditorResult.SavedAndApplied);
       cancelButton.Click += (sender, args) => {
         DialogResult = DialogResult.Cancel;
         Close();
       };
       loadButton.Click += LoadButton_Click;
       buttonLayout.Controls.Add(saveButton);
+      buttonLayout.Controls.Add(saveAndApplyButton);
       buttonLayout.Controls.Add(cancelButton);
       buttonLayout.Controls.Add(loadButton);
       rootLayout.Controls.Add(buttonLayout, 2, 0);
@@ -311,11 +322,12 @@ namespace OmenSuperHub {
       }
     }
 
-    private void SaveButton_Click(object sender, EventArgs e) {
+    private void SaveAndClose(FanCurveEditorResult result) {
       try {
         FanCurveProfile profile = GetProfile();
         ValidateProfileForMachine(profile);
         profile.Save(customFilePath);
+        EditorResult = result;
         DialogResult = DialogResult.OK;
         Close();
       } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException) {

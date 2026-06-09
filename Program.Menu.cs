@@ -228,7 +228,9 @@ namespace OmenSuperHub {
           if (ApplyCustomFanConfig())
             UpdateCheckedState("fanTableGroup", null, customFanItem);
         } else if (e.Button == MouseButtons.Right) {
-          ShowCustomFanCurveEditor();
+          FanCurveEditorResult result = ShowCustomFanCurveEditor();
+          if (result == FanCurveEditorResult.SavedAndApplied && ApplyCustomFanConfig())
+            UpdateCheckedState("fanTableGroup", null, customFanItem);
         }
       };
       fanConfigMenu.DropDownItems.Add(customFanItem);
@@ -1749,7 +1751,7 @@ namespace OmenSuperHub {
       RestoreConfig();
     }
 
-    static bool ShowCustomFanCurveEditor() {
+    static FanCurveEditorResult ShowCustomFanCurveEditor() {
       string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
       string silentFilePath = System.IO.Path.Combine(baseDirectory, "silent.txt");
       string customFilePath = System.IO.Path.Combine(baseDirectory, "custom.txt");
@@ -1774,7 +1776,8 @@ namespace OmenSuperHub {
             gpuMaximum,
             fanMaximum,
             customFilePath)) {
-          return editor.ShowDialog() == DialogResult.OK;
+          editor.ShowDialog();
+          return editor.EditorResult;
         }
       } catch (Exception ex) when (
           ex is System.IO.IOException ||
@@ -1786,7 +1789,7 @@ namespace OmenSuperHub {
             Strings.Error,
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
-        return false;
+        return FanCurveEditorResult.Cancelled;
       }
     }
 
