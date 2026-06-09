@@ -195,8 +195,9 @@ namespace OmenSuperHub {
 <h2>六. “Omen键”菜单说明</h2>
 <p>(1) 若选择“默认”，Omen键绑定的事件为任务计划程序的“Omen Key”任务；</p>
 <p>(2) 若选择“切换浮窗显示”，Omen键绑定的事件为切换浮窗显示；</p>
-<p>(3) 注意，Omen键功能可能与某些hp服务有关；</p>
-<p>(4) 若选择“取消绑定”，Omen键将无效。</p>
+<p>(3) 若选择“打开应用”，Omen键绑定的事件为打开选择的应用；</p>
+<p>(4) 注意，Omen键功能可能与某些hp服务有关；</p>
+<p>(5) 若选择“取消绑定”，Omen键将无效。</p>
 
 <h2>七. “其他设置”菜单说明</h2>
 <p>(1) “原版”图标为程序自带图标；</p>
@@ -259,8 +260,9 @@ namespace OmenSuperHub {
 <h2>六. 「Omen鍵」選單說明</h2>
 <p>(1) 若選擇「預設」，Omen鍵綁定事件為任務排程的「Omen Key」任務；</p>
 <p>(2) 若選擇「切換浮窗顯示」，Omen鍵綁定事件為切換浮窗顯示；</p>
-<p>(3) 注意，Omen鍵功能可能與某些hp服務有關；</p>
-<p>(4) 若選擇「取消綁定」，Omen鍵將無效。</p>
+<p>(3) 若選擇“開啟應用”，Omen鍵綁定的事件為開啟選擇的應用；</p>
+<p>(4) 注意，Omen鍵功能可能與某些hp服務有關；</p>
+<p>(5) 若選擇「取消綁定」，Omen鍵將無效。</p>
 
 <h2>七. 「其他設定」選單說明</h2>
 <p>(1) 「原版」圖示為程式自帶圖示；</p>
@@ -323,8 +325,9 @@ namespace OmenSuperHub {
 <h2>6. Omen Key menu</h2>
 <p>(1) Default: binds the Omen Key to the Task Scheduler 'Omen Key' task;</p>
 <p>(2) Toggle Overlay: pressing the Omen Key toggles the overlay;</p>
-<p>(3) Note: Omen Key may depend on certain HP services;</p>
-<p>(4) Unbound: the Omen Key has no action.</p>
+<p>(3) If ""Open App"" is selected, the action bound to the Omen key is to open the selected application;</p>
+<p>(4) Note: Omen Key may depend on certain HP services;</p>
+<p>(5) Unbound: the Omen Key has no action.</p>
 
 <h2>7. Settings menu</h2>
 <p>(1) Default icon: built-in icon;</p>

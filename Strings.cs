@@ -297,6 +297,10 @@
         "💡選擇低功耗將把GPU功率限制在一個較低水平。",
         "💡 Low power mode restricts GPU power to a lower level.");
 
+    public static string PerfMaxFrameRateTip => T("💡设置GPU将渲染的最大3D游戏或应用程序帧速率的最大帧速率，0即无限制",
+        "💡設置GPU將渲染的最大3D遊戲或應用程序幀速率的最大幀速率，0即無限制",
+        "💡 Sets the maximum frame rate for GPU rendering of 3D games or applications, 0 means no limit.");
+
     public static string PerfDbTip => T("💡你的设备支持Ppab条件更改，请优先选择增大Ppab条件中的功率而不是更改DB版本，两者效果相同。",
         "💡你的設備支援Ppab條件更改，請優先選擇增大Ppab條件中的功率而不是更改DB版本，兩者效果相同。",
         "💡 Your device supports Ppab condition adjustment. Prefer increasing Ppab condition power over changing DB version — same effect.");

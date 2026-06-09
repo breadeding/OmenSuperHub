@@ -728,16 +728,12 @@ namespace OmenSuperHub {
 
         InitFrameRateMap();
         ToolStripMenuItem maxFrameRateMenu = new ToolStripMenuItem(Strings.MaxFrameRateMenu);
+        maxFrameRateMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfMaxFrameRateTip) { Enabled = false });
         maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "maxFrameRateGroup", (s, e) => {
           maxFrameRate = -1;
           NvApiWrapper.NVAPI_SetMaxFrameRate(0);
           SaveConfig("MaxFrameRate");
         }, true));
-        maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.Unlimited, "maxFrameRateGroup", (s, e) => {
-          maxFrameRate = 0;
-          NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
-          SaveConfig("MaxFrameRate");
-        }, false));
         maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.SetMaxFrameRateSlider, "maxFrameRateGroup", (s, e) => { }, false));
         maxFrameRateTrackBar = new ToolStripTrackBar();
         maxFrameRateTrackBar.Minimum = 0;
@@ -757,7 +753,12 @@ namespace OmenSuperHub {
 
         maxFrameRateTrackBar.ValueChanged += (sender, e) => {
           maxFrameRate = IndexToFrameRate(maxFrameRateTrackBar.Value);
-          maxFrameRateValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{IndexToFrameRate(maxFrameRateTrackBar.Value)} FPS");
+          if (maxFrameRate > 0) {
+            maxFrameRateValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{IndexToFrameRate(maxFrameRateTrackBar.Value)} FPS");
+          } else {
+            maxFrameRateValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, Strings.Unlimited);
+          }
+          
           SaveConfig("MaxFrameRate");
         };
 

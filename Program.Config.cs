@@ -974,14 +974,10 @@ namespace OmenSuperHub {
               }
 
               if (maxFrameRateTrackBar != null) {
-                if (maxFrameRate > 0) {
+                if (maxFrameRate >= 0) {
                   NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
                   maxFrameRateTrackBar.Value = FrameRateToIndex(maxFrameRate);
                   UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
-                } else if (maxFrameRate == 0) {
-                  NvApiWrapper.NVAPI_SetMaxFrameRate(0);
-                  maxFrameRateTrackBar.Value = FrameRateToIndex(NvApiWrapper.NVAPI_GetMaxFrameRate());
-                  UpdateCheckedState("maxFrameRateGroup", Strings.Unlimited);
                 } else {
                   maxFrameRateTrackBar.Value = FrameRateToIndex(NvApiWrapper.NVAPI_GetMaxFrameRate());
                   UpdateCheckedState("maxFrameRateGroup", Strings.NotSet);
