@@ -26,7 +26,7 @@ namespace OmenSuperHub {
         ContextMenuStrip = new ContextMenuStrip(),
         Visible = true
       };
-      trayIcon.MouseClick += TrayIcon_MouseClick;
+      //trayIcon.MouseClick += TrayIcon_MouseClick;
 
       try {
         // 读取图标配置
@@ -253,9 +253,7 @@ namespace OmenSuperHub {
           if (ApplyCustomFanConfig())
             UpdateCheckedState("fanTableGroup", null, customFanItem);
         } else if (e.Button == MouseButtons.Right) {
-          FanCurveEditorResult result = ShowCustomFanCurveEditor();
-          if (result == FanCurveEditorResult.SavedAndApplied && ApplyCustomFanConfig())
-            UpdateCheckedState("fanTableGroup", null, customFanItem);
+          ShowCustomFanCurveEditor();
         }
       };
       fanConfigMenu.DropDownItems.Add(customFanItem);
@@ -1908,58 +1906,61 @@ namespace OmenSuperHub {
       RestoreConfig();
     }
 
-    static FanCurveEditorResult ShowCustomFanCurveEditor() {
+    static void ShowCustomFanCurveEditor() {
       string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-      string silentFilePath = System.IO.Path.Combine(baseDirectory, "silent.txt");
-      string customFilePath = System.IO.Path.Combine(baseDirectory, "custom.txt");
+      string coolFilePath = Path.Combine(baseDirectory, "cool.txt");
+      string customFilePath = Path.Combine(baseDirectory, "custom.txt");
 
       try {
         FanCurveProfile initialProfile;
-        if (System.IO.File.Exists(customFilePath)) {
+        if (File.Exists(customFilePath)) {
           initialProfile = FanCurveProfile.Load(customFilePath);
         } else {
-          if (!System.IO.File.Exists(silentFilePath))
-            CreateDefaultFanCurveProfile(true).Save(silentFilePath);
-          initialProfile = FanCurveProfile.Load(silentFilePath);
+          if (!File.Exists(coolFilePath))
+            CreateDefaultFanCurveProfile(false).Save(coolFilePath);
+          initialProfile = FanCurveProfile.Load(coolFilePath);
         }
 
         int cpuMaximum = maxCPUTemp ?? 100;
         int gpuMaximum = maxGPUTemp ?? 90;
-        int detectedMaximum = platformMaxFanSpeed ?? 6400;
+        int detectedMaximum = platformMaxFanSpeed ?? 5600;
         int fanMaximum = Math.Max(1000, (int)(Math.Ceiling(detectedMaximum * 1.1 / 100D) * 100D));
-        using (var editor = new MainForm(
-            initialProfile,
-            cpuMaximum,
-            gpuMaximum,
-            fanMaximum,
-            customFilePath)) {
-          editor.ShowDialog();
-          return editor.EditorResult;
-        }
+        var editor = new FanCurveForm(initialProfile, cpuMaximum, gpuMaximum, fanMaximum, customFilePath);
+
+        // 订阅关闭事件，处理保存和应用
+        editor.FormClosed += (sender, args) => {
+          if (editor.EditorResult == FanCurveEditorResult.SavedAndApplied) {
+            ApplyCustomFanConfig();
+            // 更新菜单勾选状态
+            var customFanMenuItem = FindMenuItem(trayIcon.ContextMenuStrip.Items, Strings.FanCustomMode);
+            if (customFanMenuItem != null)
+              UpdateCheckedState("fanTableGroup", null, customFanMenuItem);
+          }
+        };
+        editor.Show();  // 非模态显示
       } catch (Exception ex) when (
-          ex is System.IO.IOException ||
+          ex is IOException ||
           ex is UnauthorizedAccessException ||
-          ex is System.IO.InvalidDataException) {
+          ex is InvalidDataException) {
         MessageBox.Show(
             Application.OpenForms.OfType<HelpForm>().FirstOrDefault(),
             Strings.FanCurveLoadFailed + Environment.NewLine + ex.Message,
             Strings.Error,
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
-        return FanCurveEditorResult.Cancelled;
       }
     }
 
     static bool ApplyCustomFanConfig() {
       string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-      string coolFilePath = System.IO.Path.Combine(baseDirectory, "cool.txt");
-      string customFilePath = System.IO.Path.Combine(baseDirectory, "custom.txt");
+      string coolFilePath = Path.Combine(baseDirectory, "cool.txt");
+      string customFilePath = Path.Combine(baseDirectory, "custom.txt");
 
       try {
-        if (!System.IO.File.Exists(customFilePath)) {
-          if (!System.IO.File.Exists(coolFilePath))
+        if (!File.Exists(customFilePath)) {
+          if (!File.Exists(coolFilePath))
             CreateDefaultFanCurveProfile(false).Save(coolFilePath);
-          System.IO.File.Copy(coolFilePath, customFilePath);
+          File.Copy(coolFilePath, customFilePath);
         }
 
         fanTable = "custom";

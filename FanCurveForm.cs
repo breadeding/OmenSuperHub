@@ -13,9 +13,18 @@ namespace OmenSuperHub {
     SavedAndApplied
   }
 
-  public sealed class MainForm : Form {
+  public sealed class FanCurveForm : Form {
     private const string SeriesName = "FanSpeed";
-    private const int PointHitRadius = 10;
+    private const int PointHitRadius = 12;
+    private const int PointHitRadiusSquared = PointHitRadius * PointHitRadius;
+
+    private static readonly Color PageBackColor = Color.FromArgb(245, 247, 250);
+    private static readonly Color CardBackColor = Color.White;
+    private static readonly Color BorderColor = Color.FromArgb(220, 225, 230);
+    private static readonly Color AccentColor = Color.FromArgb(0, 122, 204);
+    private static readonly Color MarkerColor = Color.FromArgb(220, 53, 69);
+    private static readonly Color GridColor = Color.FromArgb(232, 236, 240);
+    private static readonly Color AxisLineColor = Color.FromArgb(200, 205, 210);
 
     private readonly Chart cpuChart;
     private readonly Chart gpuChart;
@@ -23,14 +32,14 @@ namespace OmenSuperHub {
     private readonly int gpuTemperatureMaximum;
     private readonly int fanSpeedMaximum;
     private readonly string customFilePath;
-    private readonly ToolTip pointToolTip = new ToolTip();
+    private readonly ToolTip pointToolTip;
 
     private Chart draggingChart;
     private DataPoint draggingPoint;
 
     internal FanCurveEditorResult EditorResult { get; private set; }
 
-    internal MainForm(
+    internal FanCurveForm(
         FanCurveProfile initialProfile,
         int cpuTemperatureMaximum,
         int gpuTemperatureMaximum,
@@ -41,52 +50,44 @@ namespace OmenSuperHub {
       this.fanSpeedMaximum = Math.Max(100, fanSpeedMaximum);
       this.customFilePath = customFilePath;
 
+      pointToolTip = new ToolTip {
+        AutomaticDelay = 0,
+        AutoPopDelay = 2000,
+        InitialDelay = 0,
+        ReshowDelay = 0,
+        ShowAlways = true
+      };
+
       Text = Strings.FanCurveEditorTitle;
       Icon = Properties.Resources.fan;
       StartPosition = FormStartPosition.CenterScreen;
       FormBorderStyle = FormBorderStyle.Sizable;
-      MinimumSize = new Size(980, 560);
-      Size = new Size(1180, 650);
       MaximizeBox = true;
-      MinimizeBox = false;
+      MinimizeBox = true;
+      BackColor = PageBackColor;
 
-      var rootLayout = new TableLayoutPanel {
-        Dock = DockStyle.Fill,
-        ColumnCount = 3,
-        RowCount = 2,
-        Padding = new Padding(12)
-      };
-      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126F));
-      rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-      rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+      Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
+      Size = new Size(screenBounds.Width * 3 / 4, screenBounds.Height * 3 / 4);
+      MinimumSize = new Size(1280, 720);
+      AutoScaleMode = AutoScaleMode.Dpi;
 
-      var instructions = new Label {
-        AutoSize = false,
-        Dock = DockStyle.Fill,
-        Text = Strings.FanCurveInstructions,
-        TextAlign = ContentAlignment.MiddleLeft,
-        Padding = new Padding(6, 0, 6, 0)
-      };
-      rootLayout.Controls.Add(instructions, 0, 0);
-      rootLayout.SetColumnSpan(instructions, 2);
+      var rootLayout = BuildRootLayout();
 
       cpuChart = CreateChart(Strings.FanCurveCpuTitle, this.cpuTemperatureMaximum);
       gpuChart = CreateChart(Strings.FanCurveGpuTitle, this.gpuTemperatureMaximum);
+
       rootLayout.Controls.Add(cpuChart, 0, 1);
       rootLayout.Controls.Add(gpuChart, 1, 1);
 
-      var buttonLayout = new FlowLayoutPanel {
-        Dock = DockStyle.Fill,
-        FlowDirection = FlowDirection.TopDown,
-        WrapContents = false,
-        Padding = new Padding(10, 8, 0, 0)
-      };
-      Button saveButton = CreateButton(Strings.FanCurveSave);
-      Button saveAndApplyButton = CreateButton(Strings.FanCurveSaveAndApply);
-      Button cancelButton = CreateButton(Strings.FanCurveCancel);
-      Button loadButton = CreateButton(Strings.FanCurveLoad);
+      Panel rightPanel = BuildActionPanel(out Button saveButton, out Button saveAndApplyButton, out Button cancelButton, out Button loadButton);
+      rootLayout.Controls.Add(rightPanel, 2, 0);
+      rootLayout.SetRowSpan(rightPanel, 2);
+
+      Controls.Add(rootLayout);
+
+      AcceptButton = saveButton;
+      CancelButton = cancelButton;
+
       saveButton.Click += (sender, args) => SaveAndClose(FanCurveEditorResult.Saved);
       saveAndApplyButton.Click += (sender, args) => SaveAndClose(FanCurveEditorResult.SavedAndApplied);
       cancelButton.Click += (sender, args) => {
@@ -94,72 +95,166 @@ namespace OmenSuperHub {
         Close();
       };
       loadButton.Click += LoadButton_Click;
-      buttonLayout.Controls.Add(saveButton);
-      buttonLayout.Controls.Add(saveAndApplyButton);
-      buttonLayout.Controls.Add(cancelButton);
-      buttonLayout.Controls.Add(loadButton);
-      rootLayout.Controls.Add(buttonLayout, 2, 0);
-      rootLayout.SetRowSpan(buttonLayout, 2);
-
-      Controls.Add(rootLayout);
-      AcceptButton = saveButton;
-      CancelButton = cancelButton;
 
       ApplyProfile(initialProfile);
+    }
+
+    protected override CreateParams CreateParams {
+      get {
+        CreateParams cp = base.CreateParams;
+        cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
+        return cp;
+      }
+    }
+
+    private TableLayoutPanel BuildRootLayout() {
+      var rootLayout = new TableLayoutPanel {
+        Dock = DockStyle.Fill,
+        ColumnCount = 3,
+        RowCount = 2,
+        Padding = new Padding(16),
+        BackColor = PageBackColor
+      };
+
+      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+      rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210F));
+
+      rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+      rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+      var instructions = new Label {
+        AutoSize = false,
+        Dock = DockStyle.Fill,
+        Text = Strings.FanCurveInstructions,
+        TextAlign = ContentAlignment.MiddleLeft,
+        Padding = new Padding(8, 0, 8, 0),
+        ForeColor = Color.FromArgb(70, 70, 70),
+        Font = new Font(Font.FontFamily, 12F, FontStyle.Regular)
+      };
+
+      rootLayout.Controls.Add(instructions, 0, 0);
+      rootLayout.SetColumnSpan(instructions, 2);
+
+      return rootLayout;
+    }
+
+    private Panel BuildActionPanel(
+        out Button saveButton,
+        out Button saveAndApplyButton,
+        out Button cancelButton,
+        out Button loadButton) {
+      var panel = new Panel {
+        Dock = DockStyle.Fill,
+        Padding = new Padding(12, 8, 0, 0),
+        BackColor = PageBackColor
+      };
+
+      var inner = new FlowLayoutPanel {
+        Dock = DockStyle.Top,
+        FlowDirection = FlowDirection.TopDown,
+        WrapContents = false,
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        BackColor = PageBackColor
+      };
+
+      saveButton = CreateActionButton(Strings.FanCurveSave);
+      saveAndApplyButton = CreateActionButton(Strings.FanCurveSaveAndApply);
+      cancelButton = CreateActionButton(Strings.FanCurveCancel);
+      loadButton = CreateActionButton(Strings.FanCurveLoad);
+
+      inner.Controls.Add(saveButton);
+      inner.Controls.Add(saveAndApplyButton);
+      inner.Controls.Add(cancelButton);
+      inner.Controls.Add(loadButton);
+
+      panel.Controls.Add(inner);
+      return panel;
+    }
+
+    private Button CreateActionButton(string text) {
+      return new Button {
+        Text = text,
+        Width = 190,
+        Height = 60,
+        Margin = new Padding(0, 0, 0, 20),
+        FlatStyle = FlatStyle.Flat,
+        BackColor = CardBackColor,
+        ForeColor = Color.FromArgb(40, 40, 40),
+        Font = new Font(Font.FontFamily, 12F, FontStyle.Regular),
+        Cursor = Cursors.Hand
+      }.Also(button => {
+        button.FlatAppearance.BorderColor = BorderColor;
+        button.FlatAppearance.BorderSize = 1;
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(238, 243, 248);
+        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(225, 232, 240);
+      });
     }
 
     private Chart CreateChart(string title, int temperatureMaximum) {
       var chart = new Chart {
         Dock = DockStyle.Fill,
-        BackColor = SystemColors.Control,
+        BackColor = PageBackColor,
         Margin = new Padding(4, 4, 8, 4),
         Cursor = Cursors.Cross
       };
+
+      chart.AntiAliasing = AntiAliasingStyles.All;
+      chart.TextAntiAliasingQuality =
+          TextAntiAliasingQuality.High;
+
       chart.Titles.Add(new Title(title) {
-        Font = new Font(Font.FontFamily, 11F, FontStyle.Bold)
+        Font = new Font(Font.FontFamily, 12F, FontStyle.Bold),
+        ForeColor = Color.FromArgb(40, 40, 40)
       });
 
-      var chartArea = new ChartArea("FanSpeedArea");
-      chartArea.BackColor = Color.White;
+      var chartArea = new ChartArea("FanSpeedArea") {
+        BackColor = CardBackColor
+      };
+
       chartArea.AxisX.Minimum = 0;
       chartArea.AxisX.Maximum = temperatureMaximum;
       chartArea.AxisX.Interval = 10;
       chartArea.AxisX.Title = Strings.FanCurveTemperatureAxis;
-      chartArea.AxisX.MajorGrid.LineColor = Color.Gainsboro;
+      chartArea.AxisX.LineColor = AxisLineColor;
+      chartArea.AxisX.MajorGrid.LineColor = GridColor;
+      chartArea.AxisX.LabelStyle.ForeColor = Color.FromArgb(90, 90, 90);
+      chartArea.AxisX.TitleForeColor = Color.FromArgb(80, 80, 80);
+      chartArea.AxisX.TitleFont = new Font(Font.FontFamily, 12F, FontStyle.Bold);
+      
       chartArea.AxisY.Minimum = 0;
       chartArea.AxisY.Maximum = fanSpeedMaximum;
       chartArea.AxisY.Interval = GetFanSpeedInterval(fanSpeedMaximum);
       chartArea.AxisY.Title = Strings.FanCurveFanSpeedAxis;
       chartArea.AxisY.LabelStyle.Format = "0";
-      chartArea.AxisY.MajorGrid.LineColor = Color.Gainsboro;
+      chartArea.AxisY.LineColor = AxisLineColor;
+      chartArea.AxisY.MajorGrid.LineColor = GridColor;
+      chartArea.AxisY.LabelStyle.ForeColor = Color.FromArgb(90, 90, 90);
+      chartArea.AxisY.TitleForeColor = Color.FromArgb(80, 80, 80);
+      chartArea.AxisY.TitleFont = new Font(Font.FontFamily, 12F, FontStyle.Bold);
+
       chart.ChartAreas.Add(chartArea);
 
-      chart.Series.Add(new Series(SeriesName) {
+      var series = new Series(SeriesName) {
         ChartType = SeriesChartType.Line,
         BorderWidth = 3,
-        Color = Color.FromArgb(0, 122, 204),
+        Color = AccentColor,
         MarkerStyle = MarkerStyle.Circle,
-        MarkerSize = 9,
-        MarkerColor = Color.FromArgb(220, 53, 69),
-        MarkerBorderColor = Color.White,
+        MarkerSize = 8,
+        MarkerColor = MarkerColor,
+        MarkerBorderColor = CardBackColor,
         MarkerBorderWidth = 1,
         ToolTip = "#VALX°C, #VALY RPM"
-      });
+      };
+      chart.Series.Add(series);
 
       chart.MouseDown += Chart_MouseDown;
       chart.MouseMove += Chart_MouseMove;
       chart.MouseUp += Chart_MouseUp;
       chart.MouseLeave += (sender, args) => pointToolTip.Hide(chart);
-      return chart;
-    }
 
-    private static Button CreateButton(string text) {
-      return new Button {
-        Text = text,
-        Width = 104,
-        Height = 38,
-        Margin = new Padding(0, 0, 0, 10)
-      };
+      return chart;
     }
 
     private static int GetFanSpeedInterval(int maximum) {
@@ -177,16 +272,28 @@ namespace OmenSuperHub {
     private static void SetSeriesPoints(Chart chart, IEnumerable<FanCurvePoint> points) {
       Series series = chart.Series[SeriesName];
       series.Points.Clear();
-      foreach (FanCurvePoint point in points.OrderBy(point => point.Temperature))
-        series.Points.AddXY(point.Temperature, point.FanSpeed);
+
+      foreach (FanCurvePoint point in points.OrderBy(item => item.Temperature)) {
+        series.Points.Add(CreateDataPoint(point.Temperature, point.FanSpeed));
+      }
+
       chart.Invalidate();
     }
 
+    private static DataPoint CreateDataPoint(int temperature, int fanSpeed) {
+      var point = new DataPoint {
+        XValue = temperature
+      };
+      point.YValues = new double[] { fanSpeed };
+      return point;
+    }
+
     private void Chart_MouseDown(object sender, MouseEventArgs e) {
-      var chart = sender as Chart;
+      Chart chart = sender as Chart;
       if (chart == null) return;
 
       DataPoint point = FindPoint(chart, e.Location);
+
       if (e.Button == MouseButtons.Right) {
         if (point != null && chart.Series[SeriesName].Points.Count > 2) {
           chart.Series[SeriesName].Points.Remove(point);
@@ -196,6 +303,7 @@ namespace OmenSuperHub {
       }
 
       if (e.Button != MouseButtons.Left) return;
+
       if (point != null) {
         draggingChart = chart;
         draggingPoint = point;
@@ -209,21 +317,24 @@ namespace OmenSuperHub {
 
       int roundedTemperature = Clamp((int)Math.Round(temperature), 0, GetTemperatureMaximum(chart));
       int roundedFanSpeed = Clamp(RoundFanSpeed(fanSpeed), 0, fanSpeedMaximum);
+
       DataPoint existingPoint = chart.Series[SeriesName].Points
           .FirstOrDefault(candidate => (int)Math.Round(candidate.XValue) == roundedTemperature);
+
       if (existingPoint != null) {
         draggingChart = chart;
         draggingPoint = existingPoint;
+        chart.Cursor = Cursors.SizeAll;
         return;
       }
 
-      var points = GetPoints(chart);
-      points.Add(new FanCurvePoint(roundedTemperature, roundedFanSpeed));
-      SetSeriesPoints(chart, points);
+      DataPoint newPoint = CreateDataPoint(roundedTemperature, roundedFanSpeed);
+      InsertPointSorted(chart.Series[SeriesName].Points, newPoint);
+      chart.Invalidate();
     }
 
     private void Chart_MouseMove(object sender, MouseEventArgs e) {
-      var chart = sender as Chart;
+      Chart chart = sender as Chart;
       if (chart == null) return;
 
       if (draggingChart == chart && draggingPoint != null) {
@@ -240,15 +351,15 @@ namespace OmenSuperHub {
 
       chart.Cursor = Cursors.Hand;
       pointToolTip.Show(
-          string.Format("{0}°C, {1} RPM", (int)Math.Round(point.XValue), (int)Math.Round(point.YValues[0])),
+          $"{(int)Math.Round(point.XValue)}°C, {(int)Math.Round(point.YValues[0])} RPM",
           chart,
           e.X + 14,
           e.Y - 28,
-          500);
+          800);
     }
 
     private void Chart_MouseUp(object sender, MouseEventArgs e) {
-      var chart = sender as Chart;
+      Chart chart = sender as Chart;
       if (chart != null) chart.Cursor = Cursors.Cross;
       draggingChart = null;
       draggingPoint = null;
@@ -259,46 +370,65 @@ namespace OmenSuperHub {
       double fanSpeed;
       if (!TryGetChartValues(chart, location, out temperature, out fanSpeed)) return;
 
-      List<DataPoint> orderedPoints = chart.Series[SeriesName].Points
-          .OrderBy(point => point.XValue)
-          .ToList();
+      Series series = chart.Series[SeriesName];
+      List<DataPoint> orderedPoints = series.Points.OrderBy(item => item.XValue).ToList();
       int pointIndex = orderedPoints.IndexOf(draggingPoint);
       if (pointIndex < 0) return;
 
       int minimumTemperature = pointIndex == 0
           ? 0
           : (int)Math.Round(orderedPoints[pointIndex - 1].XValue) + 1;
+
       int maximumTemperature = pointIndex == orderedPoints.Count - 1
           ? GetTemperatureMaximum(chart)
           : (int)Math.Round(orderedPoints[pointIndex + 1].XValue) - 1;
 
       draggingPoint.XValue = Clamp((int)Math.Round(temperature), minimumTemperature, maximumTemperature);
       draggingPoint.YValues[0] = Clamp(RoundFanSpeed(fanSpeed), 0, fanSpeedMaximum);
+
+      series.Points.Remove(draggingPoint);
+      InsertPointSorted(series.Points, draggingPoint);
       chart.Invalidate();
+    }
+
+    private static void InsertPointSorted(DataPointCollection points, DataPoint newPoint) {
+      int insertIndex = 0;
+      while (insertIndex < points.Count && points[insertIndex].XValue < newPoint.XValue) {
+        insertIndex++;
+      }
+      points.Insert(insertIndex, newPoint);
     }
 
     private DataPoint FindPoint(Chart chart, Point mouseLocation) {
       foreach (DataPoint point in chart.Series[SeriesName].Points) {
         double pointX = chart.ChartAreas[0].AxisX.ValueToPixelPosition(point.XValue);
         double pointY = chart.ChartAreas[0].AxisY.ValueToPixelPosition(point.YValues[0]);
-        double distance = Math.Sqrt(
-            Math.Pow(pointX - mouseLocation.X, 2) +
-            Math.Pow(pointY - mouseLocation.Y, 2));
-        if (distance <= PointHitRadius)
+
+        double dx = pointX - mouseLocation.X;
+        double dy = pointY - mouseLocation.Y;
+        double distanceSquared = dx * dx + dy * dy;
+
+        if (distanceSquared <= PointHitRadiusSquared) {
           return point;
+        }
       }
+
       return null;
     }
 
     private static bool TryGetChartValues(Chart chart, Point location, out double xValue, out double yValue) {
       xValue = 0;
       yValue = 0;
+
       try {
         ChartArea area = chart.ChartAreas[0];
         xValue = area.AxisX.PixelPositionToValue(location.X);
         yValue = area.AxisY.PixelPositionToValue(location.Y);
-        return xValue >= area.AxisX.Minimum && xValue <= area.AxisX.Maximum &&
-               yValue >= area.AxisY.Minimum && yValue <= area.AxisY.Maximum;
+
+        return xValue >= area.AxisX.Minimum &&
+               xValue <= area.AxisX.Maximum &&
+               yValue >= area.AxisY.Minimum &&
+               yValue <= area.AxisY.Maximum;
       } catch (ArgumentException) {
         return false;
       }
@@ -315,9 +445,11 @@ namespace OmenSuperHub {
 
         try {
           ApplyProfile(FanCurveProfile.Load(dialog.FileName));
-        } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException) {
-          MessageBox.Show(this, Strings.FanCurveLoadFailed + Environment.NewLine + ex.Message, Strings.Error,
-              MessageBoxButtons.OK, MessageBoxIcon.Error);
+        } catch (Exception ex) when (
+            ex is IOException ||
+            ex is UnauthorizedAccessException ||
+            ex is InvalidDataException) {
+          ShowError(Strings.FanCurveLoadFailed, ex);
         }
       }
     }
@@ -327,13 +459,25 @@ namespace OmenSuperHub {
         FanCurveProfile profile = GetProfile();
         ValidateProfileForMachine(profile);
         profile.Save(customFilePath);
+
         EditorResult = result;
         DialogResult = DialogResult.OK;
         Close();
-      } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException) {
-        MessageBox.Show(this, Strings.FanCurveSaveFailed + Environment.NewLine + ex.Message, Strings.Error,
-            MessageBoxButtons.OK, MessageBoxIcon.Error);
+      } catch (Exception ex) when (
+          ex is IOException ||
+          ex is UnauthorizedAccessException ||
+          ex is InvalidDataException) {
+        ShowError(Strings.FanCurveSaveFailed, ex);
       }
+    }
+
+    private void ShowError(string message, Exception ex) {
+      MessageBox.Show(
+          this,
+          message + Environment.NewLine + ex.Message,
+          Strings.Error,
+          MessageBoxButtons.OK,
+          MessageBoxIcon.Error);
     }
 
     private FanCurveProfile GetProfile() {
@@ -361,8 +505,9 @@ namespace OmenSuperHub {
               point.Temperature > temperatureMaximum ||
               point.FanSpeed < 0 ||
               point.FanSpeed > fanSpeedMaximum) ||
-          points.GroupBy(point => point.Temperature).Any(group => group.Count() > 1))
+          points.GroupBy(point => point.Temperature).Any(group => group.Count() > 1)) {
         throw new InvalidDataException(Strings.FanCurveOutOfRange);
+      }
     }
 
     private int GetTemperatureMaximum(Chart chart) {
@@ -375,6 +520,13 @@ namespace OmenSuperHub {
 
     private static int Clamp(int value, int minimum, int maximum) {
       return Math.Max(minimum, Math.Min(maximum, value));
+    }
+  }
+
+  internal static class ObjectExtensions {
+    internal static T Also<T>(this T value, Action<T> action) {
+      action(value);
+      return value;
     }
   }
 }

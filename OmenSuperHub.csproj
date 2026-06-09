@@ -306,7 +306,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="FanCurveProfile.cs" />
-    <Compile Include="MainForm.cs">
+    <Compile Include="FanCurveForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="OmenHardware.cs" />

@@ -115,7 +115,7 @@
     public static string FanCurveEditorTitle => T("自定义风扇曲线", "自訂風扇曲線", "Custom Fan Curves");
     public static string FanCurveCpuTitle => T("CPU 风扇曲线", "CPU 風扇曲線", "CPU Fan Curve");
     public static string FanCurveGpuTitle => T("GPU 风扇曲线", "GPU 風扇曲線", "GPU Fan Curve");
-    public static string FanCurveTemperatureAxis => T("温度 (°C)", "溫度 (°C)", "Temperature (°C)");
+    public static string FanCurveTemperatureAxis => T("温度 (℃)", "溫度 (℃)", "Temperature (℃)");
     public static string FanCurveFanSpeedAxis => T("风扇转速 (RPM)", "風扇轉速 (RPM)", "Fan Speed (RPM)");
     public static string FanCurveInstructions => T(
         "左键空白处增加节点；拖动节点调整；右键节点删除（至少保留两个节点）。",

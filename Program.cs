@@ -804,9 +804,7 @@ namespace OmenSuperHub {
 
     static void TrayIcon_MouseClick(object sender, MouseEventArgs e) {
       if (e.Button == MouseButtons.Left) {
-        //MainForm.Instance.Show();
-        //MainForm.Instance.TopMost = true;
-        //MainForm.Instance.TopMost = false;
+        
       }
     }
 

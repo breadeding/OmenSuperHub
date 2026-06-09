@@ -15,14 +15,10 @@ namespace OmenSuperHub {
       Icon = Properties.Resources.fan;
       this.FormClosed += HelpForm_FormClosed;
 
-      // 窗体大小和位置（屏幕的一半，居中）
+      // 窗体大小和位置（居中）
       Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
-      Size formSize = new Size(screenBounds.Width / 2, screenBounds.Height / 2);
-      Size = formSize;
-      StartPosition = FormStartPosition.Manual;
-      Location = new Point(
-          (screenBounds.Width - formSize.Width) / 2,
-          (screenBounds.Height - formSize.Height) / 2);
+      Size = new Size(screenBounds.Width * 3 / 5, screenBounds.Height * 3 / 5);
+      StartPosition = FormStartPosition.CenterScreen;
 
       // 创建 WebBrowser 控件
       webBrowser = new WebBrowser {

@@ -397,9 +397,8 @@ namespace OmenSuperHub {
     }
 
     static void LoadDefaultFanConfig(string filePath) {
-      bool useSilentDefaults =
-          filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0 ||
-          filePath.IndexOf("custom", StringComparison.OrdinalIgnoreCase) >= 0;
+      // 只有包含 "silent" 的路径才使用静音模板，否则使用冷静模板（cool / custom 等）
+      bool useSilentDefaults = filePath.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0;
       FanCurveProfile profile = CreateDefaultFanCurveProfile(useSilentDefaults);
       profile.Save(filePath);
       LoadFanConfigFromLists(
