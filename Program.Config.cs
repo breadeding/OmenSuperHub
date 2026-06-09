@@ -580,6 +580,7 @@ namespace OmenSuperHub {
               key.SetValue("AlreadyRead", alreadyRead);
               key.SetValue("CustomIcon", customIcon);
               key.SetValue("OmenKey", omenKey);
+              key.SetValue("OmenKeyAppPath", omenKeyAppPath);
               if (hasNVIDIAGpu || hasAMDDiscreteGpu)
                 key.SetValue("MonitorGPU", monitorGPU);
               key.SetValue("MonitorCPU", monitorCPU);
@@ -652,6 +653,9 @@ namespace OmenSuperHub {
                   break;
                 case "OmenKey":
                   key.SetValue("OmenKey", omenKey);
+                  break;
+                case "OmenKeyAppPath":
+                  key.SetValue("OmenKeyAppPath", omenKeyAppPath);
                   break;
                 case "MonitorGPU":
                   key.SetValue("MonitorGPU", monitorGPU);
@@ -1045,6 +1049,7 @@ namespace OmenSuperHub {
             }
 
             omenKey = (string)key.GetValue("OmenKey", "default");
+            omenKeyAppPath = (string)key.GetValue("OmenKeyAppPath", "");
             switch (omenKey) {
               case "default":
                 checkFloatingTimer.Enabled = false;
@@ -1057,6 +1062,12 @@ namespace OmenSuperHub {
                 OmenKeyOff();
                 OmenKeyOn(omenKey);
                 UpdateCheckedState("omenKeyGroup", Strings.OmenKeyToggle);
+                break;
+              case "app":
+                checkFloatingTimer.Enabled = true;
+                OmenKeyOff();
+                OmenKeyOn(omenKey);
+                UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
                 break;
               case "none":
                 checkFloatingTimer.Enabled = false;

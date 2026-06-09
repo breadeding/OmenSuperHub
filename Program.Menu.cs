@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
@@ -1147,6 +1148,47 @@ namespace OmenSuperHub {
         OmenKeyOn(omenKey);
         SaveConfig("OmenKey");
       }, false));
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyLaunchApp, "omenKeyGroup", (s, e) => {
+        if (string.IsNullOrWhiteSpace(omenKeyAppPath) || !File.Exists(omenKeyAppPath)) {
+          if (!SelectOmenKeyApp()) {
+            skipCheckedUpdate = true;
+            return;
+          }
+          SaveConfig("OmenKeyAppPath");
+        }
+        omenKey = "app";
+        checkFloatingTimer.Enabled = true;
+        OmenKeyOff();
+        OmenKeyOn(omenKey);
+        SaveConfig("OmenKey");
+      }, false));
+      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
+      string appDisplayName = string.IsNullOrWhiteSpace(omenKeyAppPath)
+        ? Strings.OmenKeyNoAppSelected
+        : Path.GetFileName(omenKeyAppPath);
+      omenKeyMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.OmenKeyCurrentApp}: {appDisplayName}") { Enabled = false });
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectApp, null, (s, e) => {
+        if (!SelectOmenKeyApp()) return;
+        SaveConfig("OmenKeyAppPath");
+        omenKey = "app";
+        checkFloatingTimer.Enabled = true;
+        OmenKeyOff();
+        OmenKeyOn(omenKey);
+        SaveConfig("OmenKey");
+        RefreshMenu();
+      }, false));
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearApp, null, (s, e) => {
+        omenKeyAppPath = "";
+        SaveConfig("OmenKeyAppPath");
+        if (omenKey == "app") {
+          omenKey = "none";
+          checkFloatingTimer.Enabled = false;
+          OmenKeyOff();
+          SaveConfig("OmenKey");
+        }
+        RefreshMenu();
+      }, false));
+      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyNone, "omenKeyGroup", (s, e) => {
         omenKey = "none";
         checkFloatingTimer.Enabled = false;

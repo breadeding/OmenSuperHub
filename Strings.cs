@@ -458,6 +458,23 @@
     // ─────────────────────────────────────────────────────────────────────────
     public static string OmenKeyDefault => T("默认", "預設", "Default");
     public static string OmenKeyToggle => T("切换浮窗显示", "切換浮窗顯示", "Toggle Overlay");
+    public static string OmenKeyLaunchApp => T("打开应用", "開啟應用程式", "Open App");
+    public static string OmenKeySelectApp => T("选择应用", "選擇應用程式", "Select App");
+    public static string OmenKeyClearApp => T("清除应用绑定", "清除應用程式綁定", "Clear App Binding");
+    public static string OmenKeyCurrentApp => T("当前应用", "目前應用程式", "Current App");
+    public static string OmenKeyNoAppSelected => T("未选择", "未選擇", "Not Selected");
+    public static string OmenKeyAppFilter => T(
+        "应用程序和快捷方式|*.exe;*.lnk;*.bat;*.cmd|所有文件|*.*",
+        "應用程式和捷徑|*.exe;*.lnk;*.bat;*.cmd|所有檔案|*.*",
+        "Applications and shortcuts|*.exe;*.lnk;*.bat;*.cmd|All files|*.*");
+    public static string OmenKeyAppNotFound => T(
+        "未找到已绑定的应用，请重新选择。",
+        "找不到已綁定的應用程式，請重新選擇。",
+        "The bound app was not found. Please select it again.");
+    public static string OmenKeyAppLaunchFailed(string msg) => T(
+        $"打开应用失败：{msg}",
+        $"開啟應用程式失敗：{msg}",
+        $"Failed to open app: {msg}");
     public static string OmenKeyNone => T("取消绑定", "取消綁定", "Unbound");
 
     // ─────────────────────────────────────────────────────────────────────────

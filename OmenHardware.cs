@@ -928,7 +928,7 @@ namespace OmenSuperHub {
         var consumerClass = new ManagementClass(scope, new ManagementPath("CommandLineEventConsumer"), null);
         var consumer = consumerClass.CreateInstance();
         string currentPath = AppDomain.CurrentDomain.BaseDirectory;
-        if (method == "custom") {
+        if (method == "custom" || method == "app") {
           consumer["CommandLineTemplate"] = @"cmd /c echo OmenKeyTriggered > \\.\pipe\OmenSuperHubPipe";
         } else {
           consumer["CommandLineTemplate"] = @"C:\Windows\System32\schtasks.exe /run /tn ""Omen Key""";
