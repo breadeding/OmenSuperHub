@@ -510,6 +510,9 @@
     public static string ValidationUnsupported => T("不支持的机型", "不支援的 HP 機型", "Unsupported HP Product");
     public static string SysBoardProduct => T("主板产品号", "主機板型號", "Board Product");
     public static string SysBiosVersion => T("BIOS 版本", "BIOS 版本", "BIOS Version");
+    public static string SysPawnIOState => T("PawnIO 状态", "PawnIO 狀態", "PawnIO State");
+    public static string SysPawnIONormol => T("正常", "正常", "Normal");
+    public static string SysPawnIONotInstalled => T("未安装", "未安裝", "Not Installed");
     public static string SysCpu => T("CPU", "CPU", "CPU");
     public static string SysCpuTjMax => T("CPU温度墙", "CPU溫度上限", "CPU Tjmax");
     public static string SysGpu => T("显卡", "顯示卡", "GPU");

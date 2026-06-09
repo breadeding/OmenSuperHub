@@ -76,6 +76,14 @@ namespace OmenSuperHub {
       string biosVersion = GetBiosVersion();
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysBiosVersion}: {biosVersion}") { Enabled = false });
 
+      // PawnIO信息
+      string pawnIOState = "";
+      if (!IsPawnIOInstalled())
+        pawnIOState = Strings.SysPawnIONotInstalled;
+      else
+        pawnIOState = GetPawnIOState();
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysPawnIOState}: {pawnIOState}") { Enabled = false });
+
       // CPU 完整型号
       string cpuModel = GetCpuModel();
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysCpu}: {cpuModel}") { Enabled = false });

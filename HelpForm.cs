@@ -154,11 +154,12 @@ namespace OmenSuperHub {
 <li>✨ 自定义风扇曲线设置界面 <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
 <li>✨ Omen键打开应用 <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
 <li>✨ Omen键切换预设 <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
+<li>✨ 本机信息添加PawnIO状态检测</a></li>
 <p><strong>优化：</strong></p>
 <li>⚡ 优化菜单操作：点击后不自动收起菜单</li>
 <li>⚡ 优化最大帧率菜单及提示</li>
 <p><strong>修复：</strong></p>
-<li>🐛 帮助页面打开时触发弹窗将导致卡死的问题</li>
+<li>🐛 切换预设时额外重新应用不相关设置的问题</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -223,11 +224,12 @@ namespace OmenSuperHub {
 <li>✨ 自訂風扇曲線設定介面 <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
 <li>✨ Omen鍵開啟應用程式 <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
 <li>✨ Omen鍵切換預設 <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
+<li>✨ 本機資訊新增PawnIO狀態偵測</a></li>
 <p><strong>優化：</strong></p>
 <li>⚡ 最佳化選單操作：點選後不自動收起選單</li>
 <li>⚡ 優化最大幀率選單及提示</li>
 <p><strong>修復：</strong></p>
-<li>🐛 幫助頁面開啟時觸發彈窗將導致卡死的問題</li>
+<li>🐛 切換預設時額外重新套用不相關設定的問題</li>
 </div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -292,11 +294,12 @@ namespace OmenSuperHub {
 <li>✨ Custom fan curve settings interface <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
 <li>✨ Launch app using the Omen key <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
 <li>✨ Switch presets using the Omen key <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
+<li>✨ Added PawnIO status detection to local device information</a></li>
 <p><strong>Improvements:</strong></p>
 <li>⚡ Menu interaction: Menu no longer closes automatically after clicking</li>
 <li>⚡ Optimized max frame rate menu and tooltips</li>
 <p><strong>Fixes:</strong></p>
-<li>🐛 Fixed an issue where triggering a popup while the Help page was open caused the app to freeze</li>
+<li>🐛 Fixed the issue of extra reapplication of unrelated settings when switching presets</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>

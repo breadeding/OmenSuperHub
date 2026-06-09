@@ -47,6 +47,41 @@ namespace OmenSuperHub {
       }
     }
 
+    /// <summary>
+    /// 判断 PawnIO 驱动是否正在运行
+    /// </summary>
+    public static bool IsPawnIOInstalled() {
+      var result = GpuAppManager.ExecuteCommand("sc query PawnIO");
+      if (result.ExitCode != 0)
+        return false;
+      else return true;
+    }
+
+    /// <summary>
+    /// 获取 PawnIO 驱动的详细状态（如 RUNNING, STOPPED, 或 Not found）
+    /// </summary>
+    public static string GetPawnIOState() {
+      var result = GpuAppManager.ExecuteCommand("sc query PawnIO");
+      if (result.ExitCode != 0)
+        return "Not found";
+
+      var lines = result.Output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+      foreach (var line in lines) {
+        if (line.IndexOf("STATE", StringComparison.OrdinalIgnoreCase) >= 0) {
+          // 典型格式: "STATE              : 4  RUNNING"
+          var parts = line.Split(new[] { ':' }, 2);
+          if (parts.Length == 2) {
+            var statePart = parts[1].Trim();
+            // 提取最后一个空格分隔的部分（即状态单词）
+            var stateWords = statePart.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (stateWords.Length > 0)
+              return stateWords[stateWords.Length - 1]; // 返回 "RUNNING" 或 "STOPPED"
+          }
+        }
+      }
+      return "Unknown";
+    }
+
     // 获取系统设计数据（128字节），包含硬件能力、传感器、热策略等
     public static byte[] GetSystemDesignData() {
       return SendOmenBiosWmi(0x28, new byte[] { 0x00, 0x00, 0x00, 0x00 }, 128);
