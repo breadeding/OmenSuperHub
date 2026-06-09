@@ -163,8 +163,9 @@ namespace OmenSuperHub {
 <hr/>
 
 <h2>一. “风扇配置”菜单说明</h2>
-<p>(1) 本程序可设置两种不同的温度-转速对应配置，安静模式加载 ""silent.txt""，降温模式加载 ""cool.txt""，程序会自动进行线性插值，精度为1℃，修改后需要重新点击对应的模式才能生效；</p>
-<p>(2) 读取到温度变化后程序将立即设置对应的转速，“实时”，“高”，“中”和“低”分别能以从无到高的强度对温度进行平滑处理。</p>
+<p>(1) 本程序支持安静、降温和自定义三种温度-转速配置。安静模式加载 ""silent.txt""，降温模式加载 ""cool.txt""；左键点击自定义会应用 ""custom.txt""，右键点击则打开 CPU/GPU 曲线编辑器；若应用时文件不存在，会先复制 ""cool.txt""；</p>
+<p>(2) 自定义曲线中左键增加节点、拖动调整节点、右键删除节点；“保存”只写入文件，“保存并应用”会写入并立即切换到自定义曲线，“加载”可将其他 txt 配置载入编辑器；程序会自动进行线性插值，精度为1℃；</p>
+<p>(3) 读取到温度变化后程序将立即设置对应的转速，“实时”，“高”，“中”和“低”分别能以从无到高的强度对温度进行平滑处理。</p>
 
 <h2>二. “风扇控制”菜单说明</h2>
 <p>(1) 选择“自动”则程序会根据风扇配置和当前温度自动设定风扇转速；</p>
@@ -226,8 +227,9 @@ namespace OmenSuperHub {
 <hr/>
 
 <h2>一. 「風扇配置」選單說明</h2>
-<p>(1) 本程式可設定兩種不同的溫度-轉速對應配置，安靜模式載入 ""silent.txt""，降溫模式載入 ""cool.txt""，程式會自動進行線性插值，精度為1℃，修改後需重新點擊對應模式才能生效；</p>
-<p>(2) 讀取到溫度變化後程式將立即設定對應轉速，「即時」、「高」、「中」、「低」分別以從無到高的強度對溫度進行平滑處理。</p>
+<p>(1) 本程式支援安靜、降溫和自訂三種溫度-轉速設定。安靜模式載入 ""silent.txt""，降溫模式載入 ""cool.txt""；左鍵點擊自訂會套用 ""custom.txt""，右鍵點擊則開啟 CPU/GPU 曲線編輯器；若套用時檔案不存在，會先複製 ""cool.txt""；</p>
+<p>(2) 自訂曲線中左鍵新增節點、拖曳調整節點、右鍵刪除節點；「儲存」只寫入檔案，「儲存並套用」會寫入並立即切換至自訂曲線，「載入」可將其他 txt 設定載入編輯器；程式會自動進行線性插值，精度為1℃；</p>
+<p>(3) 讀取到溫度變化後程式將立即設定對應轉速，「即時」、「高」、「中」、「低」分別以從無到高的強度對溫度進行平滑處理。</p>
 
 <h2>二. 「風扇控制」選單說明</h2>
 <p>(1) 選擇「自動」則程式會根據風扇配置和當前溫度自動設定風扇轉速；</p>
@@ -289,8 +291,9 @@ namespace OmenSuperHub {
 <hr/>
 
 <h2>1. Fan Config menu</h2>
-<p>(1) Two fan profiles are supported. Silent mode loads ""silent.txt"" (conservative), Cool mode loads ""cool.txt"" (aggressive). Linear interpolation at 1°C precision. Changes take effect only after re-selecting the profile;</p>
-<p>(2) Realtime / High / Medium / Low response modes apply increasing temperature smoothing.</p>
+<p>(1) Three fan profiles are supported. Silent loads ""silent.txt"" and Cool loads ""cool.txt"". Left-click Custom to apply ""custom.txt""; right-click it to open the CPU/GPU curve editor. If custom.txt is missing when applied, cool.txt is copied first;</p>
+<p>(2) In the custom editor, left-click to add a point, drag to adjust it, and right-click to delete it. Save only writes the file; Save & Apply writes it and switches to the custom curve immediately. Load imports another txt profile. Curves use linear interpolation at 1°C precision;</p>
+<p>(3) Realtime / High / Medium / Low response modes apply increasing temperature smoothing.</p>
 
 <h2>2. Fan Control menu</h2>
 <p>(1) Auto: OSH sets fan speed based on the fan profile and current temperature (higher of CPU/GPU lookup);</p>

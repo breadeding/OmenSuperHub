@@ -106,6 +106,38 @@
     // ─────────────────────────────────────────────────────────────────────────
     public static string FanSilentMode => T("安静模式", "安靜模式", "Silent Mode");
     public static string FanCoolMode => T("降温模式", "降溫模式", "Cool Mode");
+    public static string FanCustomMode => T("自定义", "自訂", "Custom");
+    public static string FanCustomTooltip => T(
+        "左键应用 custom.txt；右键编辑 CPU 和 GPU 风扇曲线。",
+        "左鍵套用 custom.txt；右鍵編輯 CPU 和 GPU 風扇曲線。",
+        "Left-click to apply custom.txt; right-click to edit CPU and GPU fan curves.");
+    public static string FanCurveEditorTitle => T("自定义风扇曲线", "自訂風扇曲線", "Custom Fan Curves");
+    public static string FanCurveCpuTitle => T("CPU 风扇曲线", "CPU 風扇曲線", "CPU Fan Curve");
+    public static string FanCurveGpuTitle => T("GPU 风扇曲线", "GPU 風扇曲線", "GPU Fan Curve");
+    public static string FanCurveTemperatureAxis => T("温度 (°C)", "溫度 (°C)", "Temperature (°C)");
+    public static string FanCurveFanSpeedAxis => T("风扇转速 (RPM)", "風扇轉速 (RPM)", "Fan Speed (RPM)");
+    public static string FanCurveInstructions => T(
+        "左键空白处增加节点；拖动节点调整；右键节点删除（至少保留两个节点）。",
+        "左鍵空白處新增節點；拖曳節點調整；右鍵節點刪除（至少保留兩個節點）。",
+        "Left-click empty space to add; drag to adjust; right-click to delete (keep at least two points).");
+    public static string FanCurveSave => T("保存", "儲存", "Save");
+    public static string FanCurveSaveAndApply => T("保存并应用", "儲存並套用", "Save & Apply");
+    public static string FanCurveCancel => T("取消", "取消", "Cancel");
+    public static string FanCurveLoad => T("加载", "載入", "Load");
+    public static string FanCurveFileFilter => T(
+        "风扇配置文件 (*.txt)|*.txt|所有文件 (*.*)|*.*",
+        "風扇設定檔 (*.txt)|*.txt|所有檔案 (*.*)|*.*",
+        "Fan profile (*.txt)|*.txt|All files (*.*)|*.*");
+    public static string FanCurveInvalidFile => T(
+        "风扇配置文件格式无效。",
+        "風扇設定檔格式無效。",
+        "The fan profile format is invalid.");
+    public static string FanCurveOutOfRange => T(
+        "曲线必须至少包含两个节点，温度和转速不能超过当前机型上限，且温度不能重复。",
+        "曲線必須至少包含兩個節點，溫度和轉速不能超過目前機型上限，且溫度不能重複。",
+        "Each curve needs at least two points. Values must stay within this model's limits and temperatures must be unique.");
+    public static string FanCurveLoadFailed => T("加载风扇配置失败。", "載入風扇設定失敗。", "Failed to load the fan profile.");
+    public static string FanCurveSaveFailed => T("保存风扇配置失败。", "儲存風扇設定失敗。", "Failed to save the fan profile.");
     public static string FanResponseSpeed => T("风扇响应速度", "風扇響應速度", "Fan Response Speed");
     public static string FanRespRealtime => T("实时", "即時", "Realtime");
     public static string FanRespHigh => T("高", "高", "High");
