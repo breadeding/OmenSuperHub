@@ -65,6 +65,9 @@ namespace OmenSuperHub {
     static void BuildTrayMenu(ContextMenuStrip menu) {
       menu.Items.Clear();
 
+      menu.Closing -= TrayMenu_Closing;
+      menu.Closing += TrayMenu_Closing;
+
       ToolStripMenuItem sysInfoMenu = new ToolStripMenuItem(Strings.SysInfo);
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelName}: {DeviceModel.OmenPlatform.DisplayName}") { Enabled = false });
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelValidation}: {Validation()}") { Enabled = false });
@@ -1333,9 +1336,30 @@ namespace OmenSuperHub {
       }, false));
       menu.Items.Add(new ToolStripSeparator()); // Separator between groups
       menu.Items.Add(CreateMenuItem(Strings.Exit, null, (s, e) => Exit(), false));
+
+      // 所有菜单项添加完毕后，递归挂载 Closing 事件
+      AttachClosingHandler(menu);
     }
 
-    // 在合适的位置添加此方法（例如 OmenHardware 类或独立的辅助类）
+    static void AttachClosingHandler(ToolStripDropDown dropDown) {
+      dropDown.Closing -= TrayMenu_Closing;
+      dropDown.Closing += TrayMenu_Closing;
+
+      foreach (ToolStripItem item in dropDown.Items) {
+        if (item is ToolStripMenuItem menuItem && menuItem.HasDropDownItems) {
+          AttachClosingHandler(menuItem.DropDown);
+        }
+      }
+    }
+
+    static void TrayMenu_Closing(object sender, ToolStripDropDownClosingEventArgs e) {
+      if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked) {
+        e.Cancel = true;  // 只拦截点击菜单项导致的关闭
+      }
+      // 其余原因（失焦、ESC、AppClicked 等）全部放行，不设 e.Cancel
+    }
+
+    // 在合适的位置添加此方法
     public static void StartCleanCreekWithProgress(int durationMs, string title, Action startCleanAction, Action stopCleanAction) {
       // 创建进度窗体
       Form progressForm = new Form();

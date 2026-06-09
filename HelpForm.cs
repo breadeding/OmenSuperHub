@@ -151,9 +151,12 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 新增最大帧率菜单，0~1000 FPS可调</li>
+<li>✨ 自定义风扇曲线设置界面 <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
+<li>✨ Omen键打开应用 <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
+<li>✨ Omen键切换预设 <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 关闭帮助页面后释放内存占用</li>
+<li>⚡ 优化菜单操作：点击后不自动收起菜单</li>
+<li>⚡ 优化最大帧率菜单及提示</li>
 <p><strong>修复：</strong></p>
 <li>🐛 帮助页面打开时触发弹窗将导致卡死的问题</li>
 </div>
@@ -195,9 +198,10 @@ namespace OmenSuperHub {
 <h2>六. “Omen键”菜单说明</h2>
 <p>(1) 若选择“默认”，Omen键绑定的事件为任务计划程序的“Omen Key”任务；</p>
 <p>(2) 若选择“切换浮窗显示”，Omen键绑定的事件为切换浮窗显示；</p>
-<p>(3) 若选择“打开应用”，Omen键绑定的事件为打开选择的应用；</p>
-<p>(4) 注意，Omen键功能可能与某些hp服务有关；</p>
-<p>(5) 若选择“取消绑定”，Omen键将无效。</p>
+<p>(3) 若选择“切换预设”，Omen键绑定的事件为在候选预设之间循环切换；</p>
+<p>(4) 若选择“打开应用”，Omen键绑定的事件为打开选择的应用；</p>
+<p>(5) 注意，Omen键功能可能与某些hp服务有关；</p>
+<p>(6) 若选择“取消绑定”，Omen键将无效。</p>
 
 <h2>七. “其他设置”菜单说明</h2>
 <p>(1) “原版”图标为程序自带图标；</p>
@@ -216,9 +220,12 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 新增最大幀率選單，0~1000 FPS可調</li>
+<li>✨ 自訂風扇曲線設定介面 <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
+<li>✨ Omen鍵開啟應用程式 <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
+<li>✨ Omen鍵切換預設 <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ 關閉幫助頁面後釋放記憶體佔用</li>
+<li>⚡ 最佳化選單操作：點選後不自動收起選單</li>
+<li>⚡ 優化最大幀率選單及提示</li>
 <p><strong>修復：</strong></p>
 <li>🐛 幫助頁面開啟時觸發彈窗將導致卡死的問題</li>
 </div>
@@ -260,9 +267,10 @@ namespace OmenSuperHub {
 <h2>六. 「Omen鍵」選單說明</h2>
 <p>(1) 若選擇「預設」，Omen鍵綁定事件為任務排程的「Omen Key」任務；</p>
 <p>(2) 若選擇「切換浮窗顯示」，Omen鍵綁定事件為切換浮窗顯示；</p>
-<p>(3) 若選擇“開啟應用”，Omen鍵綁定的事件為開啟選擇的應用；</p>
-<p>(4) 注意，Omen鍵功能可能與某些hp服務有關；</p>
-<p>(5) 若選擇「取消綁定」，Omen鍵將無效。</p>
+<p>(3) 若選擇“切換預設”，Omen鍵綁定的事件為在候選預設之間循環切換；</p>
+<p>(4) 若選擇“開啟應用”，Omen鍵綁定的事件為開啟選擇的應用；</p>
+<p>(5) 注意，Omen鍵功能可能與某些hp服務有關；</p>
+<p>(6) 若選擇「取消綁定」，Omen鍵將無效。</p>
 
 <h2>七. 「其他設定」選單說明</h2>
 <p>(1) 「原版」圖示為程式自帶圖示；</p>
@@ -281,11 +289,14 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
-<li>✨ Added a maximum frame rate menu; adjustable from 0 to 1000 FPS</li>
-<p><strong>Optimizations:</strong></p>
-<li>⚡ Memory is now released after closing the Help page</li>
+<li>✨ Custom fan curve settings interface <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
+<li>✨ Launch app using the Omen key <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
+<li>✨ Switch presets using the Omen key <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
+<p><strong>Improvements:</strong></p>
+<li>⚡ Menu interaction: Menu no longer closes automatically after clicking</li>
+<li>⚡ Optimized max frame rate menu and tooltips</li>
 <p><strong>Fixes:</strong></p>
-<li>🐛 Fixed an issue where triggering a pop-up while the Help page was open caused the application to freeze</li>
+<li>🐛 Fixed an issue where triggering a popup while the Help page was open caused the app to freeze</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -325,9 +336,10 @@ namespace OmenSuperHub {
 <h2>6. Omen Key menu</h2>
 <p>(1) Default: binds the Omen Key to the Task Scheduler 'Omen Key' task;</p>
 <p>(2) Toggle Overlay: pressing the Omen Key toggles the overlay;</p>
-<p>(3) If ""Open App"" is selected, the action bound to the Omen key is to open the selected application;</p>
-<p>(4) Note: Omen Key may depend on certain HP services;</p>
-<p>(5) Unbound: the Omen Key has no action.</p>
+<p>(3) Switch Preset: pressing the Omen Key cycles through the preset options;</p>
+<p>(4) Open App: pressing the Omen Key opens the selected application;</p>
+<p>(5) Note: Omen Key may depend on certain HP services;</p>
+<p>(6) Unbound: the Omen Key has no action.</p>
 
 <h2>7. Settings menu</h2>
 <p>(1) Default icon: built-in icon;</p>

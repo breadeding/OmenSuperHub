@@ -1501,14 +1501,14 @@ namespace OmenSuperHub {
       return GetPresetDisplayName(currentPreset);
     }
 
-    static string GetActiveProfileStatusText() {
-      return $"{Strings.ActiveProfile}: {GetCurrentPresetDisplayName()}";
+    static string GetActivePresetStatusText() {
+      return $"{Strings.ActivePreset}: {GetCurrentPresetDisplayName()}";
     }
 
     static void UpdateTrayIconText() {
       if (trayIcon == null) return;
 
-      string text = GetActiveProfileStatusText();
+      string text = GetActivePresetStatusText();
       string monitor = monitorText();
       if (!string.IsNullOrWhiteSpace(monitor))
         text += "\n" + monitor;
