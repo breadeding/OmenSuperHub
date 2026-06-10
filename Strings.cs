@@ -108,6 +108,7 @@
     // ─────────────────────────────────────────────────────────────────────────
     // 风扇配置
     // ─────────────────────────────────────────────────────────────────────────
+    public static string FanCurveNote => T("💡 右键打开编辑窗口", "💡 右鍵開啟編輯視窗", "💡 Right-click to open the editor");
     public static string FanSilentMode => T("安静模式", "安靜模式", "Silent Mode");
     public static string FanCoolMode => T("降温模式", "降溫模式", "Cool Mode");
     public static string FanCustomMode => T("自定义", "自訂", "Custom");
@@ -123,7 +124,7 @@
         "左键应用 custom.txt；右键编辑 custom.txt 风扇曲线。",
         "左鍵套用 custom.txt；右鍵編輯 custom.txt 風扇曲線。",
         "Left-click to apply custom.txt; right-click to edit custom.txt fan curve.");
-    public static string FanCurveEditorTitle => T("自定义风扇曲线", "自訂風扇曲線", "Custom Fan Curves");
+    public static string FanCurveEditorTitle => T("风扇曲线", "風扇曲線", " Fan Curves");
     public static string FanCurveTemperatureAxis => T("温度 (℃)", "溫度 (℃)", "Temperature (℃)");
     public static string FanCurveFanSpeedAxis => T("风扇转速 (RPM)", "風扇轉速 (RPM)", "Fan Speed (RPM)");
     public static string FanCurveInstructions => T(
@@ -143,9 +144,9 @@
         "風扇設定檔格式無效。",
         "The fan profile format is invalid.");
     public static string FanCurveOutOfRange => T(
-        "曲线必须至少包含一个节点，转速不能低于0，且温度不能重复。",
-        "曲線必須至少包含一個節點，轉速不能低於0，溫度無法重複。",
-        "The curve must contain at least one node, the rotational speed cannot be lower than zero, and the temperatures must not be repeated.");
+        "曲线必须至少包含两个节点，转速不能低于0，且温度不能重复。",
+        "曲線必須至少包含兩個節點，轉速不能低於0，溫度無法重複。",
+        "The curve must contain at least two nodes, the rotational speed cannot be lower than zero, and the temperatures must not be repeated.");
     public static string FanCurveLoadFailed => T("加载风扇配置失败。", "載入風扇設定失敗。", "Failed to load the fan profile.");
     public static string FanCurveSaveFailed => T("保存风扇配置失败。", "儲存風扇設定失敗。", "Failed to save the fan profile.");
     public static string FanResponseSpeed => T("风扇响应速度", "風扇響應速度", "Fan Response Speed");

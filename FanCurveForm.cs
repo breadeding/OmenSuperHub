@@ -44,7 +44,8 @@ namespace OmenSuperHub {
         int cpuTemperatureMaximum,
         int gpuTemperatureMaximum,
         int fanSpeedMaximum,
-        string customFilePath) {
+        string customFilePath,
+        string windowTitle) {
       this.cpuTemperatureMaximum = Math.Max(1, cpuTemperatureMaximum);
       this.gpuTemperatureMaximum = Math.Max(1, gpuTemperatureMaximum);
       this.fanSpeedMaximum = Math.Max(100, fanSpeedMaximum);
@@ -58,7 +59,7 @@ namespace OmenSuperHub {
         ShowAlways = true
       };
 
-      Text = Strings.FanCurveEditorTitle;
+      Text = windowTitle;
       Icon = Properties.Resources.fan;
       StartPosition = FormStartPosition.CenterScreen;
       FormBorderStyle = FormBorderStyle.Sizable;
@@ -494,7 +495,7 @@ namespace OmenSuperHub {
     }
 
     private void ValidatePointsForMachine(IList<FanCurvePoint> points, int temperatureMaximum) {
-      if (points.Count < 1 ||
+      if (points.Count < 2 ||
           points.Any(point => point.FanSpeed < 0) ||
           points.GroupBy(point => point.Temperature).Any(group => group.Count() > 1)) {
         throw new InvalidDataException(Strings.FanCurveOutOfRange);

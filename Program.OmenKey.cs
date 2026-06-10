@@ -82,6 +82,35 @@ namespace OmenSuperHub {
       public IntPtr dwExtraInfo;
     }
 
+    private static Form omenKeyDesktopAppForm;
+    private static Form omenKeyUwpAppForm;
+    private static Form omenKeyShortcutForm;
+
+    private static void ActivateForm(Form form) {
+      if (form == null || form.IsDisposed) return;
+      if (form.WindowState == FormWindowState.Minimized) {
+        form.WindowState = FormWindowState.Normal;
+      }
+      form.Show();
+      form.BringToFront();
+      form.Activate();
+    }
+
+    private static void CloseOtherOmenKeyForms(Form keepForm) {
+      if (omenKeyDesktopAppForm != null && !ReferenceEquals(omenKeyDesktopAppForm, keepForm)) {
+        try { if (!omenKeyDesktopAppForm.IsDisposed) omenKeyDesktopAppForm.Close(); } catch { }
+        omenKeyDesktopAppForm = null;
+      }
+      if (omenKeyUwpAppForm != null && !ReferenceEquals(omenKeyUwpAppForm, keepForm)) {
+        try { if (!omenKeyUwpAppForm.IsDisposed) omenKeyUwpAppForm.Close(); } catch { }
+        omenKeyUwpAppForm = null;
+      }
+      if (omenKeyShortcutForm != null && !ReferenceEquals(omenKeyShortcutForm, keepForm)) {
+        try { if (!omenKeyShortcutForm.IsDisposed) omenKeyShortcutForm.Close(); } catch { }
+        omenKeyShortcutForm = null;
+      }
+    }
+
     static void HandleOmenKeyAction() {
       if (!omenKeyTriggered) return;
 
@@ -312,26 +341,139 @@ namespace OmenSuperHub {
       trayIcon.ShowBalloonTip(3000);
     }
 
-    static bool SelectOmenKeyApp() {
-      using (var dialog = new System.Windows.Forms.OpenFileDialog()) {
-        dialog.Title = Strings.OmenKeySelectApp;
-        dialog.Filter = Strings.OmenKeyAppFilter;
-        dialog.CheckFileExists = true;
-        dialog.Multiselect = false;
-        dialog.RestoreDirectory = true;
+    static void SelectOmenKeyApp() {
+      if (omenKeyDesktopAppForm != null && !omenKeyDesktopAppForm.IsDisposed) {
+        ActivateForm(omenKeyDesktopAppForm);
+        return;
+      }
 
-        if (!string.IsNullOrWhiteSpace(omenKeyAppPath) && File.Exists(omenKeyAppPath)) {
-          dialog.InitialDirectory = Path.GetDirectoryName(omenKeyAppPath);
-          dialog.FileName = Path.GetFileName(omenKeyAppPath);
+      CloseOtherOmenKeyForms(null);
+
+      var form = new Form {
+        Text = Strings.OmenKeySelectDesktopApp,
+        StartPosition = FormStartPosition.CenterScreen,
+        Width = 720,
+        Height = 240,
+        MinimizeBox = false,
+        MaximizeBox = false,
+        ShowIcon = false
+      };
+      omenKeyDesktopAppForm = form;
+
+      var promptLabel = new Label {
+        Left = 12,
+        Top = 12,
+        Width = form.ClientSize.Width - 24,
+        Height = 36,
+        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+        Text = Strings.OmenKeySelectApp
+      };
+      var pathBox = new TextBox {
+        Left = 12,
+        Top = promptLabel.Bottom + 8,
+        Width = form.ClientSize.Width - 124,
+        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+        Text = omenKeyAppPath
+      };
+      var browseButton = new Button {
+        Text = "浏览...",
+        Width = 92,
+        Height = 30,
+        Left = form.ClientSize.Width - 104,
+        Top = pathBox.Top - 1,
+        Anchor = AnchorStyles.Top | AnchorStyles.Right
+      };
+      var fileNameLabel = new Label {
+        Left = 12,
+        Top = pathBox.Bottom + 10,
+        Width = form.ClientSize.Width - 24,
+        Height = 24,
+        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+        ForeColor = System.Drawing.Color.FromArgb(70, 70, 70),
+        Text = GetOmenKeyAppDisplayName()
+      };
+      var okButton = new Button {
+        Text = Strings.OK,
+        Width = 92,
+        Height = 32,
+        Left = form.ClientSize.Width - 304,
+        Top = form.ClientSize.Height - 44,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+      };
+      var cancelButton = new Button {
+        Text = Strings.Cancel,
+        Width = 92,
+        Height = 32,
+        Left = form.ClientSize.Width - 204,
+        Top = form.ClientSize.Height - 44,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+        DialogResult = DialogResult.Cancel
+      };
+
+      Action refreshPreview = () => {
+        string path = pathBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(path)) {
+          fileNameLabel.Text = Strings.OmenKeyNoAppSelected;
         } else {
-          dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+          fileNameLabel.Text = File.Exists(path) ? Path.GetFileName(path) : path;
+        }
+        okButton.Enabled = !string.IsNullOrWhiteSpace(path);
+      };
+
+      browseButton.Click += (s, e) => {
+        using (var dialog = new System.Windows.Forms.OpenFileDialog()) {
+          dialog.Title = Strings.OmenKeySelectApp;
+          dialog.Filter = Strings.OmenKeyAppFilter;
+          dialog.CheckFileExists = true;
+          dialog.Multiselect = false;
+          dialog.RestoreDirectory = true;
+
+          string currentPath = pathBox.Text.Trim();
+          if (!string.IsNullOrWhiteSpace(currentPath) && File.Exists(currentPath)) {
+            dialog.InitialDirectory = Path.GetDirectoryName(currentPath);
+            dialog.FileName = Path.GetFileName(currentPath);
+          } else {
+            dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+          }
+
+          if (dialog.ShowDialog(form) != DialogResult.OK) return;
+          pathBox.Text = dialog.FileName;
+          refreshPreview();
+        }
+      };
+
+      pathBox.TextChanged += (s, e) => refreshPreview();
+      okButton.Click += (s, e) => {
+        string selectedPath = pathBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(selectedPath) || !File.Exists(selectedPath)) {
+          MessageBox.Show(form, Strings.OmenKeyAppNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          return;
         }
 
-        if (dialog.ShowDialog() != DialogResult.OK) return false;
-        omenKeyAppPath = dialog.FileName;
+        omenKeyAppPath = selectedPath;
         omenKeyAppName = "";
-        return true;
-      }
+        SaveConfig("OmenKeyAppPath");
+        SaveConfig("OmenKeyAppName");
+        ApplyOmenKeyAction(OmenKeyActions.App);
+        UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
+        form.Close();
+      };
+
+      form.FormClosed += (s, e) => {
+        if (ReferenceEquals(omenKeyDesktopAppForm, form)) omenKeyDesktopAppForm = null;
+      };
+
+      form.Controls.Add(promptLabel);
+      form.Controls.Add(pathBox);
+      form.Controls.Add(browseButton);
+      form.Controls.Add(fileNameLabel);
+      form.Controls.Add(okButton);
+      form.Controls.Add(cancelButton);
+      form.CancelButton = cancelButton;
+      form.AcceptButton = okButton;
+
+      refreshPreview();
+      ActivateForm(form);
     }
 
     class OmenKeyStartApp {
@@ -390,129 +532,141 @@ namespace OmenSuperHub {
       }
     }
 
-    static bool SelectOmenKeyUwpApp() {
+    static void SelectOmenKeyUwpApp() {
+      if (omenKeyUwpAppForm != null && !omenKeyUwpAppForm.IsDisposed) {
+        ActivateForm(omenKeyUwpAppForm);
+        return;
+      }
+
+      CloseOtherOmenKeyForms(null);
+
       List<OmenKeyStartApp> apps;
       try {
         apps = LoadStartApps();
       } catch (Exception ex) {
         Logger.Error($"Failed to load UWP apps: {ex.Message}");
         MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.OmenKeyUwpLoadFailed(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
-        return false;
+        return;
       }
 
       if (apps.Count == 0) {
         MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.OmenKeyUwpNoApps, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        return false;
+        return;
       }
 
-      using (var form = new Form()) {
-        form.Text = Strings.OmenKeySelectUwpApp;
-        form.StartPosition = FormStartPosition.CenterScreen;
-        System.Drawing.Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
-        form.Width = screenBounds.Width / 2;
-        form.Height = screenBounds.Height / 2;
-        form.MinimizeBox = false;
-        form.MaximizeBox = false;
-        form.ShowIcon = false;
+      var form = new Form {
+        Text = Strings.OmenKeySelectUwpApp,
+        StartPosition = FormStartPosition.CenterScreen,
+        Width = Screen.PrimaryScreen.Bounds.Width / 2,
+        Height = Screen.PrimaryScreen.Bounds.Height / 2,
+        MinimizeBox = false,
+        MaximizeBox = false,
+        ShowIcon = false
+      };
+      omenKeyUwpAppForm = form;
 
-        var searchBox = new TextBox {
-          Left = 12,
-          Top = 12,
-          Width = form.ClientSize.Width - 24,
-          Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-        };
+      var searchBox = new TextBox {
+        Left = 12,
+        Top = 12,
+        Width = form.ClientSize.Width - 24,
+        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+      };
 
-        var listView = new ListView {
-          Left = 12,
-          Top = searchBox.Bottom + 8,
-          Width = form.ClientSize.Width - 24,
-          Height = form.ClientSize.Height - 92,
-          Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-          View = View.Details,
-          FullRowSelect = true,
-          HideSelection = false,
-          MultiSelect = false
-        };
-        listView.Columns.Add(Strings.OmenKeyUwpAppName, listView.Width / 3 - 24);
-        listView.Columns.Add("AppID", listView.Width * 2 / 3 - 24);
+      var listView = new ListView {
+        Left = 12,
+        Top = searchBox.Bottom + 8,
+        Width = form.ClientSize.Width - 24,
+        Height = form.ClientSize.Height - 92,
+        Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+        View = View.Details,
+        FullRowSelect = true,
+        HideSelection = false,
+        MultiSelect = false
+      };
+      listView.Columns.Add(Strings.OmenKeyUwpAppName, listView.Width / 3 - 24);
+      listView.Columns.Add("AppID", listView.Width * 2 / 3 - 24);
 
-        var okButton = new Button {
-          Text = Strings.OK,
-          Width = 92,
-          Height = 36,
-          Left = form.ClientSize.Width - 204,
-          Top = form.ClientSize.Height - 39,
-          Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-          Enabled = false
-        };
-        var cancelButton = new Button {
-          Text = Strings.Cancel,
-          Width = 92,
-          Height = 36,
-          Left = form.ClientSize.Width - 104,
-          Top = form.ClientSize.Height - 39,
-          Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-          DialogResult = DialogResult.Cancel
-        };
+      var okButton = new Button {
+        Text = Strings.OK,
+        Width = 92,
+        Height = 36,
+        Left = form.ClientSize.Width - 204,
+        Top = form.ClientSize.Height - 39,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+        Enabled = false
+      };
+      var cancelButton = new Button {
+        Text = Strings.Cancel,
+        Width = 92,
+        Height = 36,
+        Left = form.ClientSize.Width - 104,
+        Top = form.ClientSize.Height - 39,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+        DialogResult = DialogResult.Cancel
+      };
 
-        Action refreshList = () => {
-          string filter = searchBox.Text.Trim();
-          listView.BeginUpdate();
-          listView.Items.Clear();
-          foreach (var app in apps.Where(app =>
-              string.IsNullOrWhiteSpace(filter) ||
-              app.Name.IndexOf(filter, StringComparison.CurrentCultureIgnoreCase) >= 0 ||
-              app.AppId.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)) {
-            var item = new ListViewItem(app.Name);
-            item.SubItems.Add(app.AppId);
-            item.Tag = app;
-            listView.Items.Add(item);
+      Action refreshList = () => {
+        string filter = searchBox.Text.Trim();
+        listView.BeginUpdate();
+        listView.Items.Clear();
+        foreach (var app in apps.Where(app =>
+            string.IsNullOrWhiteSpace(filter) ||
+            app.Name.IndexOf(filter, StringComparison.CurrentCultureIgnoreCase) >= 0 ||
+            app.AppId.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)) {
+          var item = new ListViewItem(app.Name);
+          item.SubItems.Add(app.AppId);
+          item.Tag = app;
+          listView.Items.Add(item);
+        }
+
+        string currentAppId = GetOmenKeyUwpAppId();
+        foreach (ListViewItem item in listView.Items) {
+          var app = (OmenKeyStartApp)item.Tag;
+          if (!string.IsNullOrWhiteSpace(currentAppId) && string.Equals(app.AppId, currentAppId, StringComparison.OrdinalIgnoreCase)) {
+            item.Selected = true;
+            item.Focused = true;
+            item.EnsureVisible();
+            break;
           }
+        }
+        if (listView.SelectedItems.Count == 0 && listView.Items.Count > 0) {
+          listView.Items[0].Selected = true;
+          listView.Items[0].Focused = true;
+        }
+        okButton.Enabled = listView.SelectedItems.Count > 0;
+        listView.EndUpdate();
+      };
 
-          string currentAppId = GetOmenKeyUwpAppId();
-          foreach (ListViewItem item in listView.Items) {
-            var app = (OmenKeyStartApp)item.Tag;
-            if (!string.IsNullOrWhiteSpace(currentAppId) && string.Equals(app.AppId, currentAppId, StringComparison.OrdinalIgnoreCase)) {
-              item.Selected = true;
-              item.Focused = true;
-              item.EnsureVisible();
-              break;
-            }
-          }
-          if (listView.SelectedItems.Count == 0 && listView.Items.Count > 0) {
-            listView.Items[0].Selected = true;
-            listView.Items[0].Focused = true;
-          }
-          okButton.Enabled = listView.SelectedItems.Count > 0;
-          listView.EndUpdate();
-        };
-
-        searchBox.TextChanged += (s, e) => refreshList();
-        listView.SelectedIndexChanged += (s, e) => okButton.Enabled = listView.SelectedItems.Count > 0;
-        listView.DoubleClick += (s, e) => {
-          if (listView.SelectedItems.Count > 0) okButton.PerformClick();
-        };
-        okButton.Click += (s, e) => {
-          if (listView.SelectedItems.Count == 0) return;
-          form.DialogResult = DialogResult.OK;
-          form.Close();
-        };
-
-        form.Controls.Add(searchBox);
-        form.Controls.Add(listView);
-        form.Controls.Add(okButton);
-        form.Controls.Add(cancelButton);
-        form.CancelButton = cancelButton;
-        refreshList();
-
-        if (form.ShowDialog(Application.OpenForms.OfType<HelpForm>().FirstOrDefault()) != DialogResult.OK)
-          return false;
+      searchBox.TextChanged += (s, e) => refreshList();
+      listView.SelectedIndexChanged += (s, e) => okButton.Enabled = listView.SelectedItems.Count > 0;
+      listView.DoubleClick += (s, e) => {
+        if (listView.SelectedItems.Count > 0) okButton.PerformClick();
+      };
+      okButton.Click += (s, e) => {
+        if (listView.SelectedItems.Count == 0) return;
 
         var selectedApp = (OmenKeyStartApp)listView.SelectedItems[0].Tag;
         omenKeyAppPath = @"shell:AppsFolder\" + selectedApp.AppId;
         omenKeyAppName = selectedApp.Name;
-        return true;
-      }
+        SaveConfig("OmenKeyAppPath");
+        SaveConfig("OmenKeyAppName");
+        ApplyOmenKeyAction(OmenKeyActions.App);
+        UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
+        form.Close();
+      };
+
+      form.FormClosed += (s, e) => {
+        if (ReferenceEquals(omenKeyUwpAppForm, form)) omenKeyUwpAppForm = null;
+      };
+
+      form.Controls.Add(searchBox);
+      form.Controls.Add(listView);
+      form.Controls.Add(okButton);
+      form.Controls.Add(cancelButton);
+      form.CancelButton = cancelButton;
+
+      refreshList();
+      ActivateForm(form);
     }
 
     static void SendOmenKeyShortcut() {
@@ -556,101 +710,114 @@ namespace OmenSuperHub {
       };
     }
 
-    static bool SelectOmenKeyShortcut() {
-      using (var form = new Form()) {
-        form.Text = Strings.OmenKeySetShortcut;
-        form.StartPosition = FormStartPosition.CenterScreen;
-        form.Width = 440;
-        form.Height = 210;
-        form.MinimizeBox = false;
-        form.MaximizeBox = false;
-        form.ShowIcon = false;
-        form.KeyPreview = true;
+    static void SelectOmenKeyShortcut() {
+      if (omenKeyShortcutForm != null && !omenKeyShortcutForm.IsDisposed) {
+        ActivateForm(omenKeyShortcutForm);
+        return;
+      }
 
-        var promptLabel = new Label {
-          Left = 12,
-          Top = 12,
-          Width = form.ClientSize.Width - 24,
-          Height = 36,
-          Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-          Text = Strings.OmenKeyShortcutCapturePrompt
-        };
-        var shortcutBox = new TextBox {
-          Left = 12,
-          Top = promptLabel.Bottom + 8,
-          Width = form.ClientSize.Width - 24,
-          Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-          ReadOnly = true,
-          TabStop = false,
-          Text = FormatOmenKeyShortcut(omenKeyShortcut)
-        };
-        var okButton = new Button {
-          Text = Strings.OK,
-          Width = 92,
-          Height = 32,
-          Left = form.ClientSize.Width - 304,
-          Top = form.ClientSize.Height - 44,
-          Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-          Enabled = !string.IsNullOrWhiteSpace(omenKeyShortcut)
-        };
-        var clearButton = new Button {
-          Text = Strings.Clear,
-          Width = 92,
-          Height = 32,
-          Left = form.ClientSize.Width - 204,
-          Top = form.ClientSize.Height - 44,
-          Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-        };
-        var cancelButton = new Button {
-          Text = Strings.Cancel,
-          Width = 92,
-          Height = 32,
-          Left = form.ClientSize.Width - 104,
-          Top = form.ClientSize.Height - 44,
-          Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-          DialogResult = DialogResult.Cancel
-        };
+      CloseOtherOmenKeyForms(null);
 
-        string capturedShortcut = omenKeyShortcut;
-        form.KeyDown += (s, e) => {
-          if (IsModifierKey(e.KeyCode)) {
-            e.SuppressKeyPress = true;
-            return;
-          }
+      var form = new Form {
+        Text = Strings.OmenKeySetShortcut,
+        StartPosition = FormStartPosition.CenterScreen,
+        Width = 440,
+        Height = 210,
+        MinimizeBox = false,
+        MaximizeBox = false,
+        ShowIcon = false,
+        KeyPreview = true
+      };
+      omenKeyShortcutForm = form;
 
-          bool winDown = IsWinKeyDown();
-          capturedShortcut = BuildOmenKeyShortcut(e.KeyCode, e.Modifiers, winDown);
-          shortcutBox.Text = FormatOmenKeyShortcut(capturedShortcut);
-          okButton.Enabled = !string.IsNullOrWhiteSpace(capturedShortcut);
+      var promptLabel = new Label {
+        Left = 12,
+        Top = 12,
+        Width = form.ClientSize.Width - 24,
+        Height = 36,
+        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+        Text = Strings.OmenKeyShortcutCapturePrompt
+      };
+      var shortcutBox = new TextBox {
+        Left = 12,
+        Top = promptLabel.Bottom + 8,
+        Width = form.ClientSize.Width - 24,
+        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+        ReadOnly = true,
+        TabStop = false,
+        Text = FormatOmenKeyShortcut(omenKeyShortcut)
+      };
+      var okButton = new Button {
+        Text = Strings.OK,
+        Width = 92,
+        Height = 32,
+        Left = form.ClientSize.Width - 304,
+        Top = form.ClientSize.Height - 44,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+        Enabled = !string.IsNullOrWhiteSpace(omenKeyShortcut)
+      };
+      var clearButton = new Button {
+        Text = Strings.Clear,
+        Width = 92,
+        Height = 32,
+        Left = form.ClientSize.Width - 204,
+        Top = form.ClientSize.Height - 44,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+      };
+      var cancelButton = new Button {
+        Text = Strings.Cancel,
+        Width = 92,
+        Height = 32,
+        Left = form.ClientSize.Width - 104,
+        Top = form.ClientSize.Height - 44,
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+        DialogResult = DialogResult.Cancel
+      };
+
+      string capturedShortcut = omenKeyShortcut;
+      form.KeyDown += (s, e) => {
+        if (IsModifierKey(e.KeyCode)) {
           e.SuppressKeyPress = true;
-        };
-        okButton.Click += (s, e) => {
-          if (string.IsNullOrWhiteSpace(capturedShortcut)) {
-            MessageBox.Show(form, Strings.OmenKeyShortcutNotSet, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-          }
-          form.DialogResult = DialogResult.OK;
-          form.Close();
-        };
-        clearButton.Click += (s, e) => {
-          capturedShortcut = "";
-          shortcutBox.Text = "";
-          okButton.Enabled = false;
-        };
+          return;
+        }
 
-        form.Controls.Add(promptLabel);
-        form.Controls.Add(shortcutBox);
-        form.Controls.Add(okButton);
-        form.Controls.Add(clearButton);
-        form.Controls.Add(cancelButton);
-        form.CancelButton = cancelButton;
-
-        if (form.ShowDialog(Application.OpenForms.OfType<HelpForm>().FirstOrDefault()) != DialogResult.OK)
-          return false;
+        bool winDown = IsWinKeyDown();
+        capturedShortcut = BuildOmenKeyShortcut(e.KeyCode, e.Modifiers, winDown);
+        shortcutBox.Text = FormatOmenKeyShortcut(capturedShortcut);
+        okButton.Enabled = !string.IsNullOrWhiteSpace(capturedShortcut);
+        e.SuppressKeyPress = true;
+      };
+      okButton.Click += (s, e) => {
+        if (string.IsNullOrWhiteSpace(capturedShortcut)) {
+          MessageBox.Show(form, Strings.OmenKeyShortcutNotSet, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          return;
+        }
 
         omenKeyShortcut = capturedShortcut;
-        return true;
-      }
+        SaveConfig("OmenKeyShortcut");
+        ApplyOmenKeyAction(OmenKeyActions.Shortcut);
+        UpdateCheckedState("omenKeyGroup", Strings.OmenKeyShortcut);
+        form.Close();
+      };
+      clearButton.Click += (s, e) => {
+        capturedShortcut = "";
+        shortcutBox.Text = "";
+        okButton.Enabled = false;
+      };
+
+      form.FormClosed += (s, e) => {
+        if (ReferenceEquals(omenKeyShortcutForm, form)) omenKeyShortcutForm = null;
+      };
+
+      form.Controls.Add(promptLabel);
+      form.Controls.Add(shortcutBox);
+      form.Controls.Add(okButton);
+      form.Controls.Add(clearButton);
+      form.Controls.Add(cancelButton);
+      form.CancelButton = cancelButton;
+      form.AcceptButton = okButton;
+
+      ActivateForm(form);
     }
 
     static bool IsWinKeyDown() {
