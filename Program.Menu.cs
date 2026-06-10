@@ -1158,39 +1158,35 @@ namespace OmenSuperHub {
       menu.Items.Add(floatingBarMenu);
       ToolStripMenuItem omenKeyMenu = new ToolStripMenuItem(Strings.OmenKeyMenu);
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyDefault, "omenKeyGroup", (s, e) => {
-        omenKey = "default";
         tooltipUpdateTimer.Enabled = false;
-        OmenKeyOff();
-        OmenKeyOn(omenKey);
-        SaveConfig("OmenKey");
+        ApplyOmenKeyAction(OmenKeyActions.Default);
       }, true));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyToggle, "omenKeyGroup", (s, e) => {
-        omenKey = "custom";
-        checkFloatingTimer.Enabled = true;
-        OmenKeyOff();
-        OmenKeyOn(omenKey);
-        SaveConfig("OmenKey");
+        ApplyOmenKeyAction(OmenKeyActions.Overlay);
       }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySwitchPreset, "omenKeyGroup", (s, e) => {
-        omenKey = "preset";
-        checkFloatingTimer.Enabled = true;
-        OmenKeyOff();
-        OmenKeyOn(omenKey);
-        SaveConfig("OmenKey");
+        ApplyOmenKeyAction(OmenKeyActions.Preset);
       }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyLaunchApp, "omenKeyGroup", (s, e) => {
-        if (string.IsNullOrWhiteSpace(omenKeyAppPath) || !File.Exists(omenKeyAppPath)) {
+        if (!IsOmenKeyAppTargetAvailable()) {
           if (!SelectOmenKeyApp()) {
             skipCheckedUpdate = true;
             return;
           }
           SaveConfig("OmenKeyAppPath");
+          SaveConfig("OmenKeyAppName");
         }
-        omenKey = "app";
-        checkFloatingTimer.Enabled = true;
-        OmenKeyOff();
-        OmenKeyOn(omenKey);
-        SaveConfig("OmenKey");
+        ApplyOmenKeyAction(OmenKeyActions.App);
+      }, false));
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyShortcut, "omenKeyGroup", (s, e) => {
+        if (string.IsNullOrWhiteSpace(omenKeyShortcut)) {
+          if (!SelectOmenKeyShortcut()) {
+            skipCheckedUpdate = true;
+            return;
+          }
+          SaveConfig("OmenKeyShortcut");
+        }
+        ApplyOmenKeyAction(OmenKeyActions.Shortcut);
       }, false));
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
 
@@ -1245,37 +1241,50 @@ namespace OmenSuperHub {
       omenKeyMenu.DropDownItems.Add(omenKeyPresetCandidatesMenu);
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
 
-      string appDisplayName = string.IsNullOrWhiteSpace(omenKeyAppPath)
-        ? Strings.OmenKeyNoAppSelected
-        : Path.GetFileName(omenKeyAppPath);
-      omenKeyMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.OmenKeyCurrentApp}: {appDisplayName}") { Enabled = false });
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectApp, null, (s, e) => {
+      omenKeyMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}") { Enabled = false });
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectDesktopApp, null, (s, e) => {
         if (!SelectOmenKeyApp()) return;
         SaveConfig("OmenKeyAppPath");
-        omenKey = "app";
-        checkFloatingTimer.Enabled = true;
-        OmenKeyOff();
-        OmenKeyOn(omenKey);
-        SaveConfig("OmenKey");
+        SaveConfig("OmenKeyAppName");
+        ApplyOmenKeyAction(OmenKeyActions.App);
+        RefreshMenu();
+      }, false));
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectUwpApp, null, (s, e) => {
+        if (!SelectOmenKeyUwpApp()) return;
+        SaveConfig("OmenKeyAppPath");
+        SaveConfig("OmenKeyAppName");
+        ApplyOmenKeyAction(OmenKeyActions.App);
         RefreshMenu();
       }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearApp, null, (s, e) => {
         omenKeyAppPath = "";
+        omenKeyAppName = "";
         SaveConfig("OmenKeyAppPath");
-        if (omenKey == "app") {
-          omenKey = "none";
-          checkFloatingTimer.Enabled = false;
-          OmenKeyOff();
-          SaveConfig("OmenKey");
+        SaveConfig("OmenKeyAppName");
+        if (omenKey == OmenKeyActions.App) {
+          ApplyOmenKeyAction(OmenKeyActions.None);
+        }
+        RefreshMenu();
+      }, false));
+      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
+      omenKeyMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}") { Enabled = false });
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySetShortcut, null, (s, e) => {
+        if (!SelectOmenKeyShortcut()) return;
+        SaveConfig("OmenKeyShortcut");
+        ApplyOmenKeyAction(OmenKeyActions.Shortcut);
+        RefreshMenu();
+      }, false));
+      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearShortcut, null, (s, e) => {
+        omenKeyShortcut = "";
+        SaveConfig("OmenKeyShortcut");
+        if (omenKey == OmenKeyActions.Shortcut) {
+          ApplyOmenKeyAction(OmenKeyActions.None);
         }
         RefreshMenu();
       }, false));
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyNone, "omenKeyGroup", (s, e) => {
-        omenKey = "none";
-        checkFloatingTimer.Enabled = false;
-        OmenKeyOff();
-        SaveConfig("OmenKey");
+        ApplyOmenKeyAction(OmenKeyActions.None);
       }, false));
       menu.Items.Add(omenKeyMenu);
 
