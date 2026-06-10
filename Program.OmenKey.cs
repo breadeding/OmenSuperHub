@@ -52,8 +52,23 @@ namespace OmenSuperHub {
       public InputUnion u;
     }
 
+    // MOUSEINPUT is the largest union member; including it ensures Marshal.SizeOf(INPUT)
+    // matches what Windows expects (28 bytes on 32-bit, 40 bytes on 64-bit).
+    // Without it, SendInput returns 0 and GetLastWin32Error returns 87 (ERROR_INVALID_PARAMETER).
+    [StructLayout(LayoutKind.Sequential)]
+    struct MOUSEINPUT {
+      public int dx;
+      public int dy;
+      public uint mouseData;
+      public uint dwFlags;
+      public uint time;
+      public IntPtr dwExtraInfo;
+    }
+
     [StructLayout(LayoutKind.Explicit)]
     struct InputUnion {
+      [FieldOffset(0)]
+      public MOUSEINPUT mi;   // Largest member — sets the union's marshalled size
       [FieldOffset(0)]
       public KEYBDINPUT ki;
     }
@@ -393,8 +408,9 @@ namespace OmenSuperHub {
       using (var form = new Form()) {
         form.Text = Strings.OmenKeySelectUwpApp;
         form.StartPosition = FormStartPosition.CenterScreen;
-        form.Width = 720;
-        form.Height = 520;
+        System.Drawing.Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
+        form.Width = screenBounds.Width / 2;
+        form.Height = screenBounds.Height / 2;
         form.MinimizeBox = false;
         form.MaximizeBox = false;
         form.ShowIcon = false;
@@ -417,24 +433,24 @@ namespace OmenSuperHub {
           HideSelection = false,
           MultiSelect = false
         };
-        listView.Columns.Add(Strings.OmenKeyUwpAppName, 240);
-        listView.Columns.Add("AppID", 420);
+        listView.Columns.Add(Strings.OmenKeyUwpAppName, listView.Width / 3 - 24);
+        listView.Columns.Add("AppID", listView.Width * 2 / 3 - 24);
 
         var okButton = new Button {
           Text = Strings.OK,
           Width = 92,
-          Height = 28,
+          Height = 36,
           Left = form.ClientSize.Width - 204,
-          Top = form.ClientSize.Height - 40,
+          Top = form.ClientSize.Height - 39,
           Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
           Enabled = false
         };
         var cancelButton = new Button {
           Text = Strings.Cancel,
           Width = 92,
-          Height = 28,
+          Height = 36,
           Left = form.ClientSize.Width - 104,
-          Top = form.ClientSize.Height - 40,
+          Top = form.ClientSize.Height - 39,
           Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
           DialogResult = DialogResult.Cancel
         };
@@ -545,7 +561,7 @@ namespace OmenSuperHub {
         form.Text = Strings.OmenKeySetShortcut;
         form.StartPosition = FormStartPosition.CenterScreen;
         form.Width = 440;
-        form.Height = 180;
+        form.Height = 210;
         form.MinimizeBox = false;
         form.MaximizeBox = false;
         form.ShowIcon = false;
@@ -571,7 +587,7 @@ namespace OmenSuperHub {
         var okButton = new Button {
           Text = Strings.OK,
           Width = 92,
-          Height = 28,
+          Height = 32,
           Left = form.ClientSize.Width - 304,
           Top = form.ClientSize.Height - 44,
           Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
@@ -580,7 +596,7 @@ namespace OmenSuperHub {
         var clearButton = new Button {
           Text = Strings.Clear,
           Width = 92,
-          Height = 28,
+          Height = 32,
           Left = form.ClientSize.Width - 204,
           Top = form.ClientSize.Height - 44,
           Anchor = AnchorStyles.Bottom | AnchorStyles.Right
@@ -588,7 +604,7 @@ namespace OmenSuperHub {
         var cancelButton = new Button {
           Text = Strings.Cancel,
           Width = 92,
-          Height = 28,
+          Height = 32,
           Left = form.ClientSize.Width - 104,
           Top = form.ClientSize.Height - 44,
           Anchor = AnchorStyles.Bottom | AnchorStyles.Right,

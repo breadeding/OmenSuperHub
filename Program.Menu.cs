@@ -233,16 +233,38 @@ namespace OmenSuperHub {
       bool isBuiltInPreset = (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse");
 
       ToolStripMenuItem fanConfigMenu = new ToolStripMenuItem(Strings.FanConfig);
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanSilentMode, "fanTableGroup", (s, e) => {
-        fanTable = "silent";
-        LoadFanConfig("silent.txt");
-        SaveConfig("FanTable");
-      }, fanTable.Contains("silent"), Strings.FanSilentTooltip));
-      fanConfigMenu.DropDownItems.Add(CreateMenuItem(Strings.FanCoolMode, "fanTableGroup", (s, e) => {
-        fanTable = "cool";
-        LoadFanConfig("cool.txt");
-        SaveConfig("FanTable");
-      }, fanTable.Contains("cool"), Strings.FanCoolTooltip));
+      var silentFanItem = new ToolStripMenuItem(Strings.FanSilentMode) {
+        Tag = "fanTableGroup",
+        Checked = fanTable.Contains("silent"),
+        ToolTipText = Strings.FanSilentTooltip
+      };
+      silentFanItem.MouseUp += (s, e) => {
+        if (e.Button == MouseButtons.Left) {
+          fanTable = "silent";
+          LoadFanConfig("silent.txt");
+          SaveConfig("FanTable");
+          UpdateCheckedState("fanTableGroup", null, silentFanItem);
+        } else if (e.Button == MouseButtons.Right) {
+          ShowFanCurveEditor("silent.txt");
+        }
+      };
+      fanConfigMenu.DropDownItems.Add(silentFanItem);
+      var coolFanItem = new ToolStripMenuItem(Strings.FanCoolMode) {
+        Tag = "fanTableGroup",
+        Checked = fanTable.Contains("cool"),
+        ToolTipText = Strings.FanCoolTooltip
+      };
+      coolFanItem.MouseUp += (s, e) => {
+        if (e.Button == MouseButtons.Left) {
+          fanTable = "cool";
+          LoadFanConfig("cool.txt");
+          SaveConfig("FanTable");
+          UpdateCheckedState("fanTableGroup", null, coolFanItem);
+        } else if (e.Button == MouseButtons.Right) {
+          ShowFanCurveEditor("cool.txt");
+        }
+      };
+      fanConfigMenu.DropDownItems.Add(coolFanItem);
       var customFanItem = new ToolStripMenuItem(Strings.FanCustomMode) {
         Tag = "fanTableGroup",
         Checked = fanTable.Contains("custom"),
@@ -253,7 +275,7 @@ namespace OmenSuperHub {
           if (ApplyCustomFanConfig())
             UpdateCheckedState("fanTableGroup", null, customFanItem);
         } else if (e.Button == MouseButtons.Right) {
-          ShowCustomFanCurveEditor();
+          ShowFanCurveEditor("custom.txt");
         }
       };
       fanConfigMenu.DropDownItems.Add(customFanItem);
@@ -1241,20 +1263,37 @@ namespace OmenSuperHub {
       omenKeyMenu.DropDownItems.Add(omenKeyPresetCandidatesMenu);
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
 
-      omenKeyMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}") { Enabled = false });
+      var currentAppItem = new ToolStripMenuItem($"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}") { Enabled = false };
+      var currentShortcutItem = new ToolStripMenuItem($"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}") { Enabled = false };
+
+      // Refresh display items every time the submenu opens.
+      // This covers: (a) initial startup where BuildTrayMenu runs before RestoreConfig loads saved values,
+      // and (b) any stale state after actions that don't trigger a full menu rebuild.
+      omenKeyMenu.DropDownOpening += (s, e) => {
+        currentAppItem.Text = $"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}";
+        currentShortcutItem.Text = $"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}";
+      };
+
+      omenKeyMenu.DropDownItems.Add(currentAppItem);
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectDesktopApp, null, (s, e) => {
+        // SelectOmenKeyApp opens an OpenFileDialog which does NOT close the context menu.
+        // Avoid RefreshMenu() here — it would rebuild the ContextMenuStrip while this submenu
+        // is still visible, causing the root menu to flash and leaving the submenu showing
+        // stale "当前应用:" text. Instead, update the display item directly.
         if (!SelectOmenKeyApp()) return;
         SaveConfig("OmenKeyAppPath");
         SaveConfig("OmenKeyAppName");
         ApplyOmenKeyAction(OmenKeyActions.App);
-        RefreshMenu();
+        currentAppItem.Text = $"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}";
+        UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
       }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectUwpApp, null, (s, e) => {
         if (!SelectOmenKeyUwpApp()) return;
         SaveConfig("OmenKeyAppPath");
         SaveConfig("OmenKeyAppName");
         ApplyOmenKeyAction(OmenKeyActions.App);
-        RefreshMenu();
+        currentAppItem.Text = $"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}";
+        UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp);
       }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearApp, null, (s, e) => {
         omenKeyAppPath = "";
@@ -1263,24 +1302,27 @@ namespace OmenSuperHub {
         SaveConfig("OmenKeyAppName");
         if (omenKey == OmenKeyActions.App) {
           ApplyOmenKeyAction(OmenKeyActions.None);
+          UpdateCheckedState("omenKeyGroup", Strings.OmenKeyNone);
         }
-        RefreshMenu();
+        currentAppItem.Text = $"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}";
       }, false));
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
-      omenKeyMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}") { Enabled = false });
+      omenKeyMenu.DropDownItems.Add(currentShortcutItem);
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySetShortcut, null, (s, e) => {
         if (!SelectOmenKeyShortcut()) return;
         SaveConfig("OmenKeyShortcut");
         ApplyOmenKeyAction(OmenKeyActions.Shortcut);
-        RefreshMenu();
+        currentShortcutItem.Text = $"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}";
+        UpdateCheckedState("omenKeyGroup", Strings.OmenKeyShortcut);
       }, false));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearShortcut, null, (s, e) => {
         omenKeyShortcut = "";
         SaveConfig("OmenKeyShortcut");
         if (omenKey == OmenKeyActions.Shortcut) {
           ApplyOmenKeyAction(OmenKeyActions.None);
+          UpdateCheckedState("omenKeyGroup", Strings.OmenKeyNone);
         }
-        RefreshMenu();
+        currentShortcutItem.Text = $"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}";
       }, false));
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyNone, "omenKeyGroup", (s, e) => {
@@ -1915,38 +1957,41 @@ namespace OmenSuperHub {
       RestoreConfig();
     }
 
-    static void ShowCustomFanCurveEditor() {
+    // Generalized fan curve editor: handles cool.txt, silent.txt, and custom.txt.
+    // "Save & Apply" saves the file, switches fanTable to the corresponding mode, reloads it, and updates checkmarks.
+    static void ShowFanCurveEditor(string fileName) {
       string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-      string coolFilePath = Path.Combine(baseDirectory, "cool.txt");
-      string customFilePath = Path.Combine(baseDirectory, "custom.txt");
+      string filePath = Path.Combine(baseDirectory, fileName);
+      bool isSilent = fileName.IndexOf("silent", StringComparison.OrdinalIgnoreCase) >= 0;
 
       try {
         FanCurveProfile initialProfile;
-        if (File.Exists(customFilePath)) {
-          initialProfile = FanCurveProfile.Load(customFilePath);
+        if (File.Exists(filePath)) {
+          initialProfile = FanCurveProfile.Load(filePath);
         } else {
-          if (!File.Exists(coolFilePath))
-            CreateDefaultFanCurveProfile(false).Save(coolFilePath);
-          initialProfile = FanCurveProfile.Load(coolFilePath);
+          initialProfile = CreateDefaultFanCurveProfile(isSilent);
         }
 
         int cpuMaximum = maxCPUTemp ?? 100;
         int gpuMaximum = maxGPUTemp ?? 90;
         int detectedMaximum = platformMaxFanSpeed ?? 5600;
         int fanMaximum = Math.Max(1000, (int)(Math.Ceiling(detectedMaximum * 1.1 / 100D) * 100D));
-        var editor = new FanCurveForm(initialProfile, cpuMaximum, gpuMaximum, fanMaximum, customFilePath);
+        var editor = new FanCurveForm(initialProfile, cpuMaximum, gpuMaximum, fanMaximum, filePath);
 
-        // 订阅关闭事件，处理保存和应用
         editor.FormClosed += (sender, args) => {
           if (editor.EditorResult == FanCurveEditorResult.SavedAndApplied) {
-            ApplyCustomFanConfig();
-            // 更新菜单勾选状态
-            var customFanMenuItem = FindMenuItem(trayIcon.ContextMenuStrip.Items, Strings.FanCustomMode);
-            if (customFanMenuItem != null)
-              UpdateCheckedState("fanTableGroup", null, customFanMenuItem);
+            string fanTableKey = System.IO.Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
+            fanTable = fanTableKey;
+            LoadFanConfig(fileName);
+            SaveConfig("FanTable");
+            string modeText =
+                fanTableKey == "silent" ? Strings.FanSilentMode :
+                fanTableKey == "cool" ? Strings.FanCoolMode :
+                Strings.FanCustomMode;
+            UpdateCheckedState("fanTableGroup", modeText);
           }
         };
-        editor.Show();  // 非模态显示
+        editor.Show();
       } catch (Exception ex) when (
           ex is IOException ||
           ex is UnauthorizedAccessException ||

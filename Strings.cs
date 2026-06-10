@@ -111,13 +111,19 @@
     public static string FanSilentMode => T("安静模式", "安靜模式", "Silent Mode");
     public static string FanCoolMode => T("降温模式", "降溫模式", "Cool Mode");
     public static string FanCustomMode => T("自定义", "自訂", "Custom");
+    public static string FanSilentTooltip => T(
+        "左键应用安静模式；右键编辑 silent.txt 风扇曲线。",
+        "左鍵套用安靜模式；右鍵編輯 silent.txt 風扇曲線。",
+        "Left-click to apply Silent mode; right-click to edit silent.txt fan curve.");
+    public static string FanCoolTooltip => T(
+        "左键应用降温模式；右键编辑 cool.txt 风扇曲线。",
+        "左鍵套用降溫模式；右鍵編輯 cool.txt 風扇曲線。",
+        "Left-click to apply Cool mode; right-click to edit cool.txt fan curve.");
     public static string FanCustomTooltip => T(
-        "左键应用 custom.txt；右键编辑 CPU 和 GPU 风扇曲线。",
-        "左鍵套用 custom.txt；右鍵編輯 CPU 和 GPU 風扇曲線。",
-        "Left-click to apply custom.txt; right-click to edit CPU and GPU fan curves.");
+        "左键应用 custom.txt；右键编辑 custom.txt 风扇曲线。",
+        "左鍵套用 custom.txt；右鍵編輯 custom.txt 風扇曲線。",
+        "Left-click to apply custom.txt; right-click to edit custom.txt fan curve.");
     public static string FanCurveEditorTitle => T("自定义风扇曲线", "自訂風扇曲線", "Custom Fan Curves");
-    public static string FanCurveCpuTitle => T("CPU 风扇曲线", "CPU 風扇曲線", "CPU Fan Curve");
-    public static string FanCurveGpuTitle => T("GPU 风扇曲线", "GPU 風扇曲線", "GPU Fan Curve");
     public static string FanCurveTemperatureAxis => T("温度 (℃)", "溫度 (℃)", "Temperature (℃)");
     public static string FanCurveFanSpeedAxis => T("风扇转速 (RPM)", "風扇轉速 (RPM)", "Fan Speed (RPM)");
     public static string FanCurveInstructions => T(
@@ -157,15 +163,6 @@
     );
     public static string FanAutoProtectOn => T("开启保护", "開啟保護", "Enable Protection");
     public static string FanAutoProtectOff => T("关闭保护", "關閉保護", "Disable Protection");
-
-    public static string FanSilentTooltip => T(
-        "安静模式下风扇转速较低，对应 silent.txt 文件，可以通过修改文件改变转速曲线。",
-        "安靜模式下風扇轉速較低，對應 silent.txt 檔案，可以透過修改檔案改變轉速曲線。",
-        "Silent mode uses lower fan speeds. Edit silent.txt to customize the fan curve.");
-    public static string FanCoolTooltip => T(
-        "降温模式下风扇转速较高，对应 cool.txt 文件，可以通过修改文件改变转速曲线。",
-        "降溫模式下風扇轉速較高，對應 cool.txt 檔案，可以透過修改檔案改變轉速曲線。",
-        "Cool mode uses higher fan speeds. Edit cool.txt to customize the fan curve.");
 
     // ─────────────────────────────────────────────────────────────────────────
     // 风扇控制
@@ -477,7 +474,7 @@
     public static string OmenKeyShortcut => T("模拟按键", "模擬按鍵", "Simulate Shortcut");
     public static string OmenKeySelectApp => T("选择应用", "選擇應用程式", "Select App");
     public static string OmenKeySelectDesktopApp => T("选择桌面应用", "選擇桌面應用程式", "Select Desktop App");
-    public static string OmenKeySelectUwpApp => T("选择 UWP 应用", "選擇 UWP 應用程式", "Select UWP App");
+    public static string OmenKeySelectUwpApp => T("选择UWP应用", "選擇UWP應用程式", "Select UWP App");
     public static string OmenKeyClearApp => T("清除应用绑定", "清除應用程式綁定", "Clear App Binding");
     public static string OmenKeyCurrentApp => T("当前应用", "目前應用程式", "Current App");
     public static string OmenKeyCurrentShortcut => T("当前模拟按键", "目前模擬按鍵", "Current Shortcut");

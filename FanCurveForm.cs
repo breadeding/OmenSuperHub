@@ -73,8 +73,8 @@ namespace OmenSuperHub {
 
       var rootLayout = BuildRootLayout();
 
-      cpuChart = CreateChart(Strings.FanCurveCpuTitle, this.cpuTemperatureMaximum);
-      gpuChart = CreateChart(Strings.FanCurveGpuTitle, this.gpuTemperatureMaximum);
+      cpuChart = CreateChart("CPU", this.cpuTemperatureMaximum);
+      gpuChart = CreateChart("GPU", this.gpuTemperatureMaximum);
 
       rootLayout.Controls.Add(cpuChart, 0, 1);
       rootLayout.Controls.Add(gpuChart, 1, 1);
@@ -192,7 +192,7 @@ namespace OmenSuperHub {
       });
     }
 
-    private Chart CreateChart(string title, int temperatureMaximum) {
+    private Chart CreateChart(string cpuOrGpu, int temperatureMaximum) {
       var chart = new Chart {
         Dock = DockStyle.Fill,
         BackColor = PageBackColor,
@@ -204,11 +204,6 @@ namespace OmenSuperHub {
       chart.TextAntiAliasingQuality =
           TextAntiAliasingQuality.High;
 
-      chart.Titles.Add(new Title(title) {
-        Font = new Font(Font.FontFamily, 12F, FontStyle.Bold),
-        ForeColor = Color.FromArgb(40, 40, 40)
-      });
-
       var chartArea = new ChartArea("FanSpeedArea") {
         BackColor = CardBackColor
       };
@@ -216,13 +211,13 @@ namespace OmenSuperHub {
       chartArea.AxisX.Minimum = 0;
       chartArea.AxisX.Maximum = temperatureMaximum;
       chartArea.AxisX.Interval = 10;
-      chartArea.AxisX.Title = Strings.FanCurveTemperatureAxis;
+      chartArea.AxisX.Title = $"{cpuOrGpu} {Strings.FanCurveTemperatureAxis}";
       chartArea.AxisX.LineColor = AxisLineColor;
       chartArea.AxisX.MajorGrid.LineColor = GridColor;
       chartArea.AxisX.LabelStyle.ForeColor = Color.FromArgb(90, 90, 90);
       chartArea.AxisX.TitleForeColor = Color.FromArgb(80, 80, 80);
       chartArea.AxisX.TitleFont = new Font(Font.FontFamily, 12F, FontStyle.Bold);
-      
+
       chartArea.AxisY.Minimum = 0;
       chartArea.AxisY.Maximum = fanSpeedMaximum;
       chartArea.AxisY.Interval = GetFanSpeedInterval(fanSpeedMaximum);

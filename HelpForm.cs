@@ -147,15 +147,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 自定义风扇曲线设置界面 <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
-<li>✨ Omen键打开应用 <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
-<li>✨ Omen键切换预设 <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
-<li>✨ 本机信息添加PawnIO状态检测</a></li>
+<li>✨ Omen键打开UWP应用、绑定组合键 <a href='https://github.com/breadeding/OmenSuperHub/pull/68'>(#68, shihuaidexianyu)</a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 优化菜单操作：点击后不自动收起菜单</li>
-<li>⚡ 优化最大帧率菜单及提示</li>
+<li>⚡ 安静模式与降温模式支持曲线UI调整，优化转速曲线说明</li>
 <p><strong>修复：</strong></p>
-<li>🐛 切换预设时额外重新应用不相关设置的问题</li>
+<li>🐛 启动时Omen键菜单未显示已选择的应用</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
