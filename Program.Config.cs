@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows.Forms;
 using System.Windows.Input;
 using HP.Omen.Core.Common.NVidiaApi;
 using Microsoft.Win32;
@@ -1098,7 +1099,7 @@ namespace OmenSuperHub {
             DBVersion = (int)key.GetValue("DBVersion", 2);
             switch (DBVersion) {
               case 1:
-                if (IsAbove50Series()) {
+                if (IsAbove50Series() || !powerOnline || !CheckDBVersion(1)) {
                   DBVersion = 2;
                   ExecuteCommand($"pnputil /enable-device \"ACPI\\NVDA0820\\NPCF\"");
                   UpdateCheckedState("DBGroup", Strings.DbNormal);

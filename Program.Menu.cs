@@ -823,15 +823,6 @@ namespace OmenSuperHub {
           DBMenu.DropDownItems.Add(new ToolStripSeparator());
         }
         DBMenu.DropDownItems.Add(CreateMenuItem(Strings.DbUnlocked, "DBGroup", (s, e) => {
-          if (IsAbove50Series()) {
-            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbNo50Series, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            DBVersion = 2;
-            countDB = 0;
-            DBMenu.Enabled = true;
-            SaveConfig("DBVersion");
-            UpdateCheckedState("DBGroup", Strings.DbNormal);
-            return;
-          }
           if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.PerfDbUnlockWarning, Strings.DbUnlockTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
             SetGpuPowerState(true, true);
             if (isCPUPowerControlSupported)

@@ -151,6 +151,8 @@ namespace OmenSuperHub {
 <p><strong>优化：</strong></p>
 <li>⚡ 安静模式与降温模式支持曲线UI调整，优化转速曲线说明</li>
 <p><strong>修复：</strong></p>
+<li>🐛 解锁DB时，更新显卡驱动至不支持的版本后第一次启动OSH执行解锁导致功耗异常的问题</li>
+<li>🐛 风扇转速表错误校验的问题</li>
 <li>🐛 启动时Omen键菜单未显示已选择的应用</li>
 </div>
 
@@ -183,7 +185,7 @@ namespace OmenSuperHub {
 <p>(11) 修改GPU频率限制能实现限制不同级别的功耗，注意该功能不是超频功能。</p>
 
 <h2>四. “硬件监控”菜单说明</h2>
-<p>(1) 可选择开启或关闭对应的监控信息，注意如果使用混合模式应关闭GPU监控。</p>
+<p>(1) 可选择开启或关闭对应的监控信息，注意如果使用混合模式，在不使用GPU时应关闭GPU监控，否则可能会导致功耗增加。</p>
 
 <h2>五. “浮窗显示”菜单说明</h2>
 <p>(1) 开启后，屏幕上方将覆盖硬件监控信息，1秒刷新一次。</p>
@@ -213,15 +215,13 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 自訂風扇曲線設定介面 <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
-<li>✨ Omen鍵開啟應用程式 <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
-<li>✨ Omen鍵切換預設 <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
-<li>✨ 本機資訊新增PawnIO狀態偵測</a></li>
+<li>✨ Omen鍵開啟UWP應用程式、綁定組合鍵 <a href='https://github.com/breadeding/OmenSuperHub/pull/68'>(#68, shihuaidexianyu)</a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ 最佳化選單操作：點選後不自動收起選單</li>
-<li>⚡ 優化最大幀率選單及提示</li>
+<li>⚡ 安靜模式與降溫模式支援曲線UI調整，最佳化轉速曲線說明</li>
 <p><strong>修復：</strong></p>
-<li>🐛 切換預設時額外重新套用不相關設定的問題</li>
+<li>🐛 解鎖DB時，更新顯示卡驅動至不支援的版本後第一次啟動OSH執行解鎖導致功耗異常的問題</li>
+<li>🐛 風扇轉速表錯誤校驗的問題</li>
+<li>🐛 啟動時Omen鍵選單未顯示已選擇的應用程式</li>
 </div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -253,7 +253,7 @@ namespace OmenSuperHub {
 <p>(11) 修改GPU頻率限制能限制不同級別的功耗，注意該功能不是超頻功能。</p>
 
 <h2>四. 「硬體監控」選單說明</h2>
-<p>(1) 可選擇開啟或關閉對應的監控資訊，使用混合模式應關閉GPU監控。</p>
+<p>(1) 可選擇開啟或關閉對應的監控訊息，注意如果使用混合模式，在不使用GPU時應關閉GPU監控，否則可能會導致功耗增加。</p>
 
 <h2>五. 「浮窗顯示」選單說明</h2>
 <p>(1) 開啟後，螢幕上方將覆蓋硬體監控資訊，1秒更新一次。</p>
@@ -283,15 +283,13 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
-<li>✨ Custom fan curve settings interface <a href='https://github.com/breadeding/OmenSuperHub/pull/65'>(#65, Magic-Xin)</a></li>
-<li>✨ Launch app using the Omen key <a href='https://github.com/breadeding/OmenSuperHub/pull/66'>(#66, shihuaidexianyu)</a></li>
-<li>✨ Switch presets using the Omen key <a href='https://github.com/breadeding/OmenSuperHub/pull/67'>(#67, Magic-Xin)</a></li>
-<li>✨ Added PawnIO status detection to local device information</a></li>
+<li>✨ Omen key support for launching UWP apps and binding key combinations <a href='https://github.com/breadeding/OmenSuperHub/pull/68'>(#68, shihuaidexianyu)</a></li>
 <p><strong>Improvements:</strong></p>
-<li>⚡ Menu interaction: Menu no longer closes automatically after clicking</li>
-<li>⚡ Optimized max frame rate menu and tooltips</li>
+<li>⚡ Added curve UI adjustments for Quiet and Cool modes; improved descriptions for fan speed curves</li>
 <p><strong>Fixes:</strong></p>
-<li>🐛 Fixed the issue of extra reapplication of unrelated settings when switching presets</li>
+<li>🐛 Fixed an issue where unlocking caused abnormal power consumption when launching OSH for the first time after updating the GPU driver to an unsupported version</li>
+<li>🐛 Issue with fan speed reading errors</li>
+<li>🐛 Fixed an issue where the Omen key menu failed to display the selected app upon startup</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -323,7 +321,7 @@ namespace OmenSuperHub {
 <p>(11) GPU clock limit reduces max GPU frequency (not overclocking).</p>
 
 <h2>4. HW Monitor menu</h2>
-<p>(1) Toggle individual monitors. If using Hybrid mode, disable GPU monitoring to avoid high CPU usage from frequent GPU wake/sleep.</p>
+<p>(1) You can choose to enable or disable the corresponding monitoring information. Note that if you are using hybrid mode, you should disable GPU monitoring when the GPU is not in use; otherwise, power consumption may increase.</p>
 
 <h2>5. Overlay menu</h2>
 <p>(1) Shows hardware info at the top of the screen, refreshed every second.</p>
