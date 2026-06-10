@@ -409,6 +409,7 @@ namespace OmenSuperHub {
         Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
         DialogResult = DialogResult.Cancel
       };
+      cancelButton.Click += (s, e) => form.Close();
 
       Action refreshPreview = () => {
         string path = pathBox.Text.Trim();
@@ -604,6 +605,7 @@ namespace OmenSuperHub {
         Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
         DialogResult = DialogResult.Cancel
       };
+      cancelButton.Click += (s, e) => form.Close();
 
       Action refreshList = () => {
         string filter = searchBox.Text.Trim();
@@ -773,6 +775,7 @@ namespace OmenSuperHub {
         Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
         DialogResult = DialogResult.Cancel
       };
+      cancelButton.Click += (s, e) => form.Close();
 
       string capturedShortcut = omenKeyShortcut;
       form.KeyDown += (s, e) => {

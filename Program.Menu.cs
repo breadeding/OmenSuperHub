@@ -1307,6 +1307,7 @@ namespace OmenSuperHub {
         langItem.Click += (s, e) => {
           if (appLanguage == localLang.code) return;
 
+          CloseAllOpenForms();
           appLanguage = localLang.code;
           ApplyLanguage(appLanguage);
           SaveConfig("AppLanguage");
@@ -1925,8 +1926,39 @@ namespace OmenSuperHub {
       return $"{modeName}" + Strings.FanCurveEditorTitle;
     }
 
+    static void CloseAllOpenForms() {
+      var openForms = Application.OpenForms.Cast<Form>().ToList();
+      foreach (Form form in openForms) {
+        if (form == null || form.IsDisposed) continue;
+        try {
+          form.Close();
+        } catch (Exception ex) {
+          Logger.Error($"Failed to close open form '{form.Text}': {ex.Message}");
+        }
+      }
+    }
+
+    static void CloseOpenTrayMenus(ToolStripDropDown dropDown) {
+      if (dropDown == null) return;
+
+      foreach (ToolStripItem item in dropDown.Items) {
+        var menuItem = item as ToolStripMenuItem;
+        if (menuItem != null && menuItem.HasDropDownItems) {
+          CloseOpenTrayMenus(menuItem.DropDown);
+        }
+      }
+
+      if (dropDown.Visible) {
+        try {
+          dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
+        } catch {
+        }
+      }
+    }
+
     static void RefreshMenu() {
       if (trayIcon == null || trayIcon.ContextMenuStrip == null) return;
+      CloseOpenTrayMenus(trayIcon.ContextMenuStrip);
       BuildTrayMenu(trayIcon.ContextMenuStrip);
       RestoreConfig();
     }
