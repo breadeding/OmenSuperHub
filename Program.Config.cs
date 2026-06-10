@@ -581,6 +581,8 @@ namespace OmenSuperHub {
               key.SetValue("CustomIcon", customIcon);
               key.SetValue("OmenKey", omenKey);
               key.SetValue("OmenKeyAppPath", omenKeyAppPath);
+              key.SetValue("OmenKeyAppName", omenKeyAppName);
+              key.SetValue("OmenKeyShortcut", omenKeyShortcut);
               key.SetValue("OmenKeyPresetCandidates", omenKeyPresetCandidates);
               if (hasNVIDIAGpu || hasAMDDiscreteGpu)
                 key.SetValue("MonitorGPU", monitorGPU);
@@ -657,6 +659,12 @@ namespace OmenSuperHub {
                   break;
                 case "OmenKeyAppPath":
                   key.SetValue("OmenKeyAppPath", omenKeyAppPath);
+                  break;
+                case "OmenKeyAppName":
+                  key.SetValue("OmenKeyAppName", omenKeyAppName);
+                  break;
+                case "OmenKeyShortcut":
+                  key.SetValue("OmenKeyShortcut", omenKeyShortcut);
                   break;
                 case "OmenKeyPresetCandidates":
                   key.SetValue("OmenKeyPresetCandidates", omenKeyPresetCandidates);
@@ -1127,17 +1135,13 @@ namespace OmenSuperHub {
             case "dynamic": UpdateDynamicIcon(); UpdateCheckedState("customIconGroup", Strings.IconDynamic); break;
           }
 
-          omenKey = (string)key.GetValue("OmenKey", "default");
+          omenKey = (string)key.GetValue("OmenKey", OmenKeyActions.Default);
           omenKeyAppPath = (string)key.GetValue("OmenKeyAppPath", "");
+          omenKeyAppName = (string)key.GetValue("OmenKeyAppName", "");
+          omenKeyShortcut = (string)key.GetValue("OmenKeyShortcut", "");
           omenKeyPresetCandidates = (string)key.GetValue("OmenKeyPresetCandidates", GetDefaultOmenKeyPresetCandidates());
           GetOmenKeyPresetCandidateKeys();
-          switch (omenKey) {
-            case "default": checkFloatingTimer.Enabled = false; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyDefault); break;
-            case "custom": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyToggle); break;
-            case "app": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyLaunchApp); break;
-            case "preset": checkFloatingTimer.Enabled = true; OmenKeyOff(); OmenKeyOn(omenKey); UpdateCheckedState("omenKeyGroup", Strings.OmenKeySwitchPreset); break;
-            case "none": checkFloatingTimer.Enabled = false; OmenKeyOff(); UpdateCheckedState("omenKeyGroup", Strings.OmenKeyNone); break;
-          }
+          RestoreOmenKeyAction();
 
           textSize = (int)key.GetValue("FloatingBarSize", 40);
           UpdateFloatingText();

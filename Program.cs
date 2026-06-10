@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.IO.Pipes;
 using System.Linq;
 using System.Management;
 using System.Reflection;
@@ -52,7 +51,7 @@ namespace OmenSuperHub {
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static readonly string[] PresetOrder = { "PresetExtreme", "PresetGpuPriority", "PresetLightUse", "PresetCustom1", "PresetCustom2", "PresetCustom3" };
     static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
-    static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", floatingBarScreen = "", omenKey = "default", omenKeyAppPath = "", omenKeyPresetCandidates = "", dataLocalize = "off", appLanguage = "zh-CN", autoFanProtect = "on";
+    static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", floatingBarScreen = "", omenKey = OmenKeyActions.Default, omenKeyAppPath = "", omenKeyAppName = "", omenKeyShortcut = "", omenKeyPresetCandidates = "", dataLocalize = "off", appLanguage = "zh-CN", autoFanProtect = "on";
     static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
@@ -1208,201 +1207,6 @@ namespace OmenSuperHub {
       return (int)interpolated;
     }
 
-    static void HandleOmenKeyAction() {
-      if (!omenKeyTriggered) return;
-
-      omenKeyTriggered = false;
-      if (omenKey == "custom") {
-        ToggleFloatingBarByOmenKey();
-      } else if (omenKey == "app") {
-        LaunchOmenKeyApp();
-      } else if (omenKey == "preset") {
-        SwitchPresetByOmenKey();
-      }
-    }
-
-    static void ToggleFloatingBarByOmenKey() {
-      try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
-          if (key != null) {
-            if ((string)key.GetValue("FloatingBar", "off") == "on") {
-              floatingBar = "off";
-              CloseFloatingForm();
-              UpdateCheckedState("floatingBarGroup", Strings.FloatingHide);
-            } else {
-              floatingBar = "on";
-              ShowFloatingForm();
-              UpdateCheckedState("floatingBarGroup", Strings.FloatingShow);
-            }
-            SaveConfig("FloatingBar");
-          }
-        }
-      } catch (Exception ex) {
-        Logger.Error($"Error restoring configuration: {ex.Message}");
-      }
-    }
-
-    static void LaunchOmenKeyApp() {
-      if (string.IsNullOrWhiteSpace(omenKeyAppPath) || !File.Exists(omenKeyAppPath)) {
-        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.OmenKeyAppNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        return;
-      }
-
-      try {
-        string workingDirectory = Path.GetDirectoryName(omenKeyAppPath);
-        var startInfo = new ProcessStartInfo {
-          FileName = omenKeyAppPath,
-          UseShellExecute = true
-        };
-        if (!string.IsNullOrWhiteSpace(workingDirectory)) {
-          startInfo.WorkingDirectory = workingDirectory;
-        }
-        Process.Start(startInfo);
-      } catch (Exception ex) {
-        Logger.Error($"Failed to launch Omen key app: {ex.Message}");
-        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.OmenKeyAppLaunchFailed(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
-      }
-    }
-
-    static bool IsPresetAvailable(string presetKey) {
-      switch (presetKey) {
-        case "PresetExtreme":
-        case "PresetGpuPriority":
-        case "PresetLightUse":
-          return isCPUPowerControlSupported;
-        case "PresetCustom1":
-        case "PresetCustom2":
-        case "PresetCustom3":
-          return true;
-        default:
-          return false;
-      }
-    }
-
-    static List<string> GetAvailablePresetKeys() {
-      return PresetOrder.Where(IsPresetAvailable).ToList();
-    }
-
-    static string GetDefaultOmenKeyPresetCandidates() {
-      return string.Join(";", GetAvailablePresetKeys());
-    }
-
-    static List<string> GetOmenKeyPresetCandidateKeys() {
-      var available = GetAvailablePresetKeys();
-      var candidates = (omenKeyPresetCandidates ?? "")
-          .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-          .Where(available.Contains)
-          .Distinct()
-          .OrderBy(key => Array.IndexOf(PresetOrder, key))
-          .ToList();
-
-      if (candidates.Count == 0) {
-        if (IsPresetAvailable(currentPreset)) {
-          candidates.Add(currentPreset);
-        } else if (available.Count > 0) {
-          candidates.Add(available[0]);
-        }
-      }
-
-      omenKeyPresetCandidates = string.Join(";", candidates);
-      return candidates;
-    }
-
-    static bool SetOmenKeyPresetCandidate(string presetKey, bool enabled) {
-      if (!IsPresetAvailable(presetKey)) return false;
-
-      var candidates = GetOmenKeyPresetCandidateKeys();
-      if (enabled) {
-        if (!candidates.Contains(presetKey))
-          candidates.Add(presetKey);
-      } else {
-        if (candidates.Count <= 1 && candidates.Contains(presetKey))
-          return false;
-        candidates.Remove(presetKey);
-      }
-
-      candidates = candidates
-          .Distinct()
-          .OrderBy(key => Array.IndexOf(PresetOrder, key))
-          .ToList();
-      omenKeyPresetCandidates = string.Join(";", candidates);
-      return true;
-    }
-
-    static void SwitchPresetByOmenKey() {
-      var candidates = GetOmenKeyPresetCandidateKeys();
-      if (candidates.Count == 0) return;
-
-      int currentIndex = candidates.IndexOf(currentPreset);
-      string targetPreset = candidates[(currentIndex + 1) % candidates.Count];
-      if (targetPreset != currentPreset) {
-        applyPresetLogic(targetPreset);
-      } else {
-        UpdateTrayIconText();
-      }
-
-      ShowOmenKeyPresetNotification();
-    }
-
-    static void ShowOmenKeyPresetNotification() {
-      if (trayIcon == null) return;
-
-      // 如果右键菜单当前处于展开状态，则直接拦截不通知
-      if (trayIcon.ContextMenuStrip != null && trayIcon.ContextMenuStrip.Visible) {
-        return;
-      }
-
-      trayIcon.BalloonTipTitle = Strings.OmenKeyPresetBalloonTitle;
-      trayIcon.BalloonTipText = Strings.OmenKeyPresetBalloonText(GetCurrentPresetDisplayName());
-      trayIcon.BalloonTipIcon = ToolTipIcon.Info;
-      trayIcon.ShowBalloonTip(3000);
-    }
-
-    static bool SelectOmenKeyApp() {
-      using (var dialog = new System.Windows.Forms.OpenFileDialog()) {
-        dialog.Title = Strings.OmenKeySelectApp;
-        dialog.Filter = Strings.OmenKeyAppFilter;
-        dialog.CheckFileExists = true;
-        dialog.Multiselect = false;
-        dialog.RestoreDirectory = true;
-
-        if (!string.IsNullOrWhiteSpace(omenKeyAppPath) && File.Exists(omenKeyAppPath)) {
-          dialog.InitialDirectory = Path.GetDirectoryName(omenKeyAppPath);
-          dialog.FileName = Path.GetFileName(omenKeyAppPath);
-        } else {
-          dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        }
-
-        if (dialog.ShowDialog() != DialogResult.OK) return false;
-        omenKeyAppPath = dialog.FileName;
-        return true;
-      }
-    }
-
-    static CancellationTokenSource _pipeCts;
-    static void getOmenKeyTask() {
-      _pipeCts = new CancellationTokenSource();
-      var token = _pipeCts.Token;
-      System.Threading.Tasks.Task.Run(() => {
-        while (!token.IsCancellationRequested) {
-          try {
-            using (var pipeServer = new NamedPipeServerStream("OmenSuperHubPipe", PipeDirection.In)) {
-              pipeServer.WaitForConnection();    // 若需要支持取消，可用异步版本
-              using (var reader = new StreamReader(pipeServer)) {
-                string message = reader.ReadToEnd();
-                if (message.Contains("OmenKeyTriggered") && !omenKeyTriggered)
-                  omenKeyTriggered = true;
-              }
-            }
-          } catch (Exception) when (token.IsCancellationRequested) {
-            break;
-          } catch (Exception ex) {
-            Logger.Error("Pipe error: " + ex.Message);
-          }
-        }
-      }, token);
-    }
-
     // 根据 floatingBarScreen 获取目标显示器，找不到时回退主屏幕
     static Screen GetFloatingScreen() {
       if (!string.IsNullOrEmpty(floatingBarScreen)) {
@@ -1508,7 +1312,7 @@ namespace OmenSuperHub {
 
     static void Exit() {
       _pipeCts?.Cancel();
-      if (omenKey == "custom" || omenKey == "app" || omenKey == "preset") {
+      if (OmenKeyActions.UsesPipe(omenKey)) {
         OmenKeyOff();
       }
       tooltipUpdateTimer.Stop(); // 停止定时器
