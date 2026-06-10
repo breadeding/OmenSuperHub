@@ -143,9 +143,9 @@
         "風扇設定檔格式無效。",
         "The fan profile format is invalid.");
     public static string FanCurveOutOfRange => T(
-        "曲线必须至少包含两个节点，温度和转速不能超过当前机型上限，且温度不能重复。",
-        "曲線必須至少包含兩個節點，溫度和轉速不能超過目前機型上限，且溫度不能重複。",
-        "Each curve needs at least two points. Values must stay within this model's limits and temperatures must be unique.");
+        "曲线必须至少包含一个节点，转速不能低于0，且温度不能重复。",
+        "曲線必須至少包含一個節點，轉速不能低於0，溫度無法重複。",
+        "The curve must contain at least one node, the rotational speed cannot be lower than zero, and the temperatures must not be repeated.");
     public static string FanCurveLoadFailed => T("加载风扇配置失败。", "載入風扇設定失敗。", "Failed to load the fan profile.");
     public static string FanCurveSaveFailed => T("保存风扇配置失败。", "儲存風扇設定失敗。", "Failed to save the fan profile.");
     public static string FanResponseSpeed => T("风扇响应速度", "風扇響應速度", "Fan Response Speed");

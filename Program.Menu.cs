@@ -2022,9 +2022,9 @@ namespace OmenSuperHub {
         SaveConfig("FanTable");
         return true;
       } catch (Exception ex) when (
-          ex is System.IO.IOException ||
+          ex is IOException ||
           ex is UnauthorizedAccessException ||
-          ex is System.IO.InvalidDataException) {
+          ex is InvalidDataException) {
         MessageBox.Show(
             Application.OpenForms.OfType<HelpForm>().FirstOrDefault(),
             Strings.FanCurveLoadFailed + Environment.NewLine + ex.Message,
