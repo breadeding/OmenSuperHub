@@ -316,6 +316,14 @@ namespace OmenSuperHub {
       //Console.WriteLine("操作完成.");
     }
 
+    public static void ChangeDBState(bool State) {
+      if (State) {
+        ExecuteCommand($"pnputil /enable-device \"ACPI\\NVDA0820\\NPCF\"");
+      } else {
+        ExecuteCommand($"pnputil /disable-device \"ACPI\\NVDA0820\\NPCF\"");
+      }
+    }
+
     static void ExtractResourceToFile(string resourceName, string outputFilePath) {
       using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)) {
         if (resourceStream != null) {

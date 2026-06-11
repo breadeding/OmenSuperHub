@@ -255,6 +255,14 @@
     public static string MaxFrameRateMenu => T("最大帧率", "最大幀率", "Max Frame Rate");
 
     // DB 解锁相关
+    public static string UnavailableReasonTip(int seconds) => T(
+        $"正在解锁DB，暂时禁用此菜单，剩余{seconds}秒。",
+        $"正在解鎖DB，暫時停用此選單，剩餘{seconds}秒。",
+        $"Unlocking the database; this menu is temporarily disabled. {seconds} seconds remaining.");
+    public static string UnavailableRetryTip(int seconds, int count, int maxRetry) => T(
+        $"正在第{count}/{maxRetry}次重试解锁DB，暂时禁用此菜单，剩余{seconds}秒。",
+        $"正在第{count}/{maxRetry}次重試解鎖DB，暫時停用此選單，剩餘{seconds}秒。",
+        $"Retrying to unlock the DB (attempt {count}/{maxRetry}); this menu is temporarily disabled. {seconds} seconds remaining.");
     public static string DbUnlockCpuHighWarning => T("请在CPU低负载下解锁",
         "請在CPU低負載下解鎖", "Please unlock under low CPU load.");
     public static string DbUnlockFailed(float w) => T(

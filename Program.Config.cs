@@ -1098,24 +1098,23 @@ namespace OmenSuperHub {
           ApplyPresetSettings("Restore");
 
           // ── DB 版本（仅启动时处理）────────────────────────────────────────────
-          if (hasNVIDIAGpu && DBMenu.Enabled) {
+          if (hasNVIDIAGpu && performanceControlMenu.Enabled) {
             DBVersion = (int)key.GetValue("DBVersion", 2);
             switch (DBVersion) {
               case 1:
                 if (IsAbove50Series() || !powerOnline || !CheckDBVersion(1)) {
                   DBVersion = 2;
-                  ExecuteCommand($"pnputil /enable-device \"ACPI\\NVDA0820\\NPCF\"");
+                  ChangeDBState(true);
                   UpdateCheckedState("DBGroup", Strings.DbNormal);
                 } else {
-                  SetGpuPowerState(true, true);
-                  if (isCPUPowerControlSupported) SetCpuPowerLimit((byte)CPULimitDB);
-                  countDB = countDBInit;
-                  DBMenu.Enabled = false;
+                  countDB = countDBInit + 60;
+                  performanceControlMenu.Enabled = false;
+                  performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
                   UpdateCheckedState("DBGroup", Strings.DbUnlocked);
                 }
                 break;
               case 2:
-                ExecuteCommand($"pnputil /enable-device \"ACPI\\NVDA0820\\NPCF\"");
+                ChangeDBState(true);
                 UpdateCheckedState("DBGroup", Strings.DbNormal);
                 break;
             }

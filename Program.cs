@@ -44,8 +44,8 @@ namespace OmenSuperHub {
     // 四分区/灯条 WMI 协议选择（默认 BasicFourZone；用户可在菜单中切换并持久化）
     static LightingControlInterface kbControlInterface = LightingControlInterface.BasicFourZone;
     static LightingControlInterface lbControlInterface = LightingControlInterface.Dojo;
-    static int DBVersion = 2, countDB = 0, countDBInit = 5, tryTimes = 0, CPULimitDB = 25;
-    static ToolStripMenuItem DBMenu;
+    static int DBVersion = 2, countDB = 0, countDBInit = 10, tryTimes = 0, maxRetry = 5, CPULimitDB = 20;
+    static ToolStripMenuItem performanceControlMenu;
     static int textSize = 40;
     static int countRestore = 0, gpuClock = 0, maxFrameRate = -1;
     static int alreadyRead = 0, alreadyReadCode = 1000;
@@ -929,27 +929,29 @@ namespace OmenSuperHub {
       // 启用再禁用DB驱动
       if (countDB > 0) {
         countDB--;
+        if (tryTimes == 0)
+          performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
+        else
+          performanceControlMenu.ToolTipText = Strings.UnavailableRetryTip(countDB + 1, tryTimes, maxRetry);
         if (countDB == 0) {
-          string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
-          string command = $"pnputil /disable-device {deviceId}";
-          ExecuteCommand(command);
+          ChangeDBState(false);
 
           float[] limits = GetGpuPowerLimits();   // limits[0] = Current, limits[1] = Max
           // 检查显卡当前功耗限制，离电时当作解锁成功
           if (powerOnline && Math.Abs(limits[1] - limits[0]) > 1f) {
             tryTimes++;
-            // 失败时重试一次
-            if (tryTimes == 2) {
+            // 失败时重试maxRetry次
+            if (tryTimes > maxRetry) {
               tryTimes = 0;
               if (CPUPower > CPULimitDB + 10)
                 MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockCpuHighWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
               else
                 MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockFailed(limits[0]), Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-              command = $"pnputil /enable-device {deviceId}";
-              ExecuteCommand(command);
+              ChangeDBState(true);
               DBVersion = 2;
               countDB = 0;
-              DBMenu.Enabled = true;
+              performanceControlMenu.Enabled = true;
+              performanceControlMenu.ToolTipText = "";
               SaveConfig("DBVersion");
               UpdateCheckedState("DBGroup", Strings.DbNormal);
             } else {
@@ -960,7 +962,8 @@ namespace OmenSuperHub {
             }
           } else {
             tryTimes = 0;
-            DBMenu.Enabled = true;
+            performanceControlMenu.Enabled = true;
+            performanceControlMenu.ToolTipText = "";
             if (autoStart == "off") {
               MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DbUnlockSuccessNoAutoStart, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
@@ -973,10 +976,10 @@ namespace OmenSuperHub {
             SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
           }
         } else if (countDB == countDBInit - 1) {
+          SetGpuPowerState(true, true);
+          if (isCPUPowerControlSupported) SetCpuPowerLimit((byte)CPULimitDB);
           // 启用DB驱动
-          string deviceId = "\"ACPI\\NVDA0820\\NPCF\"";
-          string command = $"pnputil /enable-device {deviceId}";
-          ExecuteCommand(command);
+          ChangeDBState(true);
         }
       }
 
