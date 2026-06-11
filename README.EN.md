@@ -20,6 +20,7 @@ OmenSuperHub is a utility that emulates OGH (Omen Gaming Hub) functionalities, i
 
 It implements most of the useful features of HP OMEN's official OGH software, **without** network connection, advertisements, wallpapers, or other unnecessary bloatware.
 
+- Ensure the included PawnIO driver is installed before use; otherwise, CPU data cannot be retrieved.
 - The program is primarily designed and tested on **HP OMEN 16 2023 Intel** (i9‑13900HX + RTX 4060). It may not work on all platforms.
 - Primarily supports the OMEN 16 (2021) and subsequent models; the latest model currently supported is the HyperX OMEN Max (2026). It does not support the OMEN 15 (2020) or earlier models.
 - Using the program on unsupported models may lead to reading failures, blue screens, or other consequences.
@@ -36,11 +37,9 @@ Links
 
 These two projects were the primary inspiration for this work. The authors not only provided interactive commands but also explored methods to interact with OGH. Unfortunately, support for newer models is missing and development has ceased; they may not work without OGH.
 
-- [OpenHardwareMonitorLib](https://openhardwaremonitor.org)
-- [hexagon-oss](https://github.com/hexagon-oss/openhardwaremonitor) – an updated fork of OpenHardwareMonitor's hardware library
-- [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
+This project retrieves CPU and GPU data using [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
 
-Temperature and power monitoring in this project are based on the libraries from the above projects.
+This project implements the auto-start function by creating a scheduled task using [TaskScheduler](https://github.com/dahall/TaskScheduler).
 
 ## Disclaimer
 
