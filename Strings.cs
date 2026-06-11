@@ -452,6 +452,9 @@
     // ─────────────────────────────────────────────────────────────────────────
     // 浮窗
     // ─────────────────────────────────────────────────────────────────────────
+    public static string FloatingToggleTip => T("💡 点击OSH程序图标可以快速切换浮窗显示",
+        "💡 點擊OSH程式圖示可以快速切換浮窗顯示",
+        "💡 Click the OSH program icon to quickly toggle the floating window display.");
     public static string FloatingShow => T("显示浮窗", "顯示浮窗", "Show Overlay");
     public static string FloatingHide => T("关闭浮窗", "關閉浮窗", "Hide Overlay");
     public static string FloatingLocLeft => T("左上角", "左上角", "Top Left");

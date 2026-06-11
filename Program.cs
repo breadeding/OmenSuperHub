@@ -802,7 +802,7 @@ namespace OmenSuperHub {
 
     static void TrayIcon_MouseClick(object sender, MouseEventArgs e) {
       if (e.Button == MouseButtons.Left) {
-        
+        ToggleFloatingBar();
       }
     }
 

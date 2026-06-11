@@ -26,7 +26,7 @@ namespace OmenSuperHub {
         ContextMenuStrip = new ContextMenuStrip(),
         Visible = true
       };
-      //trayIcon.MouseClick += TrayIcon_MouseClick;
+      trayIcon.MouseClick += TrayIcon_MouseClick;
 
       try {
         // 读取图标配置
@@ -1081,6 +1081,7 @@ namespace OmenSuperHub {
       hardwareMonitorMenu.DropDownItems.Add(tempDisplayMenu);
       menu.Items.Add(hardwareMonitorMenu);
       ToolStripMenuItem floatingBarMenu = new ToolStripMenuItem(Strings.FloatingBar);
+      floatingBarMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.FloatingToggleTip) { Enabled = false });
       floatingBarMenu.DropDownItems.Add(CreateMenuItem(Strings.FloatingHide, "floatingBarGroup", (s, e) => {
         floatingBar = "off";
         CloseFloatingForm();

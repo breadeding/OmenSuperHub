@@ -117,7 +117,7 @@ namespace OmenSuperHub {
       omenKeyTriggered = false;
       switch (omenKey) {
         case OmenKeyActions.Overlay:
-          ToggleFloatingBarByOmenKey();
+          ToggleFloatingBar();
           break;
         case OmenKeyActions.App:
           LaunchOmenKeyApp();
@@ -167,7 +167,7 @@ namespace OmenSuperHub {
       }
     }
 
-    static void ToggleFloatingBarByOmenKey() {
+    static void ToggleFloatingBar() {
       try {
         using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
           if (key != null) {

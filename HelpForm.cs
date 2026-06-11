@@ -142,12 +142,12 @@ namespace OmenSuperHub {
     }
 
     // 简体中文 HTML 内容（注意内部双引号已转义为两个双引号）
-    // <p><strong>新增：</strong></p>
-    // <li>✨ </a></li>
     private static string GetHelpHtml_ZH(Version version) {
       return $@"
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
+<p><strong>新增：</strong></p>
+<li>✨ 点击OSH程序图标可以快速切换浮窗显示</a></li>
 <p><strong>优化：</strong></p>
 <li>⚡ 更紧凑的Omen键菜单结构</li>
 <li>⚡ 打开设置窗口后支持继续操作菜单</li>
@@ -218,6 +218,8 @@ namespace OmenSuperHub {
       return $@"
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
+<p><strong>新增：</strong></p>
+<li>✨ 點選OSH程式圖示可快速切換浮窗顯示</a></li>
 <p><strong>優化：</strong></p>
 <li>⚡ 更緊湊的Omen鍵選單結構</li>
 <li>⚡ 開啟設定視窗後支援繼續操作選單</li>
@@ -288,6 +290,8 @@ namespace OmenSuperHub {
       return $@"
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
+<p><strong>New Features:</strong></p>
+<li>✨ Click the OSH program icon to quickly toggle the floating window display.</a></li>
 <p><strong>Improvements:</strong></p>
 <li>⚡ More compact Omen key menu structure</li>
 <li>⚡ Menu remains interactive after opening the settings window</li>
