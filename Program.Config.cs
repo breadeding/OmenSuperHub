@@ -154,6 +154,11 @@ namespace OmenSuperHub {
         ));
 
         LogonTrigger logonTrigger = new LogonTrigger();
+        try {
+          string currentUser = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+          if (!string.IsNullOrWhiteSpace(currentUser))
+            logonTrigger.UserId = currentUser;
+        } catch { }
         tdLogon.Triggers.Add(logonTrigger);
 
         tdLogon.Settings.Hidden = true; // 任务本身也隐藏
