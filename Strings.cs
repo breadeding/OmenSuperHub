@@ -465,7 +465,6 @@
     public static string OmenKeyDefault => T("默认", "預設", "Default");
     public static string OmenKeyToggle => T("切换浮窗显示", "切換浮窗顯示", "Toggle Overlay");
     public static string OmenKeySwitchPreset => T("切换预设", "切換預設", "Switch Preset");
-    public static string OmenKeyPresetCandidates => T("候选预设", "候選預設", "Preset Candidates");
     public static string OmenKeyPresetBalloonTitle => T("已切换预设", "已切換預設", "Preset Switched");
     public static string OmenKeyPresetBalloonText(string name) => T(
         $"当前预设：{name}",

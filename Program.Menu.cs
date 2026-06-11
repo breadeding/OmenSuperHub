@@ -1174,24 +1174,17 @@ namespace OmenSuperHub {
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyDefault, "omenKeyGroup", (s, e) => {
         tooltipUpdateTimer.Enabled = false;
         ApplyOmenKeyAction(OmenKeyActions.Default);
-      }, true));
+      }, omenKey == OmenKeyActions.Default));
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyToggle, "omenKeyGroup", (s, e) => {
         ApplyOmenKeyAction(OmenKeyActions.Overlay);
-      }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySwitchPreset, "omenKeyGroup", (s, e) => {
-        ApplyOmenKeyAction(OmenKeyActions.Preset);
-      }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyLaunchApp, "omenKeyGroup", (s, e) => {
-      if (!IsOmenKeyAppTargetAvailable())
-        SelectOmenKeyApp();
-      }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyShortcut, "omenKeyGroup", (s, e) => {
-        SelectOmenKeyShortcut();
-      }, false));
-      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
+      }, omenKey == OmenKeyActions.Overlay));
 
       bool keepOmenKeyPresetCandidatesMenuOpen = false;
-      ToolStripMenuItem omenKeyPresetCandidatesMenu = new ToolStripMenuItem(Strings.OmenKeyPresetCandidates);
+
+      ToolStripMenuItem omenKeyPresetCandidatesMenu = CreateMenuItem(Strings.OmenKeySwitchPreset, "omenKeyGroup", (s, e) => {
+        ApplyOmenKeyAction(OmenKeyActions.Preset);
+      }, omenKey == OmenKeyActions.Preset);
+
       omenKeyPresetCandidatesMenu.DropDownItems.Add(new ToolStripMenuItem());
       ToolStripDropDownClosingEventHandler keepPresetCandidatesMenuOpen = (s, e) => {
         if (keepOmenKeyPresetCandidatesMenuOpen && e.CloseReason == ToolStripDropDownCloseReason.ItemClicked) {
@@ -1239,28 +1232,32 @@ namespace OmenSuperHub {
         }
       };
       omenKeyMenu.DropDownItems.Add(omenKeyPresetCandidatesMenu);
-      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
+
+      ToolStripMenuItem omenKeyLaunchAppMenu = CreateMenuItem(Strings.OmenKeyLaunchApp, "omenKeyGroup", (s, e) => {
+        if (!IsOmenKeyAppTargetAvailable())
+          SelectOmenKeyApp();
+        else
+          ApplyOmenKeyAction(OmenKeyActions.App);
+      }, omenKey == OmenKeyActions.App);
 
       var currentAppItem = new ToolStripMenuItem($"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}") { Enabled = false };
-      var currentShortcutItem = new ToolStripMenuItem($"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}") { Enabled = false };
 
       // Refresh display items every time the submenu opens.
       // This covers: (a) initial startup where BuildTrayMenu runs before RestoreConfig loads saved values,
       // and (b) any stale state after actions that don't trigger a full menu rebuild.
-      omenKeyMenu.DropDownOpening += (s, e) => {
+      omenKeyLaunchAppMenu.DropDownOpening += (s, e) => {
         currentAppItem.Text = $"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}";
-        currentShortcutItem.Text = $"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}";
       };
 
-      omenKeyMenu.DropDownItems.Add(currentAppItem);
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectDesktopApp, null, (s, e) => {
+      omenKeyLaunchAppMenu.DropDownItems.Add(currentAppItem);
+      omenKeyLaunchAppMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectDesktopApp, null, (s, e) => {
         // Modeless editor: bring the existing window to the front when it is already open.
         SelectOmenKeyApp();
       }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectUwpApp, null, (s, e) => {
+      omenKeyLaunchAppMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySelectUwpApp, null, (s, e) => {
         SelectOmenKeyUwpApp();
       }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearApp, null, (s, e) => {
+      omenKeyLaunchAppMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearApp, null, (s, e) => {
         omenKeyAppPath = "";
         omenKeyAppName = "";
         SaveConfig("OmenKeyAppPath");
@@ -1271,12 +1268,26 @@ namespace OmenSuperHub {
         }
         currentAppItem.Text = $"{Strings.OmenKeyCurrentApp}: {GetOmenKeyAppDisplayName()}";
       }, false));
-      omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
-      omenKeyMenu.DropDownItems.Add(currentShortcutItem);
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySetShortcut, null, (s, e) => {
+      omenKeyMenu.DropDownItems.Add(omenKeyLaunchAppMenu);
+
+      ToolStripMenuItem omenKeyShortcutMenu = CreateMenuItem(Strings.OmenKeyShortcut, "omenKeyGroup", (s, e) => {
+        if (string.IsNullOrWhiteSpace(omenKeyShortcut))
+          SelectOmenKeyShortcut();
+        else
+          ApplyOmenKeyAction(OmenKeyActions.Shortcut);
+      }, omenKey == OmenKeyActions.Shortcut);
+
+      var currentShortcutItem = new ToolStripMenuItem($"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}") { Enabled = false };
+
+      omenKeyShortcutMenu.DropDownOpening += (s, e) => {
+        currentShortcutItem.Text = $"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}";
+      };
+
+      omenKeyShortcutMenu.DropDownItems.Add(currentShortcutItem);
+      omenKeyShortcutMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeySetShortcut, null, (s, e) => {
         SelectOmenKeyShortcut();
       }, false));
-      omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearShortcut, null, (s, e) => {
+      omenKeyShortcutMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyClearShortcut, null, (s, e) => {
         omenKeyShortcut = "";
         SaveConfig("OmenKeyShortcut");
         if (omenKey == OmenKeyActions.Shortcut) {
@@ -1285,10 +1296,13 @@ namespace OmenSuperHub {
         }
         currentShortcutItem.Text = $"{Strings.OmenKeyCurrentShortcut}: {FormatOmenKeyShortcut(omenKeyShortcut)}";
       }, false));
+      omenKeyMenu.DropDownItems.Add(omenKeyShortcutMenu);
+
       omenKeyMenu.DropDownItems.Add(new ToolStripSeparator());
       omenKeyMenu.DropDownItems.Add(CreateMenuItem(Strings.OmenKeyNone, "omenKeyGroup", (s, e) => {
         ApplyOmenKeyAction(OmenKeyActions.None);
-      }, false));
+      }, omenKey == OmenKeyActions.None));
+
       menu.Items.Add(omenKeyMenu);
 
       ToolStripMenuItem settingMenu = new ToolStripMenuItem(Strings.OtherSettings);
