@@ -524,12 +524,12 @@ namespace OmenSuperHub {
 
         for (int i = 0; i < cpuTempList.Count; i++) {
           int speedRpm = cpuSpeedList[i];
-          CPUTempFanMap[cpuTempList[i]] = new List<int> { speedRpm, speedRpm }; // 双风扇同速
+          CPUTempFanMap[cpuTempList[i]] = speedRpm; // 双风扇同速
         }
 
         for (int i = 0; i < gpuTempList.Count; i++) {
           int speedRpm = gpuSpeedList[i];
-          GPUTempFanMap[gpuTempList[i]] = new List<int> { speedRpm, speedRpm };
+          GPUTempFanMap[gpuTempList[i]] = speedRpm;
         }
       }
     }
@@ -537,18 +537,18 @@ namespace OmenSuperHub {
     // Get fan speed for CPU and GPU and return the maximum
     // 使用平滑后的温度查表，保证高中低档响应速度生效；实时档下平滑温度==原始温度
     // 只有对应监控开启且温度已完成初始化时，才参与风扇转速计算
-    static int GetFanSpeedForTemperature(int fanIndex) {
+    static int GetFanSpeedForTemperature() {
       if (CPUTempFanMap.Count == 0 || GPUTempFanMap.Count == 0) return 0;
 
       int resultSpeed = 0;
 
       if (monitorCPU && cpuTempReady) {
-        int cpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedCPUTemp, CPUTempFanMap, fanIndex);
+        int cpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedCPUTemp, CPUTempFanMap);
         resultSpeed = Math.Max(resultSpeed, cpuFanSpeed);
       }
 
       if (monitorGPU && gpuTempReady) {
-        int gpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedGPUTemp, GPUTempFanMap, fanIndex);
+        int gpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedGPUTemp, GPUTempFanMap);
         resultSpeed = Math.Max(resultSpeed, gpuFanSpeed);
       }
 
