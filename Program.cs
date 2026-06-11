@@ -929,6 +929,12 @@ namespace OmenSuperHub {
       // 启用再禁用DB驱动
       if (countDB > 0) {
         countDB--;
+        // 提前判断是否符合条件
+        if (CPUPower > 0.01f && CPUPower < CPULimitDB) {
+          float[] limits = GetGpuPowerLimits();   // limits[0] = Current, limits[1] = Max
+          if (!powerOnline || Math.Abs(limits[1] - limits[0]) < 1f)
+            countDB = 0;
+        }
         if (tryTimes == 0)
           performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
         else
@@ -955,10 +961,10 @@ namespace OmenSuperHub {
               SaveConfig("DBVersion");
               UpdateCheckedState("DBGroup", Strings.DbNormal);
             } else {
-              SetGpuPowerState(true, true);
-              if (isCPUPowerControlSupported)
-                SetCpuPowerLimit((byte)CPULimitDB);
               countDB = countDBInit;
+              // 启用DB驱动
+              ChangeDBState(true);
+              SetGpuPowerState(true, true);
             }
           } else {
             tryTimes = 0;
@@ -976,10 +982,7 @@ namespace OmenSuperHub {
             SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
           }
         } else if (countDB == countDBInit - 1) {
-          SetGpuPowerState(true, true);
           if (isCPUPowerControlSupported) SetCpuPowerLimit((byte)CPULimitDB);
-          // 启用DB驱动
-          ChangeDBState(true);
         }
       }
 
@@ -1293,17 +1296,19 @@ namespace OmenSuperHub {
       return GetPresetDisplayName(currentPreset);
     }
 
-    static string GetActivePresetStatusText() {
-      return $"{Strings.ActivePreset}: {GetCurrentPresetDisplayName()}";
-    }
-
     static void UpdateTrayIconText() {
       if (trayIcon == null) return;
 
-      string text = GetActivePresetStatusText();
+      string text = "";
+      string presetName = GetCurrentPresetDisplayName();
       string monitor = monitorText();
-      if (!string.IsNullOrWhiteSpace(monitor))
-        text += "\n" + monitor;
+      if (Strings.ActivePreset.Length + presetName.Length + 1 + monitor.Length <= 63) {
+        text = $"{Strings.ActivePreset + presetName}\n{monitor}";
+      } else if (presetName.Length + 1 + monitor.Length <= 63) {
+        text = presetName + "\n" + monitor;
+      } else {
+        text = monitor;
+      }
 
       const int notifyIconTextLimit = 63;
       if (text.Length > notifyIconTextLimit)

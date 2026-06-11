@@ -2117,6 +2117,9 @@ namespace OmenSuperHub {
             DBVersion = 1;
             ChangeDBVersion(DBVersion);
             countDB = countDBInit;
+            // 启用DB驱动
+            ChangeDBState(true);
+            SetGpuPowerState(true, true);
             performanceControlMenu.Enabled = false;
             performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
             SaveConfig("DBVersion");

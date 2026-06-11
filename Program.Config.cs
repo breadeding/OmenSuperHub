@@ -1108,6 +1108,9 @@ namespace OmenSuperHub {
                   UpdateCheckedState("DBGroup", Strings.DbNormal);
                 } else {
                   countDB = countDBInit + 60;
+                  // 启用DB驱动
+                  ChangeDBState(true);
+                  SetGpuPowerState(true, true);
                   performanceControlMenu.Enabled = false;
                   performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
                   UpdateCheckedState("DBGroup", Strings.DbUnlocked);
