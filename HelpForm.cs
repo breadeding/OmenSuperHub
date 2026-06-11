@@ -141,7 +141,7 @@ namespace OmenSuperHub {
 </html>";
     }
 
-    // 简体中文 HTML 内容（注意内部双引号已转义为两个双引号）
+    // 简体中文 HTML 内容
     private static string GetHelpHtml_ZH(Version version) {
       return $@"
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
