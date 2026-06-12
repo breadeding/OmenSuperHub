@@ -169,7 +169,8 @@ namespace OmenSuperHub {
         //Console.WriteLine("任务二已创建：用户登录时重启。");
       }
 
-      CleanUpAndRemoveTasks();
+      // 整个清理操作异步化，不影响启动
+      System.Threading.Tasks.Task.Run(() => CleanUpAndRemoveTasks());
     }
 
     static void AutoStartDisable() {
@@ -297,10 +298,12 @@ namespace OmenSuperHub {
           maxCPUTemp = throttle;
         }
         if (hasNVIDIAGpu) {
-          throttle = GetGpuTemperatureTarget();
-          if (throttle > 50) {
-            maxGPUTemp = throttle;
-          }
+          System.Threading.Tasks.Task.Run(() => {
+            throttle = GetGpuTemperatureTarget();
+            if (throttle > 50) {
+              maxGPUTemp = throttle;
+            }
+          });
         }
       }
     }

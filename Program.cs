@@ -203,60 +203,67 @@ namespace OmenSuperHub {
         }
         // 每版本仅显示一次
         if (alreadyRead != alreadyReadCode) {
-          if (Validation() == Strings.ValidationUnsupported) {
+          string validationResult = Validation();
+          if (validationResult == Strings.ValidationUnsupported) {
             var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductUnsupported, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
               return; // 退出程序
-          } else if (Validation() == Strings.ValidationUnsupportedHPProduct) {
+          } else if (validationResult == Strings.ValidationUnsupportedHPProduct) {
             var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductUnsupportedHP, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
               return; // 退出程序
-          } else if (Validation() == Strings.ValidationOldOmenProduct) {
+          } else if (validationResult == Strings.ValidationOldOmenProduct) {
             var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductOldOmen, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
               return; // 退出程序
           }
         }
 
-        kbType = GetKeyboardType();
-        systemSSID = DeviceModel.ThisSystemID; // DeviceModel.OmenPlatform.Name
-        deviceType = DeviceModel.DeviceType;
+        var t1 = System.Threading.Tasks.Task.Run(() => kbType = GetKeyboardType());
+        var t2 = System.Threading.Tasks.Task.Run(() => systemSSID = DeviceModel.ThisSystemID);
         //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
-        string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
-        platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
-        if (platformSettings != null) {
-          currentPreset = "PresetExtreme";
-          isCPUPowerControlSupported = true;
-        }
-        if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
-          supportAni = true;
-        }
-        if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
-          supportDojo = true;
-          if (IsLightBarPlatform())
-            supportLightbar = true;
-        }
+        var t3 = System.Threading.Tasks.Task.Run(() => {
+          deviceType = DeviceModel.DeviceType; // DeviceModel.OmenPlatform.Name
+          string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
+          platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
+          if (platformSettings != null) {
+            currentPreset = "PresetExtreme";
+            isCPUPowerControlSupported = true;
+          }
+          InitPlatformMaxFanSpeed();
+        });
+        var t4 = System.Threading.Tasks.Task.Run(() => {
+          if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
+            supportAni = true;
+          }
+        });
+        var t5 = System.Threading.Tasks.Task.Run(() => {
+          if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
+            supportDojo = true;
+            if (IsLightBarPlatform())
+              supportLightbar = true;
+          }
+        });
+        var t6 = System.Threading.Tasks.Task.Run(() => NvGraphicsMode = GetGfxMode());
+        var t7 = System.Threading.Tasks.Task.Run(() => hasAMDDiscreteGpu = HasAmdDiscreteGpu());
+        var t8 = System.Threading.Tasks.Task.Run(() => {
+          hasNVIDIAGpu = HasNvidiaGpu();
+          if (hasNVIDIAGpu) {
+            ExtractAndPreloadNativeDll("NvidiaApi.dll");
+            maxFrameRate = NvApiWrapper.NVAPI_GetMaxFrameRate();
+          }
+        });
+        var t9 = System.Threading.Tasks.Task.Run(() => SetUnleashMode()); // 固定为释放全部性能模式
+        var t10 = System.Threading.Tasks.Task.Run(() => Is3FanNb = IsThreeFanSupported());
+        var t11 = System.Threading.Tasks.Task.Run(() => isFanCleanSupported = IsCleanCreekSupported());
+        var t12 = System.Threading.Tasks.Task.Run(() => isFanLegacyCleanSupported = IsLegacyCleanCreekSupported());
+        var t13 = System.Threading.Tasks.Task.Run(() => monitorQuery());
+        var t14 = System.Threading.Tasks.Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
+        var t15 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
+        var t16 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
+        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16);
 
-        NvGraphicsMode = GetGfxMode();
-        hasAMDDiscreteGpu = HasAmdDiscreteGpu();
-        hasNVIDIAGpu = HasNvidiaGpu();
-        if (hasNVIDIAGpu) {
-          ExtractAndPreloadNativeDll("NvidiaApi.dll");
-          maxFrameRate = NvApiWrapper.NVAPI_GetMaxFrameRate();
-        }
-        // 固定为释放全部性能模式
-        SetUnleashMode();
-        Is3FanNb = IsThreeFanSupported();
-        isFanCleanSupported = IsCleanCreekSupported();
-        isFanLegacyCleanSupported = IsLegacyCleanCreekSupported();
-
-        monitorQuery();
-
-        isTwoBytePL4 = IsTwoBytePL4Supported();
-
-        // Initialize tray icon
         InitMaxTemp();
-        InitPlatformMaxFanSpeed();
         LoadLanguageSetting();  // 必须在 InitTrayIcon 之前，使菜单使用正确语言
         InitTrayIcon();
 
@@ -283,13 +290,11 @@ namespace OmenSuperHub {
           }
         }, null, 100, 1000);
 
-        getOmenKeyTask();
         checkFloatingTimer = new System.Windows.Forms.Timer();
         checkFloatingTimer.Interval = 100;
         checkFloatingTimer.Tick += (s, e) => HandleOmenKeyAction();
         checkFloatingTimer.Start();
 
-        // Restore last setting
         RestoreConfig();
 
         if (alreadyRead != alreadyReadCode) {
@@ -343,7 +348,6 @@ namespace OmenSuperHub {
         //Console.WriteLine($"IsIntelGraphics: {OmenHsaClient.IsIntelGraphics()}");
 
         Logger.Info($"version: {version}");
-        SetBrowserEmulationForWebBrowser();
         Application.Run();
       }
     }
