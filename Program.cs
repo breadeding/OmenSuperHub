@@ -31,6 +31,52 @@ namespace OmenSuperHub {
     [DllImport("user32.dll")]
     static extern bool SetProcessDPIAware();
 
+    // ── 低级鼠标钩子（用于托盘图标滚轮切换预设）──────────────────────────
+    delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    // Shell_NotifyIconGetRect：获取托盘图标的屏幕矩形
+    [StructLayout(LayoutKind.Sequential)]
+    struct NOTIFYICONIDENTIFIER {
+      public uint cbSize;
+      public IntPtr hWnd;
+      public uint uID;
+      public Guid guidItem;
+    }
+
+    [DllImport("shell32.dll", SetLastError = true)]
+    static extern int Shell_NotifyIconGetRect(ref NOTIFYICONIDENTIFIER identifier, out RECT iconRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct RECT { public int left, top, right, bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct MSLLHOOKSTRUCT {
+      public Point pt;
+      public int mouseData;
+      public int flags;
+      public int time;
+      public IntPtr dwExtraInfo;
+    }
+
+    const int WH_MOUSE_LL = 14;
+    const int WM_MOUSEWHEEL = 0x020A;
+
+    static IntPtr _mouseHook = IntPtr.Zero;
+    static LowLevelMouseProc _mouseHookProc; // 防止 GC 回收委托
+    static Control _invokeTarget;            // 专用 marshal 控件（句柄在安装钩子前已创建）
+
     static byte currentAnimSpeed = 1, currentAnimDirection = 0, currentAnimTheme = 0, currentAnimEffect = 2;
     // 单键RGB当前选中状态（用于菜单勾选，null/-1 表示未选择）
     static string perKeyStaticColorSel = null;
@@ -800,6 +846,93 @@ namespace OmenSuperHub {
       }
     }
 
+    // ── 托盘图标滚轮钩子 ─────────────────────────────────────────────────
+    static void InstallTrayScrollHook() {
+      if (_mouseHook != IntPtr.Zero) return;
+
+      // 创建专用 marshal 控件并强制创建窗口句柄，确保 BeginInvoke 可用
+      _invokeTarget = new Control();
+      _invokeTarget.CreateControl(); // 强制创建 HWND
+
+      _mouseHookProc = TrayScrollHookProc;
+      _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, _mouseHookProc, GetModuleHandle(null), 0);
+    }
+
+    static void UninstallTrayScrollHook() {
+      if (_mouseHook == IntPtr.Zero) return;
+      UnhookWindowsHookEx(_mouseHook);
+      _mouseHook = IntPtr.Zero;
+      _invokeTarget?.Dispose();
+      _invokeTarget = null;
+    }
+
+    // 获取托盘图标屏幕矩形；失败时返回 Rectangle.Empty
+    static Rectangle GetTrayIconRect() {
+      try {
+        // NotifyIcon 内部 hWnd 通过反射取得
+        var windowField = typeof(NotifyIcon).GetField("window",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (windowField == null) return Rectangle.Empty;
+        var nativeWindow = windowField.GetValue(trayIcon) as System.Windows.Forms.NativeWindow;
+        if (nativeWindow == null) return Rectangle.Empty;
+        IntPtr hWnd = nativeWindow.Handle;
+
+        var idField = typeof(NotifyIcon).GetField("id",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        uint id = idField != null ? (uint)(int)idField.GetValue(trayIcon) : 1u;
+
+        var nid = new NOTIFYICONIDENTIFIER {
+          cbSize = (uint)Marshal.SizeOf(typeof(NOTIFYICONIDENTIFIER)),
+          hWnd = hWnd,
+          uID = id
+        };
+        RECT rc;
+        if (Shell_NotifyIconGetRect(ref nid, out rc) == 0) {
+          return Rectangle.FromLTRB(rc.left, rc.top, rc.right, rc.bottom);
+        }
+      } catch { }
+      return Rectangle.Empty;
+    }
+
+    static IntPtr TrayScrollHookProc(int nCode, IntPtr wParam, IntPtr lParam) {
+      if (nCode >= 0 && (int)wParam == WM_MOUSEWHEEL) {
+        var info = (MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(MSLLHOOKSTRUCT));
+        Rectangle iconRect = GetTrayIconRect();
+
+        bool isOverTray = !iconRect.IsEmpty && iconRect.Contains(info.pt);
+
+        if (isOverTray) {
+          // mouseData 高 16 位为滚轮增量，向上为正
+          int delta = (short)((info.mouseData >> 16) & 0xFFFF);
+          // 用专用 marshal 控件切回 UI 线程（ContextMenuStrip 在首次打开前没有 HWND）
+          bool up = delta > 0;
+          _invokeTarget?.BeginInvoke(new Action(() => CyclePresetByScroll(up)));
+        }
+      }
+      return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+    }
+
+    // scrollUp=true 向上滚（候选列表向前）；false 向下滚（向后）
+    static void CyclePresetByScroll(bool scrollUp) {
+      // 右键菜单打开时不切换，避免误操作
+      if (trayIcon?.ContextMenuStrip != null && trayIcon.ContextMenuStrip.Visible) return;
+
+      var candidates = GetOmenKeyPresetCandidateKeys();
+      if (candidates.Count == 0) return;
+
+      int idx = candidates.IndexOf(currentPreset);
+      if (idx < 0) idx = 0;
+      int next = scrollUp
+          ? (idx - 1 + candidates.Count) % candidates.Count
+          : (idx + 1) % candidates.Count;
+      string targetPreset = candidates[next];
+      if (targetPreset != currentPreset) {
+        applyPresetLogic(targetPreset);
+      } else {
+        UpdateTrayIconText();
+      }
+    }
+
     static void TrayIcon_MouseClick(object sender, MouseEventArgs e) {
       if (e.Button == MouseButtons.Left) {
         ToggleFloatingBar();
@@ -896,7 +1029,9 @@ namespace OmenSuperHub {
 
       if (monitorFan)
         fanSpeedNow = GetFanLevel();
-      UpdateTrayIconText();
+      // 仅当鼠标悬停在托盘图标上时才刷新 tooltip 文字，避免无谓的字符串构建
+      if (!GetTrayIconRect().IsEmpty && GetTrayIconRect().Contains(Control.MousePosition))
+        UpdateTrayIconText();
       //Console.WriteLine("UpdateTooltip");
 
       // 同步数据到本地txt
@@ -1338,6 +1473,7 @@ namespace OmenSuperHub {
       if (OmenKeyActions.UsesPipe(omenKey)) {
         OmenKeyOff();
       }
+      UninstallTrayScrollHook(); // 卸载鼠标钩子
       tooltipUpdateTimer.Stop(); // 停止定时器
 
       //openComputer.Close();

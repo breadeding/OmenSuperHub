@@ -147,7 +147,7 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ </a></li>
+<li>✨ 可在托盘图标上通过滚动鼠标切换预设</a></li>
 <p><strong>优化：</strong></p>
 <li>⚡ 获取不到CPU数据时显示PawnIO状态</li>
 <li>⚡ 加强解锁DB稳定性</li>
@@ -216,17 +216,14 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 點選OSH程式圖示可快速切換浮窗顯示</a></li>
+<li>✨ 可在托盤圖示上透過捲動滑鼠切換預設</a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ 更緊湊的Omen鍵選單結構</li>
-<li>⚡ 開啟設定視窗後支援繼續操作選單</li>
+<li>⚡ 取得不到CPU資料時顯示PawnIO狀態</li>
+<li>⚡ 加強解鎖DB穩定性</li>
+<li>⚡ 解鎖DB時動態判斷是否符合條件</li>
 <p><strong>修復：</strong></p>
-<li>🐛 任務規劃程式無UserId限制導致多次啟動、登入前無法自動控制轉速</li>
-<li>🐛 切換語言後未關閉已開啟的視窗、選單</li>
-<li>🐛 Omen鍵已綁定目標應用時將Omen鍵設定為「開啟應用程式」模式無效</li>
-<li>🐛 模擬按鍵設定介面的「取消」點選無效</li>
-<li>🐛 Omen鍵已綁定模擬按鍵時將Omen鍵設定為「模擬按鍵」模式仍開啟設定介面</li>
-<li>🐛 Omen鍵已綁定模擬按鍵時將Omen鍵設定為「模擬按鍵」模式無效</li>
+<li>🐛 解鎖DB確認彈窗取消後選單未正確勾選的問題</li>
+<li>🐛 圖示懸浮窗內容超長導致截斷的問題</li>
 </div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -288,17 +285,14 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
-<li>✨ Click the OSH program icon to quickly toggle the floating window display.</a></li>
+<li>✨ Switch presets by scrolling the mouse over the tray icon</li>
 <p><strong>Improvements:</strong></p>
-<li>⚡ More compact Omen key menu structure</li>
-<li>⚡ Menu remains interactive after opening the settings window</li>
+<li>⚡ Display PawnIO status when CPU data is unavailable</li>
+<li>⚡ Improved stability for unlocking the DB</li>
+<li>⚡ Dynamically verify eligibility when unlocking the DB</li>
 <p><strong>Fixes:</strong></p>
-<li>🐛 Task scheduler lacked a UserID restriction, causing multiple launches; fan speed could not be automatically controlled before login</li>
-<li>🐛 Open windows and menus were not closed after switching languages</li>
-<li>🐛 Setting the Omen key to ""Open Application"" mode had no effect when it was already bound to a target application</li>
-<li>🐛 Clicking ""Cancel"" in the simulated key settings interface did not work</li>
-<li>🐛 Setting the Omen key to ""Simulated Key"" mode still opened the settings interface when it was already bound to a simulated key</li>
-<li>🐛 Setting the Omen key to ""Simulated Key"" mode had no effect when it was already bound to a simulated key</li>
+<li>🐛 Fixed an issue where the menu checkbox wasn't updated correctly after cancelling the DB unlock confirmation dialog</li>
+<li>🐛 Fixed an issue where the tray icon tooltip was truncated due to excessive length</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>

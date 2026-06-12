@@ -317,7 +317,7 @@ namespace OmenSuperHub {
       var candidates = GetOmenKeyPresetCandidateKeys();
       if (candidates.Count == 0) return;
 
-      int currentIndex = candidates.IndexOf(currentPreset);
+        int currentIndex = candidates.IndexOf(currentPreset);
       string targetPreset = candidates[(currentIndex + 1) % candidates.Count];
       if (targetPreset != currentPreset) {
         applyPresetLogic(targetPreset);
@@ -325,7 +325,9 @@ namespace OmenSuperHub {
         UpdateTrayIconText();
       }
 
-      ShowOmenKeyPresetNotification();
+      // 当鼠标不悬停在托盘图标上时才通知
+      if (GetTrayIconRect().IsEmpty || !GetTrayIconRect().Contains(Control.MousePosition))
+        ShowOmenKeyPresetNotification();
     }
 
     static void ShowOmenKeyPresetNotification() {

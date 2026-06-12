@@ -476,6 +476,10 @@
     public static string OmenKeyDefault => T("默认", "預設", "Default");
     public static string OmenKeyToggle => T("切换浮窗显示", "切換浮窗顯示", "Toggle Overlay");
     public static string OmenKeySwitchPreset => T("切换预设", "切換預設", "Switch Preset");
+    // 滚轮操作提示（置顶，不可点击）
+    public static string scrollHint => T("💡可在托盘图标上滚动鼠标切换预设",
+        "💡可在托盤圖示上滾動滑鼠切換預設",
+        "💡 Scroll on tray icon to switch preset");
     public static string OmenKeyPresetBalloonTitle => T("已切换预设", "已切換預設", "Preset Switched");
     public static string OmenKeyPresetBalloonText(string name) => T(
         $"当前预设：{name}",
