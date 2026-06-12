@@ -147,17 +147,14 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 点击OSH程序图标可以快速切换浮窗显示</a></li>
+<li>✨ </a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 更紧凑的Omen键菜单结构</li>
-<li>⚡ 打开设置窗口后支持继续操作菜单</li>
+<li>⚡ 获取不到CPU数据时显示PawnIO状态</li>
+<li>⚡ 加强解锁DB稳定性</li>
+<li>⚡ 解锁DB时动态判断是否符合条件</li>
 <p><strong>修复：</strong></p>
-<li>🐛 任务计划程序无UserId限制导致多次启动、登录前无法自动控制转速</li>
-<li>🐛 切换语言后未关闭已打开的窗口、菜单</li>
-<li>🐛 Omen键已绑定目标应用时将Omen键设定为“打开应用”模式无效</li>
-<li>🐛 模拟按键设置界面的“取消”点击无效</li>
-<li>🐛 Omen键已绑定模拟按键时将Omen键设定为“模拟按键”模式依然打开设置界面</li>
-<li>🐛 Omen键已绑定模拟按键时将Omen键设定为“模拟按键”模式无效</li>
+<li>🐛 解锁DB确认弹窗取消后菜单未正确勾选的问题</li>
+<li>🐛 图标悬浮窗内容超长导致截断的问题</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>

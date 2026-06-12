@@ -87,7 +87,7 @@ namespace OmenSuperHub {
         case "CPU": return Color.FromArgb(0, 128, 192);
         case "GPU": return Color.FromArgb(0, 128, 192);
         case "Fan": return Color.FromArgb(0, 128, 64);
-        default:    return Color.Black;
+        default:    return Color.FromArgb(0, 128, 192);
       }
     }
 

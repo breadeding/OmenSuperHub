@@ -1263,11 +1263,27 @@ namespace OmenSuperHub {
     //生成监控信息
     static string monitorText() {
       string str = "";
-      if (monitorCPU)
-        str += $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
+      string pawnIOState = "";
+      if (monitorCPU) {
+        if (CPUPower > 0.01f)
+          str += $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
+        else {
+          if (!IsPawnIOInstalled())
+            pawnIOState = Strings.SysPawnIONotInstalled;
+          else
+            pawnIOState = GetPawnIOState();
+          if (pawnIOState == "RUNNING")
+            str += $"CPU: {Strings.MonitorPrepareLabel}";
+          else
+            str += $"CPU: PawnIO {pawnIOState}";
+        }
+      }
       if (monitorGPU) {
         if (str.Length > 0) str += "\n";
-        str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
+        if (pawnIOState == "RUNNING" && GPUPower < 0.01f)
+          str += $"GPU: {Strings.MonitorPrepareLabel}";
+        else
+          str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
       }
       if (monitorFan) {
         if (str.Length > 0) str += "\n";
