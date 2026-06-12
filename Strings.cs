@@ -195,8 +195,6 @@
     public static string GfxOnlyInternal => T("💡仅部分机型支持在此修改图形模式（需重启），若不支持可在BIOS设置修改。",
         "💡僅部分機型支援在此修改圖形模式（需重啟），若不支援可在BIOS設定修改。",
         "💡 Only some models support switching graphics mode here (requires reboot). Use BIOS otherwise.");
-    public static string GfxDiscreteMode => T("独显直连", "獨顯直連", "Discrete GPU");
-    public static string GfxHybridMode => T("混合模式", "混合模式", "Hybrid Mode");
     public static string GfxUMAConfirm => T("仅集成显卡启用，屏蔽独显，该模式下 HDMI 输出将无法工作。确定切换吗?",
         "僅整合顯示啟用，遮蔽獨顯，此模式下 HDMI 輸出將無法運作。確定切換嗎？",
         "Only iGPU will be active. HDMI output will not work in UMA mode. Confirm switch?");
@@ -558,9 +556,6 @@
     public static string SysPawnIONotInstalled => T("未安装", "未安裝", "Not Installed");
     public static string SysCpu => T("CPU", "CPU", "CPU");
     public static string SysCpuTjMax => T("CPU温度墙", "CPU溫度上限", "CPU Tjmax");
-    public static string SysGpu => T("显卡", "顯示卡", "GPU");
-    public static string SysGpuUnknown => T("显卡: 未知", "顯示卡: 未知", "GPU: Unknown");
-    public static string SysGpuList => T("显卡:", "顯示卡:", "GPU:");
     public static string SysNvidiaTjMax => T("NVIDIA 温度墙", "NVIDIA 溫度上限", "NVIDIA Tjmax");
     public static string SysNvidiaPower => T("NVIDIA 功率限制", "NVIDIA 功率限制", "NVIDIA Power Limit");
     public static string SysIRSensor => T("IR传感器", "IR感測器", "IR Sensor");

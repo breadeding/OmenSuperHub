@@ -13,6 +13,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Common.NVidiaApi;
+using HP.Omen.Core.Common.WMI;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
@@ -102,7 +103,7 @@ namespace OmenSuperHub {
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, omenKeyTriggered = false, isTwoBytePL4 = false;
-    static bool hasNVIDIAGpu, hasAMDDiscreteGpu; // 启动时一次性检测，硬件状态不会改变
+    static bool hasNVIDIAGpu; // 启动时一次性检测，硬件状态不会改变
     static string monitorRefreshRate = "low"; // 刷新频率：low=1s, high=0.25s
     static List<int> fanSpeedNow = new List<int> { 20, 23, 0 };
     static float respondSpeed = 0.4f;
@@ -219,10 +220,9 @@ namespace OmenSuperHub {
           }
         }
 
-        var t1 = System.Threading.Tasks.Task.Run(() => kbType = GetKeyboardType());
-        var t2 = System.Threading.Tasks.Task.Run(() => systemSSID = DeviceModel.ThisSystemID);
-        //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
-        var t3 = System.Threading.Tasks.Task.Run(() => {
+        var t1 = System.Threading.Tasks.Task.Run(() => systemSSID = OmenSMBiosHelper.SystemID);
+        var t2 = System.Threading.Tasks.Task.Run(() => {
+          kbType = GetKeyboardType();
           deviceType = DeviceModel.DeviceType; // DeviceModel.OmenPlatform.Name
           string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
           platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
@@ -230,38 +230,34 @@ namespace OmenSuperHub {
             currentPreset = "PresetExtreme";
             isCPUPowerControlSupported = true;
           }
+          //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
           InitPlatformMaxFanSpeed();
-        });
-        var t4 = System.Threading.Tasks.Task.Run(() => {
           if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
             supportAni = true;
           }
-        });
-        var t5 = System.Threading.Tasks.Task.Run(() => {
           if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
             supportDojo = true;
             if (IsLightBarPlatform())
               supportLightbar = true;
           }
         });
-        var t6 = System.Threading.Tasks.Task.Run(() => NvGraphicsMode = GetGfxMode());
-        var t7 = System.Threading.Tasks.Task.Run(() => hasAMDDiscreteGpu = HasAmdDiscreteGpu());
-        var t8 = System.Threading.Tasks.Task.Run(() => {
+        var t3 = System.Threading.Tasks.Task.Run(() => NvGraphicsMode = GetGfxMode());
+        var t4 = System.Threading.Tasks.Task.Run(() => {
           hasNVIDIAGpu = HasNvidiaGpu();
           if (hasNVIDIAGpu) {
             ExtractAndPreloadNativeDll("NvidiaApi.dll");
             maxFrameRate = NvApiWrapper.NVAPI_GetMaxFrameRate();
           }
         });
-        var t9 = System.Threading.Tasks.Task.Run(() => SetUnleashMode()); // 固定为释放全部性能模式
-        var t10 = System.Threading.Tasks.Task.Run(() => Is3FanNb = IsThreeFanSupported());
-        var t11 = System.Threading.Tasks.Task.Run(() => isFanCleanSupported = IsCleanCreekSupported());
-        var t12 = System.Threading.Tasks.Task.Run(() => isFanLegacyCleanSupported = IsLegacyCleanCreekSupported());
-        var t13 = System.Threading.Tasks.Task.Run(() => monitorQuery());
-        var t14 = System.Threading.Tasks.Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
-        var t15 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
-        var t16 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
-        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16);
+        var t5 = System.Threading.Tasks.Task.Run(() => SetUnleashMode()); // 固定为释放全部性能模式
+        var t6 = System.Threading.Tasks.Task.Run(() => Is3FanNb = IsThreeFanSupported());
+        var t7 = System.Threading.Tasks.Task.Run(() => isFanCleanSupported = IsCleanCreekSupported());
+        var t8 = System.Threading.Tasks.Task.Run(() => isFanLegacyCleanSupported = IsLegacyCleanCreekSupported());
+        var t9 = System.Threading.Tasks.Task.Run(() => monitorQuery());
+        var t10 = System.Threading.Tasks.Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
+        var t11 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
+        var t12 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
+        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12);
 
         InitMaxTemp();
         LoadLanguageSetting();  // 必须在 InitTrayIcon 之前，使菜单使用正确语言
@@ -313,30 +309,8 @@ namespace OmenSuperHub {
         //trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
         //trayIcon.ShowBalloonTip(3000);
 
-        //Console.WriteLine($"DeviceType: {deviceType}");
-        //Console.WriteLine($"PlatformSku: {sku}");
-        //Console.WriteLine($"TppMaxValue: {platformSettings.TppMaxValue}");
-
-        //// 1. 获取所有可能的键盘附件类型（OGH 中通过 AccessoryList.json 定义）
-        //var keyboardTypes = new[]
-        //{
-        //        AccessoryEnums.AccessoryType.Keyboard_Woodstock,
-        //        AccessoryEnums.AccessoryType.Keyboard_Woody2,
-        //        AccessoryEnums.AccessoryType.Keyboard_Winston
-        //    };
-
-        //// 2. 遍历尝试打开当前已连接的键盘设备
-        //foreach (var type in keyboardTypes) {
-        //  var hwid = DeviceModel.GetCurrentlyUsingHWID(type);
-        //  if (hwid == null) continue;
-
-        //  // 解析 VID/PID（十六进制字符串 → int）
-        //  if (!int.TryParse(hwid.VID, System.Globalization.NumberStyles.HexNumber, null, out int vid))
-        //    continue;
-        //  if (!int.TryParse(hwid.PID, System.Globalization.NumberStyles.HexNumber, null, out int pid))
-        //    continue;
-
-        //}
+        //Stopwatch sw = Stopwatch.StartNew();
+        //Console.WriteLine($"NotifyIcon create: {sw.ElapsedMilliseconds}ms");
 
         //Platform omenPlatform = DeviceModel.OmenPlatform;
         //Console.WriteLine($"Platform Name: {omenPlatform.Name}");
@@ -400,116 +374,6 @@ namespace OmenSuperHub {
         }
       } catch { }
       return false;
-    }
-
-    public static bool HasAmdGpu() {
-      try {
-        using (var searcher = new System.Management.ManagementObjectSearcher(
-            "root\\CIMV2", "SELECT Name FROM Win32_VideoController")) {
-          foreach (var obj in searcher.Get()) {
-            string name = obj["Name"]?.ToString() ?? "";
-            if (name.IndexOf("AMD", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                name.IndexOf("Radeon", StringComparison.OrdinalIgnoreCase) >= 0)
-              return true;
-          }
-        }
-      } catch { }
-      return false;
-    }
-
-    public static bool HasAmdDiscreteGpu() {
-      try {
-        using (var searcher = new ManagementObjectSearcher(
-            "root\\CIMV2",
-            "SELECT Name, AdapterCompatibility, VideoProcessor FROM Win32_VideoController")) {
-          foreach (var obj in searcher.Get()) {
-            string name = obj["Name"]?.ToString() ?? "";
-            string vendor = obj["AdapterCompatibility"]?.ToString() ?? "";
-            string processor = obj["VideoProcessor"]?.ToString() ?? "";
-
-            // AMD 显卡供应商 ID 为 1002
-            bool isAmd = vendor.Contains("1002") || name.IndexOf("AMD", StringComparison.OrdinalIgnoreCase) >= 0;
-
-            if (!isAmd) continue;
-
-            // 排除典型的集显命名特征（Radeon Graphics 不带 RX/数字型号）
-            bool isIntegrated = name.Contains("Radeon Graphics") && !name.Contains("RX")
-                               || name.Contains("AMD Radeon(TM) Graphics");
-
-            if (!isIntegrated) // 不是集显，那就是独显
-              return true;
-
-            // 也可以进一步检查 VideoProcessor 字段，独显通常有具体代号如 "Navi", "Ellesmere", "Vega 10"
-            if (!string.IsNullOrEmpty(processor) && !processor.Contains("Renoir") && !processor.Contains("Cezanne") && !processor.Contains("Rembrandt"))
-              return true; // 集显 APU 代号为 Renoir/Cezanne/Rembrandt 等
-          }
-        }
-      } catch { }
-      return false;
-    }
-
-    public static class AmdGpuSwitcher {
-      // 本地枚举定义（与 DLL 中的值完全对应）
-      public enum LocalADLSmartMuxEnableState {
-        ADL_MUXCONTROL_DISABLED = 0,
-        ADL_MUXCONTROL_ENABLED = 1
-      }
-
-      private static object GetSAGHelper() {
-        // 获取 SmartAccessGraphicsHelp 类型
-        Assembly commonAssembly = AppDomain.CurrentDomain.GetAssemblies()
-            .First(a => a.GetName().Name == "HP.Omen.Core.Common");
-        Type sagHelpType = commonAssembly.GetType(
-            "HP.Omen.Core.Common.Utilities.SmartAccessGraphicsHelp.SmartAccessGraphicsHelp");
-
-        // 获取 SAGHelper 静态属性（单例）
-        PropertyInfo sagHelperProp = sagHelpType.GetProperty("SAGHelper",
-            BindingFlags.Public | BindingFlags.Static);
-        return sagHelperProp.GetValue(null); // 静态属性，get
-      }
-
-      public static bool IsSupported() {
-        if (hasNVIDIAGpu || !hasAMDDiscreteGpu)      // ★ 先检查硬件，避免触发 ADL
-          return false;
-
-        object helper = GetSAGHelper();
-        if (helper == null) return false;
-
-        PropertyInfo supportProp = helper.GetType().GetProperty(
-            "SmartAccessGraphicsSupport",
-            BindingFlags.Public | BindingFlags.Instance);
-        return (bool)supportProp.GetValue(helper);
-      }
-
-      public static LocalADLSmartMuxEnableState GetMode() {
-        object helper = GetSAGHelper();
-        if (helper == null) return LocalADLSmartMuxEnableState.ADL_MUXCONTROL_DISABLED;
-
-        PropertyInfo modeProp = helper.GetType().GetProperty(
-            "SmartAccessGraphicsMode",
-            BindingFlags.Public | BindingFlags.Instance);
-        int modeValue = (int)modeProp.GetValue(helper);
-        return (LocalADLSmartMuxEnableState)modeValue;
-      }
-
-      public static void SetMode(LocalADLSmartMuxEnableState mode) {
-        object helper = GetSAGHelper();
-        if (helper == null) return;
-
-        // 获取 DLL 中的枚举类型
-        Assembly commonAssembly = AppDomain.CurrentDomain.GetAssemblies()
-            .First(a => a.GetName().Name == "HP.Omen.Core.Common");
-        Type stateEnum = commonAssembly.GetType(
-            "HP.Omen.Core.Common.Utilities.SmartAccessGraphicsHelp.ADLSmartMuxEnableState");
-
-        // 将本地枚举值转换为 DLL 枚举对象
-        object modeValue = Enum.ToObject(stateEnum, (int)mode);
-
-        MethodInfo setMethod = helper.GetType().GetMethod(
-            "SetSmartAccessGraphicsMode",
-            BindingFlags.Public | BindingFlags.Instance);
-        setMethod.Invoke(helper, new[] { modeValue });
-      }
     }
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]

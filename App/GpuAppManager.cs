@@ -7,6 +7,7 @@ using System.Management;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace OmenSuperHub {
   public static class GpuAppManager {
@@ -109,6 +110,28 @@ namespace OmenSuperHub {
     }
 
     /// <summary>
+    /// 通过 nvidia-smi -L 获取第一个 NVIDIA 显卡的型号名称
+    /// </summary>
+    public static string GetGpuModelFromNvidiaSmi() {
+      var result = ExecuteCommand("nvidia-smi -L");
+      if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output))
+        return null;
+
+      // 输出格式示例：GPU 0: NVIDIA GeForce RTX 4060 Laptop GPU (UUID: ...)
+      // 提取 "GPU 0: " 之后，左括号之前的内容
+      var output = result.Output.Trim();
+      var colonIndex = output.IndexOf(':');
+      if (colonIndex == -1) return null;
+
+      var afterColon = output.Substring(colonIndex + 1).TrimStart();
+      var parenIndex = afterColon.IndexOf('(');
+      if (parenIndex != -1)
+        afterColon = afterColon.Substring(0, parenIndex).TrimEnd();
+
+      return string.IsNullOrEmpty(afterColon) ? null : afterColon;
+    }
+
+    /// <summary>
     /// 通过 WMI 枚举所有 NVIDIA 显卡信息（不依赖 nvidia-smi，UMA 模式下仍可检测到硬件）。
     /// </summary>
     public static List<(string Name, int ModelNum)> GetNvidiaGpuInfoList() {
@@ -131,9 +154,22 @@ namespace OmenSuperHub {
       return result;
     }
 
-    /// <summary>是否存在 NVIDIA 独显（WMI 层面，UMA 模式下硬件仍在）。</summary>
-    public static bool HasNvidiaGpu()
-        => GetNvidiaGpuInfoList().Count > 0;
+    /// <summary>是否存在 NVIDIA 独显。</summary>
+    public static bool HasNvidiaGpu() {
+      using (RegistryKey key =
+          Registry.LocalMachine.OpenSubKey(
+          @"SYSTEM\CurrentControlSet\Enum\PCI")) {
+        foreach (string device in key.GetSubKeyNames()) {
+          if (!device.StartsWith("VEN_10DE",
+              StringComparison.OrdinalIgnoreCase))
+            continue;
+
+          return true;
+        }
+      }
+
+      return false;
+    }
 
     /// <summary>
     /// 是否为 50 系及以上显卡。
@@ -168,14 +204,12 @@ namespace OmenSuperHub {
     }
 
     // 设置显卡频率限制
-    public static bool SetGPUClockLimit(int freq) {
-      if (freq < 210) {
-        ExecuteCommand("nvidia-smi --reset-gpu-clocks");
-        return false;
-      } else {
-        ExecuteCommand("nvidia-smi --lock-gpu-clocks=0," + freq);
-        return true;
-      }
+    public static void SetGPUClockLimit(int freq) {
+      ExecuteCommand("nvidia-smi --lock-gpu-clocks=0," + freq);
+    }
+
+    public static void SetGPUClockReset() {
+      ExecuteCommand("nvidia-smi --reset-gpu-clocks");
     }
 
     public static int GetGpuTemperatureTarget() {

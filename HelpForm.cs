@@ -149,6 +149,7 @@ namespace OmenSuperHub {
 <p><strong>新增：</strong></p>
 <li>✨ 可在托盘图标上通过滚动鼠标切换预设</a></li>
 <p><strong>优化：</strong></p>
+<li>⚡ 大幅提升启动速度</li>
 <li>⚡ 获取不到CPU数据时显示PawnIO状态</li>
 <li>⚡ 加强解锁DB稳定性</li>
 <li>⚡ 解锁DB时动态判断是否符合条件</li>
@@ -218,6 +219,7 @@ namespace OmenSuperHub {
 <p><strong>新增：</strong></p>
 <li>✨ 可在托盤圖示上透過捲動滑鼠切換預設</a></li>
 <p><strong>優化：</strong></p>
+<li>⚡ 大幅提升啟動速度</li>
 <li>⚡ 取得不到CPU資料時顯示PawnIO狀態</li>
 <li>⚡ 加強解鎖DB穩定性</li>
 <li>⚡ 解鎖DB時動態判斷是否符合條件</li>
@@ -287,6 +289,7 @@ namespace OmenSuperHub {
 <p><strong>New Features:</strong></p>
 <li>✨ Switch presets by scrolling the mouse over the tray icon</li>
 <p><strong>Improvements:</strong></p>
+<li>⚡ Significantly faster startup speed</li>
 <li>⚡ Display PawnIO status when CPU data is unavailable</li>
 <li>⚡ Improved stability for unlocking the DB</li>
 <li>⚡ Dynamically verify eligibility when unlocking the DB</li>

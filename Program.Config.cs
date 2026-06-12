@@ -591,7 +591,7 @@ namespace OmenSuperHub {
               key.SetValue("OmenKeyAppName", omenKeyAppName);
               key.SetValue("OmenKeyShortcut", omenKeyShortcut);
               key.SetValue("OmenKeyPresetCandidates", omenKeyPresetCandidates);
-              if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+              if (hasNVIDIAGpu)
                 key.SetValue("MonitorGPU", monitorGPU);
               key.SetValue("MonitorCPU", monitorCPU);
               key.SetValue("MonitorFan", monitorFan);
@@ -777,7 +777,7 @@ namespace OmenSuperHub {
             iccMax = (string)key.GetValue("IccMax", iccMax);
             acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
             monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", monitorCPU));
-            if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+            if (hasNVIDIAGpu)
               monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", monitorGPU));
             monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", monitorFan));
             monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", monitorRefreshRate);
@@ -859,21 +859,19 @@ namespace OmenSuperHub {
       // NVIDIA 专属
       if (hasNVIDIAGpu) {
         if (gpuClockTrackBar != null) {
-          if (SetGPUClockLimit(gpuClock)) {
-            if (gpuClock > 0) {
-              gpuClockTrackBar.Value = gpuClock / 10;
-              UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
-            } else {
-              UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
-            }
-          } else {
+          if (gpuClock < gpuClockTrackBar.Minimum * 10) {
+            System.Threading.Tasks.Task.Run(() => SetGPUClockReset());
             UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
+          } else {
+            System.Threading.Tasks.Task.Run(() => SetGPUClockLimit(gpuClock));
+            gpuClockTrackBar.Value = gpuClock / 10;
+            UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
           }
         }
 
         if (maxFrameRateTrackBar != null) {
           if (maxFrameRate >= 0) {
-            NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+            System.Threading.Tasks.Task.Run(() => NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate));
             maxFrameRateTrackBar.Value = FrameRateToIndex(maxFrameRate);
             UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
           } else {
@@ -929,7 +927,7 @@ namespace OmenSuperHub {
                 // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
                 if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
                   monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
-                  if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+                  if (hasNVIDIAGpu)
                     monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
                   else
                     monitorGPU = false;
@@ -1200,7 +1198,7 @@ namespace OmenSuperHub {
           key.SetValue("IccMax", iccMax);
           key.SetValue("AcLoadLine", acLoadline);
           key.SetValue("MonitorCPU", monitorCPU);
-          if (hasNVIDIAGpu || hasAMDDiscreteGpu)
+          if (hasNVIDIAGpu)
             key.SetValue("MonitorGPU", monitorGPU);
           key.SetValue("MonitorFan", monitorFan);
           key.SetValue("MonitorRefreshRate", monitorRefreshRate);

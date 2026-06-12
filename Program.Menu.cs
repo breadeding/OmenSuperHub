@@ -55,7 +55,7 @@ namespace OmenSuperHub {
       BuildTrayMenu(trayIcon.ContextMenuStrip);
       UpdateTrayIconText();
       // 延迟安装低级鼠标钩子，避免 SetWindowsHookEx 在启动时造成鼠标卡顿
-      var hookDelayTimer = new System.Windows.Forms.Timer { Interval = 200 };
+      var hookDelayTimer = new System.Windows.Forms.Timer { Interval = 10 };
       hookDelayTimer.Tick += (s, e) => {
         hookDelayTimer.Stop();
         hookDelayTimer.Dispose();
@@ -100,18 +100,7 @@ namespace OmenSuperHub {
       }
       ToolStripMenuItem gpuPowerLimitsMenu = null;
       if (hasNVIDIAGpu) {
-        // 获取所有显卡
-        var allGpuNames = GetAllGpuNamesList();
-        if (allGpuNames.Count == 1) {
-          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysGpu}: {allGpuNames[0]}") { Enabled = false });
-        } else if (allGpuNames.Count > 1) {
-          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.SysGpuList) { Enabled = false });
-          foreach (var gpuName in allGpuNames) {
-            sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"    {gpuName}") { Enabled = false });
-          }
-        } else {
-          sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.SysGpuUnknown) { Enabled = false });
-        }
+        sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem("GPU: " + GetGpuModelFromNvidiaSmi()) { Enabled = false });
         if (maxGPUTemp.HasValue) {
           sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysNvidiaTjMax}: {maxGPUTemp.Value}°C") { Enabled = false });
         }
@@ -417,17 +406,7 @@ namespace OmenSuperHub {
         performanceControlMenu.DropDownItems.Add(hotSwitchItem);
       }
       ToolStripMenuItem graphicsModeControlMenu = null;
-      if (!hasNVIDIAGpu && hasAMDDiscreteGpu) {
-        graphicsModeControlMenu = new ToolStripMenuItem(Strings.GraphicsMode);
-        var initAmdMode = AmdGpuSwitcher.GetMode();
-        bool amdIsDiscrete = initAmdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
-        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem(Strings.GfxDiscreteMode, "graphicsModeGroup", (s, e) => {
-          AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED);
-        }, amdIsDiscrete));
-        graphicsModeControlMenu.DropDownItems.Add(CreateMenuItem(Strings.GfxHybridMode, "graphicsModeGroup", (s, e) => {
-          AmdGpuSwitcher.SetMode(AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_DISABLED);
-        }, !amdIsDiscrete));
-      } else {
+      if (hasNVIDIAGpu) {
         byte supportedGfxModes = GetSupportedGfxModes();
 
         if (supportedGfxModes != 0) {
@@ -485,11 +464,7 @@ namespace OmenSuperHub {
       if (graphicsModeControlMenu != null) {
         performanceControlMenu.DropDownItems.Add(graphicsModeControlMenu);
         graphicsModeControlMenu.DropDownOpening += (s, e) => {
-          if (!hasNVIDIAGpu && hasAMDDiscreteGpu) {
-            var amdMode = AmdGpuSwitcher.GetMode();
-            bool isDisc = amdMode == AmdGpuSwitcher.LocalADLSmartMuxEnableState.ADL_MUXCONTROL_ENABLED;
-            UpdateCheckedState("graphicsModeGroup", isDisc ? Strings.GfxDiscreteMode : Strings.GfxHybridMode);
-          } else {
+          if (hasNVIDIAGpu) {
             var nvMode = GetGfxMode();
             string chk;
             switch (nvMode) {
@@ -742,7 +717,7 @@ namespace OmenSuperHub {
         ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem(Strings.GpuClockMenu);
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.Unlimited, "gpuClockGroup", (s, e) => {
           gpuClock = 0;
-          SetGPUClockLimit(gpuClock);
+          System.Threading.Tasks.Task.Run(() => SetGPUClockReset());
           SaveConfig("GpuClock");
         }, true));
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuClockSlider, "gpuClockGroup", (s, e) => { }, false));
@@ -757,7 +732,7 @@ namespace OmenSuperHub {
 
         gpuClockTrackBar.MouseDown += (sender, e) => {
           gpuClock = gpuClockTrackBar.Value * 10;
-          SetGPUClockLimit(gpuClock);
+          System.Threading.Tasks.Task.Run(() => SetGPUClockLimit(gpuClock));
           SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
         };
@@ -770,7 +745,7 @@ namespace OmenSuperHub {
 
         gpuClockTrackBar.MouseUp += (sender, e) => {
           gpuClock = gpuClockTrackBar.Value * 10;
-          SetGPUClockLimit(gpuClock);
+          System.Threading.Tasks.Task.Run(() => SetGPUClockLimit(gpuClock));
           SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
         };
@@ -784,7 +759,7 @@ namespace OmenSuperHub {
         maxFrameRateMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfMaxFrameRateTip) { Enabled = false });
         maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "maxFrameRateGroup", (s, e) => {
           maxFrameRate = -1;
-          NvApiWrapper.NVAPI_SetMaxFrameRate(0);
+          System.Threading.Tasks.Task.Run(() => NvApiWrapper.NVAPI_SetMaxFrameRate(0));
           SaveConfig("MaxFrameRate");
         }, true));
         maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.SetMaxFrameRateSlider, "maxFrameRateGroup", (s, e) => { }, false));
@@ -799,7 +774,7 @@ namespace OmenSuperHub {
 
         maxFrameRateTrackBar.MouseDown += (sender, e) => {
           maxFrameRate = IndexToFrameRate(maxFrameRateTrackBar.Value);
-          NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+          System.Threading.Tasks.Task.Run(() => NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate));
           SaveConfig("MaxFrameRate");
           UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
         };
@@ -817,7 +792,7 @@ namespace OmenSuperHub {
 
         maxFrameRateTrackBar.MouseUp += (sender, e) => {
           maxFrameRate = IndexToFrameRate(maxFrameRateTrackBar.Value);
-          NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate);
+          System.Threading.Tasks.Task.Run(() => NvApiWrapper.NVAPI_SetMaxFrameRate(maxFrameRate));
           SaveConfig("MaxFrameRate");
           UpdateCheckedState("maxFrameRateGroup", Strings.SetMaxFrameRateSlider);
         };
@@ -990,7 +965,7 @@ namespace OmenSuperHub {
         // 手动更新勾选状态（因为提前 return 会跳过 CreateMenuItem 的自动勾选）
       }, false));
       hardwareMonitorMenu.DropDownItems.Add(monitorCPUMenu);
-      if (hasNVIDIAGpu || hasAMDDiscreteGpu) {
+      if (hasNVIDIAGpu) {
         ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem(Strings.MonitorGpuLabel);
         monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOn, "monitorGPUGroup", (s, e) => {
           bool wasAllOff = !monitorCPU && !monitorGPU;
