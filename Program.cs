@@ -148,7 +148,7 @@ namespace OmenSuperHub {
     static GraphicsSwitcherMode NvGraphicsMode;
     static NbKeyboardLightingType kbType;
     static SynchronizationContext uiContext;
-    static Stopwatch sw = Stopwatch.StartNew();
+    //static Stopwatch sw = Stopwatch.StartNew();
 
     [STAThread]
     static void Main(string[] args) {
@@ -259,9 +259,9 @@ namespace OmenSuperHub {
           InitMaxTemp();
         });
 
-        Console.WriteLine($"1: {sw.ElapsedMilliseconds}ms");
+        //Console.WriteLine($"1: {sw.ElapsedMilliseconds}ms");
         System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14);
-        Console.WriteLine($"2: {sw.ElapsedMilliseconds}ms");
+        //Console.WriteLine($"2: {sw.ElapsedMilliseconds}ms");
 
         if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
           supportAni = true;
@@ -270,7 +270,7 @@ namespace OmenSuperHub {
         LoadLanguageSetting();  // 必须在 InitTrayIcon 之前，使菜单使用正确语言
         InitTrayIcon();
         uiContext = SynchronizationContext.Current;
-        Console.WriteLine($"3: {sw.ElapsedMilliseconds}ms");
+        //Console.WriteLine($"3: {sw.ElapsedMilliseconds}ms");
 
         optimiseTimer = new System.Windows.Forms.Timer();
         optimiseTimer.Interval = 30000;
@@ -301,7 +301,7 @@ namespace OmenSuperHub {
         checkFloatingTimer.Start();
 
         RestoreConfig();
-        Console.WriteLine($"4: {sw.ElapsedMilliseconds}ms");
+        //Console.WriteLine($"4: {sw.ElapsedMilliseconds}ms");
 
         if (alreadyRead != alreadyReadCode) {
           HelpForm.Instance.Show();
@@ -508,16 +508,16 @@ namespace OmenSuperHub {
     [HandleProcessCorruptedStateExceptions]
     static void RunHardwareMonitor() {
       bool isEnabled = false;
-      Console.Error.WriteLine("CRASH: " + $"1: {sw.ElapsedMilliseconds}ms");
+      //Console.Error.WriteLine("CRASH: " + $"1: {sw.ElapsedMilliseconds}ms");
       var computer = new LibreComputer() { };
-      Console.Error.WriteLine("CRASH: " + $"2: {sw.ElapsedMilliseconds}ms");
+      //Console.Error.WriteLine("CRASH: " + $"2: {sw.ElapsedMilliseconds}ms");
       try {
         computer.Open();
       } catch (Exception ex) {
         Console.Error.WriteLine("CRASH: Open failed - " + ex.Message);
         Environment.Exit(1);
       }
-      Console.Error.WriteLine("CRASH: " + $"3: {sw.ElapsedMilliseconds}ms");
+      //Console.Error.WriteLine("CRASH: " + $"3: {sw.ElapsedMilliseconds}ms");
       int sleepMs = 1000;
 
       var readThread = new Thread(() => {
@@ -525,6 +525,7 @@ namespace OmenSuperHub {
           string line = Console.ReadLine();
           if (line == null) Environment.Exit(0);
           if (line == "GPU:ON") {
+            isEnabled = false;
             computer.IsGpuEnabled = true;
             isEnabled = true;
           }
@@ -532,6 +533,7 @@ namespace OmenSuperHub {
             computer.IsGpuEnabled = false;
           }
           if (line == "CPU:ON") {
+            isEnabled = false;
             computer.IsCpuEnabled = true;
             isEnabled = true;
           }
@@ -550,7 +552,12 @@ namespace OmenSuperHub {
       while (!isEnabled) {
         Thread.Sleep(1);
       }
-      Console.Error.WriteLine("CRASH: " + $"4: {sw.ElapsedMilliseconds}ms");
+      // 等待可能的第二个监控打开
+      Thread.Sleep(1);
+      while (!isEnabled) {
+        Thread.Sleep(1);
+      }
+      //Console.Error.WriteLine("CRASH: " + $"4: {sw.ElapsedMilliseconds}ms");
       while (true) {
         bool gGpu = false;
         try {
@@ -565,7 +572,7 @@ namespace OmenSuperHub {
               Console.Error.WriteLine("CRASH: Update failed - " + ex.Message);
               Environment.Exit(1);
             }
-            Console.Error.WriteLine("CRASH: " + $"5: {sw.ElapsedMilliseconds}ms");
+            //Console.Error.WriteLine("CRASH: " + $"5: {sw.ElapsedMilliseconds}ms");
             foreach (LibreISensor sensor in hw.Sensors) {
               try {
                 if (hw.HardwareType == LibreHardwareType.Cpu) {
