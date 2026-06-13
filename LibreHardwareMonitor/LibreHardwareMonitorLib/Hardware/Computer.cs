@@ -178,17 +178,11 @@ public class Computer : IComputer
             {
                 if (value)
                 {
-                    Add(new AmdGpuGroup(_settings));
                     Add(new NvidiaGroup(_settings));
-
-                    if (_cpuEnabled)
-                        Add(new IntelGpuGroup(GetIntelCpus(), _settings));
                 }
                 else
                 {
-                    RemoveType<AmdGpuGroup>();
                     RemoveType<NvidiaGroup>();
-                    RemoveType<IntelGpuGroup>();
                 }
             }
 
