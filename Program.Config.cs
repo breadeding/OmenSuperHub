@@ -546,16 +546,24 @@ namespace OmenSuperHub {
     static int GetFanSpeedForTemperature() {
       if (CPUTempFanMap.Count == 0 || GPUTempFanMap.Count == 0) return 0;
 
-      int resultSpeed = 0;
+      // 首次获取到真实温度数据前不进行转速控制，fanControlTimer处理-100将直接return
+      int resultSpeed = -100;
 
-      if (monitorCPU && cpuTempReady) {
+      if (tempReady && monitorCPU && cpuTempReady) {
         int cpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedCPUTemp, CPUTempFanMap);
         resultSpeed = Math.Max(resultSpeed, cpuFanSpeed);
       }
 
-      if (monitorGPU && gpuTempReady) {
+      if (tempReady && monitorGPU && gpuTempReady) {
         int gpuFanSpeed = GetFanSpeedForSpecificTemperature(smoothedGPUTemp, GPUTempFanMap);
         resultSpeed = Math.Max(resultSpeed, gpuFanSpeed);
+      }
+
+      // 获取不到温度时使用传感器温度备用
+      if (monitorCPU && !monitorGPU) {
+        if (CPUPower < 0.01f && isAmbientSensorSupported) {
+          resultSpeed = GetFanSpeedForSpecificTemperature(GetFittingTemperature(), CPUTempFanMap);
+        }
       }
 
       return resultSpeed;

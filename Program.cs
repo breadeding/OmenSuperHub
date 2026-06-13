@@ -142,7 +142,7 @@ namespace OmenSuperHub {
     static bool isSysInfoMenuOpen = false;
     static string systemSSID;
     static bool supportAni = false, supportDojo = false, supportLightbar = false;
-    static bool isCPUPowerControlSupported = false;
+    static bool isCPUPowerControlSupported = false, isAmbientSensorSupported = false;
     static DeviceEnums.DeviceType deviceType;
     static PlatformSettings platformSettings;
     static GraphicsSwitcherMode NvGraphicsMode;
@@ -257,7 +257,8 @@ namespace OmenSuperHub {
         var t10 = System.Threading.Tasks.Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
         var t11 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
         var t12 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
-        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12);
+        var t13 = System.Threading.Tasks.Task.Run(() => isAmbientSensorSupported = GetSensorTemperature(1) > 1);
+        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13);
 
         InitMaxTemp();
         LoadLanguageSetting();  // 必须在 InitTrayIcon 之前，使菜单使用正确语言
@@ -273,9 +274,9 @@ namespace OmenSuperHub {
 
         // Main loop to query CPU and GPU temperature every second
         fanControlTimer = new System.Threading.Timer((e) => {
-          // 自动模式下，首次获取到真实温度数据前不进行转速控制
-          if (!tempReady && fanControl == "auto") return;
+          if (fanControl != "auto") return;
           int fanSpeed = GetFanSpeedForTemperature() / 100;
+          if (fanSpeed < 0) return;
           int s0, s1;
           lock (fanSpeedNow) { s0 = fanSpeedNow[0]; s1 = fanSpeedNow[1]; }
           if (Math.Abs(fanSpeed - s0) > 1 || Math.Abs(fanSpeed - s1) > 1) {

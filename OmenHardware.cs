@@ -348,6 +348,13 @@ namespace OmenSuperHub {
       return -1;
     }
 
+    // 通过环境传感器温度来预估CPU温度
+    public static float GetFittingTemperature() {
+      float temp = GetSensorTemperature(1);
+      if (temp < 25) return temp;
+      else return temp * 1.2f - 5;
+    }
+
     /// <param name="ocp">输出：是否触发过流保护 (Bit 0)</param>
     /// <param name="otp">输出：是否触发过温保护 (Bit 1)</param>
     /// <returns>true：成功读取并解析；false：WMI 通信失败</returns>
