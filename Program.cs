@@ -240,7 +240,11 @@ namespace OmenSuperHub {
         var t10 = System.Threading.Tasks.Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
         var t11 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
         var t12 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
-        var t13 = System.Threading.Tasks.Task.Run(() => isAmbientSensorSupported = GetSensorTemperature(1) > 1);
+        var t13 = System.Threading.Tasks.Task.Run(() => {
+          int irTemp = GetSensorTemperature(0);
+          int ambientTemp = GetSensorTemperature(1);
+          isAmbientSensorSupported = ambientTemp > 1 && irTemp != ambientTemp;
+        });
         var t14 = System.Threading.Tasks.Task.Run(() => {
           deviceType = DeviceModel.OmenPlatform.Name;
           string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
@@ -944,9 +948,8 @@ namespace OmenSuperHub {
 
       if (monitorFan)
         fanSpeedNow = GetFanLevel();
-      // 仅当鼠标悬停在托盘图标上时才刷新 tooltip 文字，避免无谓的字符串构建
-      if (!GetTrayIconRect().IsEmpty && GetTrayIconRect().Contains(Control.MousePosition))
-        UpdateTrayIconText();
+      
+      UpdateTrayIconText();
       //Console.WriteLine("UpdateTooltip");
 
       // 同步数据到本地txt

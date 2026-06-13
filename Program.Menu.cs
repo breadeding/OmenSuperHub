@@ -100,22 +100,19 @@ namespace OmenSuperHub {
       if (hasNVIDIAGpu) {
         gpuModelMenu = new ToolStripMenuItem("GPU: ") { Enabled = false };
         sysInfoMenu.DropDownItems.Add(gpuModelMenu);
-        System.Threading.Tasks.Task.Run(() => {
-          string gpuModel = GetGpuModelFromNvidiaSmi();
-          uiContext.Post(_ => {
-            gpuModelMenu.Text = "GPU: " + gpuModel;
-          }, null);
-        });
         if (maxGPUTemp.HasValue) {
           sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysNvidiaTjMax}: {maxGPUTemp.Value}°C") { Enabled = false });
         }
         gpuPowerLimitsMenu = new ToolStripMenuItem($"{Strings.SysNvidiaPower}: --W / --W") { Enabled = false };
         sysInfoMenu.DropDownItems.Add(gpuPowerLimitsMenu);
         System.Threading.Tasks.Task.Run(() => {
+          string gpuModel = GetGpuModelFromNvidiaSmi();
           var limits = GetGpuPowerLimits();
           string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+          Thread.Sleep(2000);
           uiContext.Post(_ => {
             gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
+            gpuModelMenu.Text = "GPU: " + gpuModel;
           }, null);
         });
       }
@@ -140,7 +137,7 @@ namespace OmenSuperHub {
         else
           pawnIOState = GetPawnIOState();
         int adapterPower = GetAdapterPower();
-        Thread.Sleep(500);
+        Thread.Sleep(2000);
         uiContext.Post(_ => {
           pawnIOStateMenu.Text = $"{Strings.SysPawnIOState}: {pawnIOState}";
           adapterPowerMenu.Text = $"{Strings.SysAdapterPower}: {adapterPower}W";

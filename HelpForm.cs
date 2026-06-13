@@ -147,15 +147,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 可在托盘图标上通过滚动鼠标切换预设</a></li>
+<li>✨ 自动转速下，仅CPU监控且获取不到数据时自动启用传感器拟合</a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 大幅提升启动速度</li>
-<li>⚡ 获取不到CPU数据时显示PawnIO状态</li>
-<li>⚡ 加强解锁DB稳定性</li>
-<li>⚡ 解锁DB时动态判断是否符合条件</li>
-<p><strong>修复：</strong></p>
-<li>🐛 解锁DB确认弹窗取消后菜单未正确勾选的问题</li>
-<li>🐛 图标悬浮窗内容超长导致截断的问题</li>
+<li>⚡ 大幅提升硬件监控启动速度及效率</li>
+<li>⚡ 移除AcLoadLine可以超出限制的功能</li>
+<li>⚡ 优化本机信息传感器不支持时的显示</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -217,15 +213,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 可在托盤圖示上透過捲動滑鼠切換預設</a></li>
+<li>✨ 自動轉速下，僅CPU監控且取得不到數據時自動啟用感測器擬合 </a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ 大幅提升啟動速度</li>
-<li>⚡ 取得不到CPU資料時顯示PawnIO狀態</li>
-<li>⚡ 加強解鎖DB穩定性</li>
-<li>⚡ 解鎖DB時動態判斷是否符合條件</li>
-<p><strong>修復：</strong></p>
-<li>🐛 解鎖DB確認彈窗取消後選單未正確勾選的問題</li>
-<li>🐛 圖示懸浮窗內容超長導致截斷的問題</li>
+<li>⚡ 大幅提升硬體監控啟動速度及效率</li>
+<li>⚡ 移除AcLoadLine可以超出限制的功能</li>
+<li>⚡ 優化本機資訊感測器不支援時的顯示</li>
 </div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -287,15 +279,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
-<li>✨ Switch presets by scrolling the mouse over the tray icon</li>
+<li>✨ In auto-speed mode, automatically enable sensor simulation if only the CPU is being monitored and no data is retrieved</li>
 <p><strong>Improvements:</strong></p>
-<li>⚡ Significantly faster startup speed</li>
-<li>⚡ Display PawnIO status when CPU data is unavailable</li>
-<li>⚡ Improved stability for unlocking the DB</li>
-<li>⚡ Dynamically verify eligibility when unlocking the DB</li>
-<p><strong>Fixes:</strong></p>
-<li>🐛 Fixed an issue where the menu checkbox wasn't updated correctly after cancelling the DB unlock confirmation dialog</li>
-<li>🐛 Fixed an issue where the tray icon tooltip was truncated due to excessive length</li>
+<li>⚡ Significantly improved startup speed and efficiency for hardware monitoring</li>
+<li>⚡ Removed the ability for AcLoadLine to exceed limits</li>
+<li>⚡ Optimized display when local system sensors are unsupported</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
