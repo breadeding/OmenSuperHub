@@ -147,6 +147,8 @@ namespace OmenSuperHub {
     static PlatformSettings platformSettings;
     static GraphicsSwitcherMode NvGraphicsMode;
     static NbKeyboardLightingType kbType;
+    static SynchronizationContext uiContext;
+    static Stopwatch sw = Stopwatch.StartNew();
 
     [STAThread]
     static void Main(string[] args) {
@@ -221,26 +223,7 @@ namespace OmenSuperHub {
         }
 
         var t1 = System.Threading.Tasks.Task.Run(() => systemSSID = OmenSMBiosHelper.SystemID);
-        var t2 = System.Threading.Tasks.Task.Run(() => {
-          kbType = GetKeyboardType();
-          deviceType = DeviceModel.DeviceType; // DeviceModel.OmenPlatform.Name
-          string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
-          platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
-          if (platformSettings != null) {
-            currentPreset = "PresetExtreme";
-            isCPUPowerControlSupported = true;
-          }
-          //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
-          InitPlatformMaxFanSpeed();
-          if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
-            supportAni = true;
-          }
-          if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
-            supportDojo = true;
-            if (IsLightBarPlatform())
-              supportLightbar = true;
-          }
-        });
+        var t2 = System.Threading.Tasks.Task.Run(() => kbType = GetKeyboardType());
         var t3 = System.Threading.Tasks.Task.Run(() => NvGraphicsMode = GetGfxMode());
         var t4 = System.Threading.Tasks.Task.Run(() => {
           hasNVIDIAGpu = HasNvidiaGpu();
@@ -258,11 +241,36 @@ namespace OmenSuperHub {
         var t11 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
         var t12 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
         var t13 = System.Threading.Tasks.Task.Run(() => isAmbientSensorSupported = GetSensorTemperature(1) > 1);
-        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13);
+        var t14 = System.Threading.Tasks.Task.Run(() => {
+          deviceType = DeviceModel.OmenPlatform.Name;
+          string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
+          platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
+          if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
+            supportDojo = true;
+            if (IsLightBarPlatform())
+              supportLightbar = true;
+          }
+          if (platformSettings != null) {
+            currentPreset = "PresetExtreme";
+            isCPUPowerControlSupported = true;
+          }
+          //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
+          InitPlatformMaxFanSpeed();
+          InitMaxTemp();
+        });
 
-        InitMaxTemp();
+        Console.WriteLine($"1: {sw.ElapsedMilliseconds}ms");
+        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14);
+        Console.WriteLine($"2: {sw.ElapsedMilliseconds}ms");
+
+        if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
+          supportAni = true;
+        }
+        
         LoadLanguageSetting();  // 必须在 InitTrayIcon 之前，使菜单使用正确语言
         InitTrayIcon();
+        uiContext = SynchronizationContext.Current;
+        Console.WriteLine($"3: {sw.ElapsedMilliseconds}ms");
 
         optimiseTimer = new System.Windows.Forms.Timer();
         optimiseTimer.Interval = 30000;
@@ -293,6 +301,7 @@ namespace OmenSuperHub {
         checkFloatingTimer.Start();
 
         RestoreConfig();
+        Console.WriteLine($"4: {sw.ElapsedMilliseconds}ms");
 
         if (alreadyRead != alreadyReadCode) {
           HelpForm.Instance.Show();
@@ -311,7 +320,8 @@ namespace OmenSuperHub {
         //trayIcon.ShowBalloonTip(3000);
 
         //Stopwatch sw = Stopwatch.StartNew();
-        //Console.WriteLine($"NotifyIcon create: {sw.ElapsedMilliseconds}ms");
+        //Console.WriteLine($"1: {sw.ElapsedMilliseconds}ms");
+        //Console.Error.WriteLine("CRASH: " + $"1: {sw.ElapsedMilliseconds}ms");
 
         //Platform omenPlatform = DeviceModel.OmenPlatform;
         //Console.WriteLine($"Platform Name: {omenPlatform.Name}");
@@ -497,25 +507,37 @@ namespace OmenSuperHub {
 
     [HandleProcessCorruptedStateExceptions]
     static void RunHardwareMonitor() {
-      var computer = new LibreComputer() { IsCpuEnabled = true };
-
+      bool isEnabled = false;
+      Console.Error.WriteLine("CRASH: " + $"1: {sw.ElapsedMilliseconds}ms");
+      var computer = new LibreComputer() { };
+      Console.Error.WriteLine("CRASH: " + $"2: {sw.ElapsedMilliseconds}ms");
       try {
         computer.Open();
       } catch (Exception ex) {
         Console.Error.WriteLine("CRASH: Open failed - " + ex.Message);
         Environment.Exit(1);
       }
-
+      Console.Error.WriteLine("CRASH: " + $"3: {sw.ElapsedMilliseconds}ms");
       int sleepMs = 1000;
 
       var readThread = new Thread(() => {
         while (true) {
           string line = Console.ReadLine();
           if (line == null) Environment.Exit(0);
-          if (line == "GPU:ON") computer.IsGpuEnabled = true;
-          if (line == "GPU:OFF") computer.IsGpuEnabled = false;
-          if (line == "CPU:ON") computer.IsCpuEnabled = true;
-          if (line == "CPU:OFF") computer.IsCpuEnabled = false;
+          if (line == "GPU:ON") {
+            computer.IsGpuEnabled = true;
+            isEnabled = true;
+          }
+          if (line == "GPU:OFF") {
+            computer.IsGpuEnabled = false;
+          }
+          if (line == "CPU:ON") {
+            computer.IsCpuEnabled = true;
+            isEnabled = true;
+          }
+          if (line == "CPU:OFF") {
+            computer.IsCpuEnabled = false;
+          }
           if (line.StartsWith("INTERVAL:") && int.TryParse(line.Substring(9), out int ms) && ms > 0)
             sleepMs = ms;
         }
@@ -525,6 +547,10 @@ namespace OmenSuperHub {
 
       float tCpu = 50, pCpu = 0, tGpu = 40, pGpu = 0;
 
+      while (!isEnabled) {
+        Thread.Sleep(1);
+      }
+      Console.Error.WriteLine("CRASH: " + $"4: {sw.ElapsedMilliseconds}ms");
       while (true) {
         bool gGpu = false;
         try {
@@ -539,7 +565,7 @@ namespace OmenSuperHub {
               Console.Error.WriteLine("CRASH: Update failed - " + ex.Message);
               Environment.Exit(1);
             }
-
+            Console.Error.WriteLine("CRASH: " + $"5: {sw.ElapsedMilliseconds}ms");
             foreach (LibreISensor sensor in hw.Sensors) {
               try {
                 if (hw.HardwareType == LibreHardwareType.Cpu) {
@@ -605,6 +631,19 @@ namespace OmenSuperHub {
           }
           if (!tempReady) {
             tempReady = true;
+            // 首次获取到数据立即刷新
+            try {
+              QueryHardware();
+            } catch (Exception ex) {
+              Logger.Error($"[UpdateTooltip] QueryHardware 异常: {ex.Message}");
+            }
+            if (!GetTrayIconRect().IsEmpty && GetTrayIconRect().Contains(Control.MousePosition))
+              UpdateTrayIconText();
+
+            UpdateFloatingText();
+
+            if (customIcon == "dynamic")
+              UpdateDynamicIcon();
           }
         }
       };
@@ -915,18 +954,22 @@ namespace OmenSuperHub {
       // 同时只有当 SysInfo 菜单处于展开状态时，才去进行耗时的查询和更新操作，以节省资源
       ToolStrip parentStrip = irSensorMenu?.GetCurrentParent();
       if (isSysInfoMenuOpen && parentStrip != null) {
+        int irTemp = GetSensorTemperature(0);
+        int ambientTemp = GetSensorTemperature(1);
+        int pchTemp = GetSensorTemperature(2);
+        int vrTemp = GetSensorTemperature(3);
         if (parentStrip.InvokeRequired) {
           parentStrip.Invoke(new System.Action(() => {
-            irSensorMenu.Text = $"{Strings.SysIRSensor}: {GetSensorTemperature(0)}°C";
-            ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
-            pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
-            vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
+            if (irSensorMenu != null) irSensorMenu.Text = $"{Strings.SysIRSensor}: {FormatSensorTemperature(irTemp)}";
+            if (ambientSensorMenu != null) ambientSensorMenu.Text = $"{Strings.SysAmbient}: {FormatSensorTemperature(ambientTemp)}";
+            if (pchSensorMenu != null) pchSensorMenu.Text = $"{Strings.SysPCH}: {FormatSensorTemperature(pchTemp)}";
+            if (vrSensorMenu != null) vrSensorMenu.Text = $"{Strings.SysVR}: {FormatSensorTemperature(vrTemp)}";
           }));
         } else {
-          irSensorMenu.Text = $"{Strings.SysIRSensor}: {GetSensorTemperature(0)}°C";
-          ambientSensorMenu.Text = $"{Strings.SysAmbient}: {GetSensorTemperature(1)}°C";
-          pchSensorMenu.Text = $"{Strings.SysPCH}: {GetSensorTemperature(2)}°C";
-          vrSensorMenu.Text = $"{Strings.SysVR}: {GetSensorTemperature(3)}°C";
+          if (irSensorMenu != null) irSensorMenu.Text = $"{Strings.SysIRSensor}: {FormatSensorTemperature(irTemp)}";
+          if (ambientSensorMenu != null) ambientSensorMenu.Text = $"{Strings.SysAmbient}: {FormatSensorTemperature(ambientTemp)}";
+          if (pchSensorMenu != null) pchSensorMenu.Text = $"{Strings.SysPCH}: {FormatSensorTemperature(pchTemp)}";
+          if (vrSensorMenu != null) vrSensorMenu.Text = $"{Strings.SysVR}: {FormatSensorTemperature(vrTemp)}";
         }
       }
 

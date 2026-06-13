@@ -564,6 +564,8 @@
     public static string SysVR => T("VR传感器", "VR感測器", "VR Sensor");
     public static string SysKbType => T("键盘灯光类型", "鍵盤燈光類型", "KB Light Type");
     public static string SysAdapterPower => T("原装适配器功率", "原裝充電器功率", "Adapter Wattage");
+    public static string SysSensorUnsupported => T("不支持", "不支援", "Unsupported");
+    public static string SysSensorDisconnected => T("连接断开", "連接斷開", "Disconnected");
 
     // ─────────────────────────────────────────────────────────────────────────
     // 错误/警告对话框
