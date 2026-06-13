@@ -563,17 +563,11 @@ namespace OmenSuperHub {
           SaveConfig("AcLoadLine");
         }, true));
         int maxSupportedLevel = GetLoadLineSupportLevels();
-        for (int level = 1; level <= maxSupportedLevel + 5; level++) {
+        for (int level = 1; level <= maxSupportedLevel; level++) {
           int currentLevel = level;
           string displayText = (180 - 10 * currentLevel).ToString();
           acLoadLineMenu.DropDownItems.Add(CreateMenuItem(displayText, "acLoadLineGroup", (s, e) => {
             acLoadline = currentLevel.ToString();
-            if (currentLevel > maxSupportedLevel) {
-              trayIcon.BalloonTipTitle = Strings.AcLoadLineBalloonTitle;
-              trayIcon.BalloonTipText = Strings.AcLoadLineBalloonText(maxSupportedLevel, currentLevel);
-              trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
-              trayIcon.ShowBalloonTip(3000);
-            }
             SetLoadLine(currentLevel);
             SaveConfig("AcLoadLine");
           }, false));

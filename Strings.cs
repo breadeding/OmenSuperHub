@@ -619,10 +619,6 @@
     // AC Load Line 气泡提示
     // ─────────────────────────────────────────────────────────────────────────
     public static string AcLoadLineBalloonTitle => T("AC Load Line 提示", "AC Load Line 提示", "AC Load Line Hint");
-    public static string AcLoadLineBalloonText(int maxSupported, int current) => T(
-        $"当前设备支持的最大 AC Load Line 为 {180 - 10 * maxSupported}，将尝试设置 {180 - 10 * current}。",
-        $"目前裝置支援的最大 AC Load Line 為 {180 - 10 * maxSupported}，將嘗試設定 {180 - 10 * current}。",
-        $"The maximum supported AC Load Line for this device is {180 - 10 * maxSupported}. Attempting to set {180 - 10 * current}.");
     public static string NoCustomIcon => T("不存在自定义图标custom.ico",
         "找不到自訂圖示 custom.ico", "Custom icon file custom.ico not found.");
     public static string KeyboardConnectFail => T("键盘连接失败！", "鍵盤連線失敗！", "Keyboard connection failed!");
