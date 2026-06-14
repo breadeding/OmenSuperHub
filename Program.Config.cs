@@ -169,8 +169,7 @@ namespace OmenSuperHub {
         //Console.WriteLine("任务二已创建：用户登录时重启。");
       }
 
-      // 整个清理操作异步化，不影响启动
-      System.Threading.Tasks.Task.Run(() => CleanUpAndRemoveTasks());
+      CleanUpAndRemoveTasks();
     }
 
     static void AutoStartDisable() {
@@ -802,6 +801,69 @@ namespace OmenSuperHub {
     /// 不读写注册表，可以在启动恢复和运行时切换预设时复用。
     /// </summary>
     static void ApplyPresetSettings(string presetKey) {
+      // 自定义预设特有字段：监控项、温度显示模式等
+      if (presetKey == "Restore" || presetKey == "PresetCustom1" || presetKey == "PresetCustom2" || presetKey == "PresetCustom3") {
+        if (presetKey == "Restore") {
+          try {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+              // Restore时已经判断过key
+              if (key != null) {
+                // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
+                if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
+                  monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
+                  if (hasNVIDIAGpu)
+                    monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
+                  else
+                    monitorGPU = false;
+                  monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", false));
+                  monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", "low");
+                  tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
+                }
+              }
+            }
+          } catch (Exception ex) {
+            Logger.Error($"RestoreConfig: {ex.Message}");
+          }
+        }
+
+        UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
+        UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
+        UpdateCheckedState("monitorFanGroup", monitorFan ? Strings.MonitorFanOn : Strings.MonitorFanOff);
+
+        bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
+        if (monitorCPU || monitorGPU) {
+          if (!wasMonitorRunning) {
+            cpuTempReady = gpuTempReady = tempReady = false;
+            StartHardwareMonitor();
+          } else {
+            if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
+            if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
+            SetCpuMonitorState(monitorCPU);
+            SetGpuMonitorState(monitorGPU);
+          }
+        } else {
+          if (wasMonitorRunning) {
+            cpuTempReady = gpuTempReady = tempReady = false;
+            StopHardwareMonitor();
+          }
+        }
+
+        switch (monitorRefreshRate) {
+          case "high":
+            tooltipUpdateTimer.Interval = 250; SetMonitorInterval(250);
+            UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshHigh);
+            break;
+          default:
+            monitorRefreshRate = "low";
+            tooltipUpdateTimer.Interval = 1000; SetMonitorInterval(1000);
+            UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshLow);
+            break;
+        }
+
+        UpdateCheckedState("tempDisplayGroup", tempDisplayMode == "raw" ? Strings.TempRaw : Strings.TempSmoothed);
+        if (tempDisplayMode != "raw") tempDisplayMode = "smoothed";
+      }
+
       // 风扇曲线
       if (fanTable.Contains("cool")) {
         LoadFanConfig("cool.txt");
@@ -924,69 +986,6 @@ namespace OmenSuperHub {
           }
         }
       });
-
-      // 自定义预设特有字段：监控项、温度显示模式等
-      if (presetKey == "Restore" || presetKey == "PresetCustom1" || presetKey == "PresetCustom2" || presetKey == "PresetCustom3") {
-        if (presetKey == "Restore") {
-          try {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
-              // Restore时已经判断过key
-              if (key != null) {
-                // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
-                if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
-                  monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", true));
-                  if (hasNVIDIAGpu)
-                    monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", true));
-                  else
-                    monitorGPU = false;
-                  monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", false));
-                  monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", "low");
-                  tempDisplayMode = (string)key.GetValue("TempDisplayMode", "smoothed");
-                }
-              }
-            }
-          } catch (Exception ex) {
-            Logger.Error($"RestoreConfig: {ex.Message}");
-          }
-        }
-        
-        UpdateCheckedState("monitorCPUGroup", monitorCPU ? Strings.MonitorCpuOn : Strings.MonitorCpuOff);
-        UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
-        UpdateCheckedState("monitorFanGroup", monitorFan ? Strings.MonitorFanOn : Strings.MonitorFanOff);
-
-        bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
-        if (monitorCPU || monitorGPU) {
-          if (!wasMonitorRunning) {
-            cpuTempReady = gpuTempReady = tempReady = false;
-            StartHardwareMonitor();
-          } else {
-            if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
-            if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
-            SetCpuMonitorState(monitorCPU);
-            SetGpuMonitorState(monitorGPU);
-          }
-        } else {
-          if (wasMonitorRunning) {
-            cpuTempReady = gpuTempReady = tempReady = false;
-            StopHardwareMonitor();
-          }
-        }
-
-        switch (monitorRefreshRate) {
-          case "high":
-            tooltipUpdateTimer.Interval = 250; SetMonitorInterval(250);
-            UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshHigh);
-            break;
-          default:
-            monitorRefreshRate = "low";
-            tooltipUpdateTimer.Interval = 1000; SetMonitorInterval(1000);
-            UpdateCheckedState("monitorRefreshGroup", Strings.MonitorRefreshLow);
-            break;
-        }
-
-        UpdateCheckedState("tempDisplayGroup", tempDisplayMode == "raw" ? Strings.TempRaw : Strings.TempSmoothed);
-        if (tempDisplayMode != "raw") tempDisplayMode = "smoothed";
-      }
     }
 
     /// <summary>
@@ -1100,12 +1099,12 @@ namespace OmenSuperHub {
           } else {
             LoadPresetFields(currentPreset);
           }
-
+          
           var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
           if (item != null)
             UpdateCheckedState("presetsGroup", null, item);
           ApplyPresetSettings("Restore");
-
+          
           // ── DB 版本（仅启动时处理）────────────────────────────────────────────
           if (hasNVIDIAGpu && performanceControlMenu.Enabled) {
             DBVersion = (int)key.GetValue("DBVersion", 2);
@@ -1135,12 +1134,12 @@ namespace OmenSuperHub {
           // ── 非预设配置项 ──────────────────────────────────────────────────────
           autoStart = (string)key.GetValue("AutoStart", "off");
           if (autoStart == "on") {
-            AutoStartEnable();
+            System.Threading.Tasks.Task.Run(() => AutoStartEnable());
             UpdateCheckedState("autoStartGroup", Strings.Enable);
           } else {
             UpdateCheckedState("autoStartGroup", Strings.Disable);
           }
-
+          
           alreadyRead = (int)key.GetValue("AlreadyRead", 0);
 
           customIcon = (string)key.GetValue("CustomIcon", "original");
@@ -1157,7 +1156,7 @@ namespace OmenSuperHub {
           omenKeyPresetCandidates = (string)key.GetValue("OmenKeyPresetCandidates", GetDefaultOmenKeyPresetCandidates());
           GetOmenKeyPresetCandidateKeys();
           RestoreOmenKeyAction();
-
+          
           textSize = (int)key.GetValue("FloatingBarSize", 40);
           UpdateFloatingText();
           if (textSizeTrackBar != null) textSizeTrackBar.Value = textSize / 4;

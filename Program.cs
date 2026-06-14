@@ -13,7 +13,6 @@ using System.Threading;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Common.NVidiaApi;
-using HP.Omen.Core.Common.WMI;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
@@ -121,7 +120,7 @@ namespace OmenSuperHub {
     static StreamWriter hwMonitorIn;
 
     // Cache last written values to avoid unnecessary disk reads/writes
-    static string lastCpuText = null, lastGpuText = null, lastFanText = null;
+    static string lastCpuText = null, lastGpuText = null, lastFanText = null, pawnIOState = "";
     static string tempDisplayMode = "smoothed"; // 温度显示方式：smoothed=平滑值, raw=原始值
     static int? platformMaxFanSpeed = null; // 平台最大转速（RPM），由LoadDefaultFanConfig获取后缓存
     static SortedDictionary<float, int> CPUTempFanMap = new SortedDictionary<float, int>();
@@ -152,6 +151,7 @@ namespace OmenSuperHub {
 
     [STAThread]
     static void Main(string[] args) {
+      //Console.WriteLine($"0.1: {sw.ElapsedMilliseconds}ms");
       if (args.Length > 0 && args[0] == "--hwmonitor") {
         RunHardwareMonitor();
         return;
@@ -194,6 +194,7 @@ namespace OmenSuperHub {
         Version version = Assembly.GetExecutingAssembly().GetName().Version;
         string versionString = version.ToString().Replace(".", "");
         alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
+        //Console.WriteLine($"0.2: {sw.ElapsedMilliseconds}ms");
 
         try {
           using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
@@ -222,7 +223,24 @@ namespace OmenSuperHub {
           }
         }
 
-        var t1 = System.Threading.Tasks.Task.Run(() => systemSSID = OmenSMBiosHelper.SystemID);
+        var t1 = System.Threading.Tasks.Task.Run(() => {
+          deviceType = DeviceModel.OmenPlatform.Name;
+          string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
+          platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
+          if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
+            supportDojo = true;
+            if (IsLightBarPlatform())
+              supportLightbar = true;
+          }
+          if (platformSettings != null) {
+            currentPreset = "PresetExtreme";
+            isCPUPowerControlSupported = true;
+          }
+          //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
+          systemSSID = DeviceModel.ThisSystemID;
+          InitPlatformMaxFanSpeed();
+          InitMaxTemp();
+        });
         var t2 = System.Threading.Tasks.Task.Run(() => kbType = GetKeyboardType());
         var t3 = System.Threading.Tasks.Task.Run(() => NvGraphicsMode = GetGfxMode());
         var t4 = System.Threading.Tasks.Task.Run(() => {
@@ -245,32 +263,15 @@ namespace OmenSuperHub {
           int ambientTemp = GetSensorTemperature(1);
           isAmbientSensorSupported = ambientTemp > 1 && irTemp != ambientTemp;
         });
-        var t14 = System.Threading.Tasks.Task.Run(() => {
-          deviceType = DeviceModel.OmenPlatform.Name;
-          string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
-          platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
-          if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
-            supportDojo = true;
-            if (IsLightBarPlatform())
-              supportLightbar = true;
-          }
-          if (platformSettings != null) {
-            currentPreset = "PresetExtreme";
-            isCPUPowerControlSupported = true;
-          }
-          //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
-          InitPlatformMaxFanSpeed();
-          InitMaxTemp();
-        });
-
+        
         //Console.WriteLine($"1: {sw.ElapsedMilliseconds}ms");
-        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14);
+        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13);
         //Console.WriteLine($"2: {sw.ElapsedMilliseconds}ms");
-
+        
         if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
           supportAni = true;
         }
-        
+
         LoadLanguageSetting();  // 必须在 InitTrayIcon 之前，使菜单使用正确语言
         InitTrayIcon();
         uiContext = SynchronizationContext.Current;
@@ -1320,18 +1321,17 @@ namespace OmenSuperHub {
     //生成监控信息
     static string monitorText() {
       string str = "";
-      string pawnIOState = "";
       if (monitorCPU) {
         if (CPUPower > 0.01f)
           str += $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
         else {
-          if (!IsPawnIOInstalled())
-            pawnIOState = Strings.SysPawnIONotInstalled;
-          else
-            pawnIOState = GetPawnIOState();
+          //if (!IsPawnIOInstalled())
+          //  pawnIOState = Strings.SysPawnIONotInstalled;
+          //else
+          //  pawnIOState = GetPawnIOState();
           if (pawnIOState == "RUNNING")
             str += $"CPU: {Strings.MonitorPrepareLabel}";
-          else
+          else if (pawnIOState.Length > 0)
             str += $"CPU: PawnIO {pawnIOState}";
         }
       }
@@ -1339,7 +1339,7 @@ namespace OmenSuperHub {
         if (str.Length > 0) str += "\n";
         if (pawnIOState == "RUNNING" && GPUPower < 0.01f)
           str += $"GPU: {Strings.MonitorPrepareLabel}";
-        else
+        else if (pawnIOState.Length > 0)
           str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
       }
       if (monitorFan) {
@@ -1371,7 +1371,7 @@ namespace OmenSuperHub {
 
     static void UpdateTrayIconText() {
       if (trayIcon == null) return;
-
+      
       string text = "";
       string presetName = GetCurrentPresetDisplayName();
       string monitor = monitorText();

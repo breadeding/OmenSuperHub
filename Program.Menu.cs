@@ -131,7 +131,6 @@ namespace OmenSuperHub {
 
       System.Threading.Tasks.Task.Run(() => {
         // PawnIO信息
-        string pawnIOState = "";
         if (!IsPawnIOInstalled())
           pawnIOState = Strings.SysPawnIONotInstalled;
         else
@@ -1359,12 +1358,12 @@ namespace OmenSuperHub {
       ToolStripMenuItem autoStartMenu = new ToolStripMenuItem(Strings.AutoStart);
       autoStartMenu.DropDownItems.Add(CreateMenuItem(Strings.Enable, "autoStartGroup", (s, e) => {
         autoStart = "on";
-        AutoStartEnable();
+        System.Threading.Tasks.Task.Run(() => AutoStartEnable());
         SaveConfig("AutoStart");
       }, false));
       autoStartMenu.DropDownItems.Add(CreateMenuItem(Strings.Disable, "autoStartGroup", (s, e) => {
         autoStart = "off";
-        AutoStartDisable();
+        System.Threading.Tasks.Task.Run(() => AutoStartDisable());
         SaveConfig("AutoStart");
       }, true));
       settingMenu.DropDownItems.Add(autoStartMenu);
