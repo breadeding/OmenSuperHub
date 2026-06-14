@@ -230,10 +230,10 @@ namespace OmenSuperHub {
       /// <summary>
       /// 判断是否支持动画（Dojo 协议）
       /// </summary>
-      public static bool IsAnimationSupported(NbKeyboardLightingType kbType, DeviceEnums.DeviceType device) {
+      public static bool IsAnimationSupported(NbKeyboardLightingType kbType, DeviceEnums.DeviceType device, int cycleNumber) {
         if (!_isAnimationSupported.HasValue) {
           _isAnimationSupported = false;
-          if (DeviceModel.GetCycleNumber(DeviceModel.OmenPlatform.ProductNum.FirstOrDefault((SSIDInfo x) => x.SSID.Equals(DeviceModel.ThisSystemID)).Cycle) > 260) {
+          if (cycleNumber > 260) {
             _isAnimationSupported = true;
           }
           if (_isAnimationSupported.Value) {

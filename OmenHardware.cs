@@ -10,8 +10,8 @@ using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 namespace OmenSuperHub {
   internal class OmenHardware {
     private static bool? _isGamingProduct;
-    public static string Validation() {
-      if (IsGamingProduct) {
+    public static string Validation(string displayName) {
+      if (IsGamingProduct(displayName)) {
         return Strings.ValidationGamingProduct;
       } else {
         if (DeviceModel.IsOldOmenProduct) {
@@ -24,27 +24,23 @@ namespace OmenSuperHub {
       }
     }
 
-    public static bool IsGamingProduct {
-      get {
-        if (!_isGamingProduct.HasValue) {
-          _isGamingProduct = false;
+    public static bool IsGamingProduct(string displayName) {
+      if (!_isGamingProduct.HasValue) {
+        _isGamingProduct = false;
 
-          string displayName = DeviceModel.OmenPlatform.DisplayName;
-
-          if (displayName.Contains("OMEN")) {
-            _isGamingProduct = true;
-          } else {
-            if (DeviceModel.FeatureByte.Contains("7K") && DeviceModel.FeatureByte.Contains("fd")) {
-              if (displayName.Contains("PAVILION") || displayName.Contains("VICTUS")) {
-                _isGamingProduct = true;
-              }
-            } else if (displayName.Contains("VICTUS")) {
+        if (displayName.Contains("OMEN")) {
+          _isGamingProduct = true;
+        } else {
+          if (DeviceModel.FeatureByte.Contains("7K") && DeviceModel.FeatureByte.Contains("fd")) {
+            if (displayName.Contains("PAVILION") || displayName.Contains("VICTUS")) {
               _isGamingProduct = true;
             }
+          } else if (displayName.Contains("VICTUS")) {
+            _isGamingProduct = true;
           }
         }
-        return _isGamingProduct.Value;
       }
+      return _isGamingProduct.Value;
     }
 
     /// <summary>

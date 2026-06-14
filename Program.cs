@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Common.NVidiaApi;
@@ -104,7 +105,7 @@ namespace OmenSuperHub {
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, omenKeyTriggered = false, isTwoBytePL4 = false;
     static bool hasNVIDIAGpu; // 启动时一次性检测，硬件状态不会改变
     static string monitorRefreshRate = "low"; // 刷新频率：low=1s, high=0.25s
-    static List<int> fanSpeedNow = new List<int> { 20, 23, 0 };
+    static List<int> fanSpeedNow = new List<int> { 20, 20, 0 };
     static float respondSpeed = 0.4f;
 
     static int? maxCPUTemp = null;
@@ -139,10 +140,12 @@ namespace OmenSuperHub {
 
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
-    static string systemSSID;
+    static string systemSSID, sku, biosVersion;
     static bool supportAni = false, supportDojo = false, supportLightbar = false;
     static bool isCPUPowerControlSupported = false, isAmbientSensorSupported = false;
     static DeviceEnums.DeviceType deviceType;
+    static string deviceDisplayName;
+    static int cycleNumber;
     static PlatformSettings platformSettings;
     static GraphicsSwitcherMode NvGraphicsMode;
     static NbKeyboardLightingType kbType;
@@ -194,20 +197,13 @@ namespace OmenSuperHub {
         Version version = Assembly.GetExecutingAssembly().GetName().Version;
         string versionString = version.ToString().Replace(".", "");
         alreadyReadCode = new Random(int.Parse(versionString)).Next(1000, 10000);
-        //Console.WriteLine($"0.2: {sw.ElapsedMilliseconds}ms");
 
-        try {
-          using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
-            if (key != null) {
-              alreadyRead = (int)key.GetValue("AlreadyRead", 0);
-            }
-          }
-        } catch (Exception ex) {
-          Logger.Error($"Error restoring AlreadyRead configuration: {ex.Message}");
-        }
+        // 读取 deviceDisplayName / cycleNumber / deviceType / supportDojo / systemSSID / alreadyRead
+        LoadDeviceInfoFromRegistry();
+        //Console.WriteLine($"0.2: {sw.ElapsedMilliseconds}ms");
         // 每版本仅显示一次
         if (alreadyRead != alreadyReadCode) {
-          string validationResult = Validation();
+          string validationResult = Validation(deviceDisplayName);
           if (validationResult == Strings.ValidationUnsupported) {
             var result = MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.ProductUnsupported, Strings.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (result != DialogResult.OK)
@@ -223,52 +219,58 @@ namespace OmenSuperHub {
           }
         }
 
-        var t1 = System.Threading.Tasks.Task.Run(() => {
-          deviceType = DeviceModel.OmenPlatform.Name;
-          string sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
+        var t1 = Task.Run(() => {
+          //Console.WriteLine($"1.1: {sw.ElapsedMilliseconds}ms");
           platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
-          if (DeviceModel.OmenPlatform.Feature.Contains("DojoLighting")) {
-            supportDojo = true;
-            if (IsLightBarPlatform())
-              supportLightbar = true;
-          }
+          //Console.WriteLine($"1.2: {sw.ElapsedMilliseconds}ms");
+          
           if (platformSettings != null) {
             currentPreset = "PresetExtreme";
             isCPUPowerControlSupported = true;
           }
           //isCPUPowerControlSupported = IsPowerControlSupported(deviceType); // 似乎不准确
-          systemSSID = DeviceModel.ThisSystemID;
           InitPlatformMaxFanSpeed();
           InitMaxTemp();
         });
-        var t2 = System.Threading.Tasks.Task.Run(() => kbType = GetKeyboardType());
-        var t3 = System.Threading.Tasks.Task.Run(() => NvGraphicsMode = GetGfxMode());
-        var t4 = System.Threading.Tasks.Task.Run(() => {
+        var t2 = Task.Run(() => {
+          biosVersion = GetBiosVersion();
+        });
+        var t3 = Task.Run(() => {
           hasNVIDIAGpu = HasNvidiaGpu();
           if (hasNVIDIAGpu) {
             ExtractAndPreloadNativeDll("NvidiaApi.dll");
             maxFrameRate = NvApiWrapper.NVAPI_GetMaxFrameRate();
           }
         });
-        var t5 = System.Threading.Tasks.Task.Run(() => SetUnleashMode()); // 固定为释放全部性能模式
-        var t6 = System.Threading.Tasks.Task.Run(() => Is3FanNb = IsThreeFanSupported());
-        var t7 = System.Threading.Tasks.Task.Run(() => isFanCleanSupported = IsCleanCreekSupported());
-        var t8 = System.Threading.Tasks.Task.Run(() => isFanLegacyCleanSupported = IsLegacyCleanCreekSupported());
-        var t9 = System.Threading.Tasks.Task.Run(() => monitorQuery());
-        var t10 = System.Threading.Tasks.Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
-        var t11 = System.Threading.Tasks.Task.Run(() => SetBrowserEmulationForWebBrowser());
-        var t12 = System.Threading.Tasks.Task.Run(() => getOmenKeyTask());
-        var t13 = System.Threading.Tasks.Task.Run(() => {
+        var t4 = Task.Run(() => kbType = GetKeyboardType());
+        var t5 = Task.Run(() => NvGraphicsMode = GetGfxMode());
+        var t6 = Task.Run(() => {
+          SetUnleashMode(); // 固定为释放全部性能模式
+          Is3FanNb = IsThreeFanSupported();
+        });
+        var t7 = Task.Run(() => {
+          isFanCleanSupported = IsCleanCreekSupported();
+          isFanLegacyCleanSupported = IsLegacyCleanCreekSupported();
+        });
+        var t8 = Task.Run(() => {
+          getOmenKeyTask();
+          monitorQuery();
+          if (supportDojo && IsLightBarPlatform())
+            supportLightbar = true;
+        });
+        var t9 = Task.Run(() => {
+          SetBrowserEmulationForWebBrowser();
           int irTemp = GetSensorTemperature(0);
           int ambientTemp = GetSensorTemperature(1);
           isAmbientSensorSupported = ambientTemp > 1 && irTemp != ambientTemp;
         });
-        
+        //var t10 = Task.Run(() => isTwoBytePL4 = IsTwoBytePL4Supported());
+
         //Console.WriteLine($"1: {sw.ElapsedMilliseconds}ms");
-        System.Threading.Tasks.Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13);
+        Task.WaitAll(t1, t2, t3, t4, t5, t6, t7, t8, t9);
         //Console.WriteLine($"2: {sw.ElapsedMilliseconds}ms");
-        
-        if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType)) {
+
+        if (FourZoneSupportHelper.IsAnimationSupported(kbType, deviceType, cycleNumber)) {
           supportAni = true;
         }
 
@@ -649,10 +651,8 @@ namespace OmenSuperHub {
             } catch (Exception ex) {
               Logger.Error($"[UpdateTooltip] QueryHardware 异常: {ex.Message}");
             }
-            if (!GetTrayIconRect().IsEmpty && GetTrayIconRect().Contains(Control.MousePosition))
-              UpdateTrayIconText();
-
             UpdateFloatingText();
+            UpdateTrayIconText();
 
             if (customIcon == "dynamic")
               UpdateDynamicIcon();
@@ -949,7 +949,7 @@ namespace OmenSuperHub {
 
       if (monitorFan)
         fanSpeedNow = GetFanLevel();
-      
+
       UpdateTrayIconText();
       //Console.WriteLine("UpdateTooltip");
 
@@ -1325,10 +1325,6 @@ namespace OmenSuperHub {
         if (CPUPower > 0.01f)
           str += $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
         else {
-          //if (!IsPawnIOInstalled())
-          //  pawnIOState = Strings.SysPawnIONotInstalled;
-          //else
-          //  pawnIOState = GetPawnIOState();
           if (pawnIOState == "RUNNING")
             str += $"CPU: {Strings.MonitorPrepareLabel}";
           else if (pawnIOState.Length > 0)
@@ -1371,7 +1367,7 @@ namespace OmenSuperHub {
 
     static void UpdateTrayIconText() {
       if (trayIcon == null) return;
-      
+
       string text = "";
       string presetName = GetCurrentPresetDisplayName();
       string monitor = monitorText();

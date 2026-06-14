@@ -4,7 +4,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Common.NVidiaApi;
+using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
 using static OmenSuperHub.GpuAppManager;
@@ -79,6 +81,99 @@ namespace OmenSuperHub {
       }
       // 其他语言默认英语
       return "en";
+    }
+
+    /// <summary>
+    /// 从注册表加载设备信息缓存（deviceDisplayName / cycleNumber / deviceType / supportDojo）及 alreadyRead。
+    /// 若注册表中无对应设备信息项，则从 DeviceModel 获取后写入注册表供后续启动使用。
+    /// </summary>
+    static void LoadDeviceInfoFromRegistry() {
+      // ── 设备信息（缓存命中则直接用，否则从 DeviceModel 获取）────────────────
+      bool needFetch = false;
+      // ── alreadyRead（无论设备信息是否缓存都要读）────────────────────────────
+      try {
+        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+          if (key != null) {
+            alreadyRead = (int)key.GetValue("AlreadyRead", 0);
+            string cachedName = key.GetValue("DeviceDisplayName") as string;
+            object cachedCycle = key.GetValue("CycleNumber");
+            string cachedType = key.GetValue("DeviceType") as string;
+            object cachedDojo = key.GetValue("SupportDojo");
+            string cachedSSID = key.GetValue("SystemSSID") as string;
+            string cachedSku = key.GetValue("Sku") as string;
+
+            if (!string.IsNullOrEmpty(cachedName)
+              && cachedCycle != null
+              && !string.IsNullOrEmpty(cachedType)
+              && cachedDojo != null
+              && !string.IsNullOrEmpty(cachedSSID)
+              && !string.IsNullOrEmpty(cachedSku)) {
+              deviceDisplayName = cachedName;
+              cycleNumber = (int)cachedCycle;
+              supportDojo = ((int)cachedDojo) != 0;
+              systemSSID = cachedSSID;
+              sku = cachedSku;
+              if (Enum.TryParse<DeviceEnums.DeviceType>(cachedType, out var parsedType))
+                deviceType = parsedType;
+              else {
+                needFetch = true;
+                Logger.Error($"LoadDeviceInfoFromRegistry: 无法解析 DeviceType={cachedType}，将重新从 DeviceModel 获取");
+              }
+            } else {
+              needFetch = true;
+            }
+          } else {
+            needFetch = true; // 全新安装，注册表键不存在
+          }
+        }
+      } catch (Exception ex) {
+        needFetch = true;
+        Logger.Error($"LoadDeviceInfoFromRegistry: 读取设备信息失败: {ex.Message}");
+      }
+
+      if (needFetch)
+        FetchAndCacheDeviceInfo();
+      else
+        System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => FetchAndCacheDeviceInfo());
+    }
+
+    /// <summary>
+    /// 从 DeviceModel 获取设备信息并写入注册表缓存。
+    /// </summary>
+    static void FetchAndCacheDeviceInfo() {
+      try {
+        deviceDisplayName = DeviceModel.OmenPlatform.DisplayName;
+        cycleNumber = DeviceModel.GetCycleNumber(DeviceModel.OmenPlatform.ProductNum.FirstOrDefault((SSIDInfo x) => x.SSID.Equals(DeviceModel.ThisSystemID)).Cycle);
+        deviceType = DeviceModel.OmenPlatform.Name;
+        supportDojo = DeviceModel.OmenPlatform.Feature.Contains("DojoLighting");
+        systemSSID = DeviceModel.ThisSystemID;
+        sku = PerformanceControlHelper.GetPlatformSku(isInit: true);
+        SaveDeviceInfoToRegistry();
+      } catch (Exception ex) {
+        Logger.Error($"FetchAndCacheDeviceInfo 失败: {ex.Message}");
+      }
+    }
+
+    /// <summary>
+    /// 将设备信息写入注册表缓存。
+    /// </summary>
+    static void SaveDeviceInfoToRegistry() {
+      try {
+        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub", writable: true)) {
+          if (key == null) {
+            Logger.Info($"全新安装，暂不保存键值。");
+            return;
+          }
+          key.SetValue("DeviceDisplayName", deviceDisplayName, RegistryValueKind.String);
+          key.SetValue("CycleNumber", cycleNumber, RegistryValueKind.DWord);
+          key.SetValue("DeviceType", deviceType.ToString(), RegistryValueKind.String);
+          key.SetValue("SupportDojo", supportDojo ? 1 : 0, RegistryValueKind.DWord);
+          key.SetValue("SystemSSID", systemSSID, RegistryValueKind.String);
+          key.SetValue("Sku", sku, RegistryValueKind.String);
+        }
+      } catch (Exception ex) {
+        Logger.Error($"SaveDeviceInfoToRegistry 失败: {ex.Message}");
+      }
     }
 
     static void LoadLanguageSetting() {
@@ -1158,16 +1253,24 @@ namespace OmenSuperHub {
           RestoreOmenKeyAction();
           
           textSize = (int)key.GetValue("FloatingBarSize", 40);
-          UpdateFloatingText();
           if (textSizeTrackBar != null) textSizeTrackBar.Value = textSize / 4;
 
           floatingBarLoc = (string)key.GetValue("FloatingBarLoc", "left");
-          UpdateFloatingText();
           UpdateCheckedState("floatingBarLocGroup", floatingBarLoc == "left" ? Strings.FloatingLocLeft : Strings.FloatingLocRight);
 
           floatingBarScreen = (string)key.GetValue("FloatingBarScreen", "");
           floatingBar = (string)key.GetValue("FloatingBar", "off");
-          if (floatingBar == "on") { ShowFloatingForm(); UpdateCheckedState("floatingBarGroup", Strings.FloatingShow); } else { CloseFloatingForm(); UpdateCheckedState("floatingBarGroup", Strings.FloatingHide); }
+          if (floatingBar == "on") {
+            uiContext.Post(_ => {
+              ShowFloatingForm();
+            }, null);
+            UpdateCheckedState("floatingBarGroup", Strings.FloatingShow);
+          } else {
+            uiContext.Post(_ => {
+              CloseFloatingForm();
+            }, null);
+            UpdateCheckedState("floatingBarGroup", Strings.FloatingHide);
+          }
 
           dataLocalize = (string)key.GetValue("DataLocalize", "off");
           UpdateCheckedState("dataLocalizeGroup", dataLocalize == "on" ? Strings.Enable : Strings.Disable);

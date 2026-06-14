@@ -78,11 +78,10 @@ namespace OmenSuperHub {
       menu.Closing += TrayMenu_Closing;
 
       ToolStripMenuItem sysInfoMenu = new ToolStripMenuItem(Strings.SysInfo);
-      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelName}: {DeviceModel.OmenPlatform.DisplayName}") { Enabled = false });
-      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelValidation}: {Validation()}") { Enabled = false });
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelName}: {deviceDisplayName}") { Enabled = false });
+      sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysModelValidation}: {Validation(deviceDisplayName)}") { Enabled = false });
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysBoardProduct}: {systemSSID}") { Enabled = false });
       // BIOS 版本
-      string biosVersion = GetBiosVersion();
       sysInfoMenu.DropDownItems.Add(new ToolStripMenuItem($"{Strings.SysBiosVersion}: {biosVersion}") { Enabled = false });
 
       ToolStripMenuItem pawnIOStateMenu = null;
