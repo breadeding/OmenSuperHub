@@ -591,8 +591,14 @@ namespace OmenSuperHub {
                   if (sensor.SensorType == LibreSensorType.Temperature && sensor.Name == "GPU Core")
                     tGpu = sensor.Value.GetValueOrDefault();
                   if (sensor.SensorType == LibreSensorType.Power && sensor.Name == "GPU Package") {
-                    gGpu = true;
-                    pGpu = sensor.Value.GetValueOrDefault();
+                    if (sensor.Value.HasValue) {
+                      pGpu = sensor.Value.GetValueOrDefault();
+                      gGpu = true;
+                    }
+                    else {
+                      pGpu = -1;
+                      gGpu = false;
+                    }
                   }
                 }
               } catch { }
@@ -639,10 +645,16 @@ namespace OmenSuperHub {
             smoothedCPUTemp = rawTempCPU;
             cpuTempReady = true;
           }
-          if (!gpuTempReady) {
+          if (!gpuTempReady && rawGotGPU) {
             smoothedGPUTemp = rawTempGPU;
             gpuTempReady = true;
           }
+          if (!rawGotGPU) {
+            gpuTempReady = false;
+            GPUTemp = 40;
+            GPUPower = 0;
+          }
+
           if (!tempReady) {
             tempReady = true;
             // 首次获取到数据立即刷新
@@ -1182,60 +1194,60 @@ namespace OmenSuperHub {
       //通过countQuery延时来确保温度正常读取
       if (countQuery <= 5 && monitorGPU)
         countQuery++;
-      //自动关闭GPU监控
-      if (countQuery > 5 && autoStopMonitorGPU && !isConnectedToNVIDIA && monitorGPU && ((GPUPower >= 0 && GPUPower <= 1.3) || !getGPU)) {
-        // 如果是NVIDIAGpu平台，进一步检查是否有程序占用GPU
-        bool isGpuIdle = true;
-        if (hasNVIDIAGpu) {
-          var gpuApps = GetGpuApps();
-          if (gpuApps != null && gpuApps.Count > 0) {
-            isGpuIdle = false;
-          }
-        }
+      ////自动关闭GPU监控
+      //if (countQuery > 5 && autoStopMonitorGPU && !isConnectedToNVIDIA && monitorGPU && ((GPUPower >= 0 && GPUPower <= 1.3) || !getGPU)) {
+      //  // 如果是NVIDIAGpu平台，进一步检查是否有程序占用GPU
+      //  bool isGpuIdle = true;
+      //  if (hasNVIDIAGpu) {
+      //    var gpuApps = GetGpuApps();
+      //    if (gpuApps != null && gpuApps.Count > 0) {
+      //      isGpuIdle = false;
+      //    }
+      //  }
 
-        if (isGpuIdle) {
-          GPUPower = 0;
-          rawPowerGPU = 0f;
-          getGPU = false;
-          hasStopAuto = true;
-          countQuery = 0;
-          monitorGPU = false;
-          gpuTempReady = false; // 关闭后温度不再有效
-                                //重置自动开启标志
-          hasStartAuto = false;
-          autoStartMonitorGPU = true;
-          SetGpuMonitorState(false);
-          UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOff);
-          SaveConfig("MonitorGPU");
+      //  if (isGpuIdle) {
+      //    GPUPower = 0;
+      //    rawPowerGPU = 0f;
+      //    getGPU = false;
+      //    hasStopAuto = true;
+      //    countQuery = 0;
+      //    monitorGPU = false;
+      //    gpuTempReady = false; // 关闭后温度不再有效
+      //                          //重置自动开启标志
+      //    hasStartAuto = false;
+      //    autoStartMonitorGPU = true;
+      //    SetGpuMonitorState(false);
+      //    UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOff);
+      //    SaveConfig("MonitorGPU");
 
-          // 设置通知的文本和标题
-          trayIcon.BalloonTipTitle = Strings.GpuAutoStopTitle;
-          trayIcon.BalloonTipText = Strings.GpuAutoStopText;
-          trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
-          trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
-        }
-      }
-      //自动开启GPU监控：需为自动转速控制且从"未连接显示器"切换为"已连接"时才触发
-      if (autoStartMonitorGPU && isConnectedToNVIDIA && !prevIsConnectedToNVIDIA && !monitorGPU && fanControl == "auto") {
-        GPUPower = 0;
-        rawPowerGPU = 0f;
-        hasStartAuto = true;
-        countQuery = 0;
-        monitorGPU = true;
-        gpuTempReady = false; // 等待获取到温度后再参与风扇控制
-        //重置自动关闭标志
-        hasStopAuto = false;
-        autoStopMonitorGPU = true;
-        SetGpuMonitorState(true);
-        UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOn);
-        SaveConfig("MonitorGPU");
+      //    // 设置通知的文本和标题
+      //    trayIcon.BalloonTipTitle = Strings.GpuAutoStopTitle;
+      //    trayIcon.BalloonTipText = Strings.GpuAutoStopText;
+      //    trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
+      //    trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
+      //  }
+      //}
+      ////自动开启GPU监控：需为自动转速控制且从"未连接显示器"切换为"已连接"时才触发
+      //if (autoStartMonitorGPU && isConnectedToNVIDIA && !prevIsConnectedToNVIDIA && !monitorGPU && fanControl == "auto") {
+      //  GPUPower = 0;
+      //  rawPowerGPU = 0f;
+      //  hasStartAuto = true;
+      //  countQuery = 0;
+      //  monitorGPU = true;
+      //  gpuTempReady = false; // 等待获取到温度后再参与风扇控制
+      //  //重置自动关闭标志
+      //  hasStopAuto = false;
+      //  autoStopMonitorGPU = true;
+      //  SetGpuMonitorState(true);
+      //  UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOn);
+      //  SaveConfig("MonitorGPU");
 
-        // 设置通知的文本和标题
-        trayIcon.BalloonTipTitle = Strings.GpuAutoStopTitle;
-        trayIcon.BalloonTipText = Strings.GpuAutoStartText;
-        trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
-        trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
-      }
+      //  // 设置通知的文本和标题
+      //  trayIcon.BalloonTipTitle = Strings.GpuAutoStopTitle;
+      //  trayIcon.BalloonTipText = Strings.GpuAutoStartText;
+      //  trayIcon.BalloonTipIcon = ToolTipIcon.Info; // 图标类型
+      //  trayIcon.ShowBalloonTip(3000); // 显示气泡通知，持续时间为 3 秒
+      //}
 
       // 似乎无法一次性关闭GPU监控及选项
       //if (!monitorGPU) {
@@ -1333,8 +1345,12 @@ namespace OmenSuperHub {
       }
       if (monitorGPU) {
         if (str.Length > 0) str += "\n";
-        if (pawnIOState == "RUNNING" && !gpuTempReady)
-          str += $"GPU: {Strings.MonitorPrepareLabel}";
+        if (pawnIOState == "RUNNING" && !gpuTempReady) {
+          if (rawPowerGPU < 0)
+            str += $"GPU: {Strings.GpuPoweredOff}";
+          else
+            str += $"GPU: {Strings.MonitorPrepareLabel}";
+        }
         else if (pawnIOState.Length > 0)
           str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
       }

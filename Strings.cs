@@ -593,6 +593,7 @@
     public static string MonitorCpuLabel => T("CPU", "CPU", "CPU");
     public static string MonitorGpuLabel => T("GPU", "GPU", "GPU");
     public static string MonitorFanLabel => T("风扇", "風扇", "Fan");
+    public static string GpuPoweredOff => T("节能", "節能", "PoweredOff");
     public static string MonitorPrepareLabel => T("数据获取中...", "數據獲取中...", "Retrieving data...");
 
     // ─────────────────────────────────────────────────────────────────────────
