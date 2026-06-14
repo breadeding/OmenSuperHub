@@ -231,7 +231,7 @@
     public static string Maximum => T("最大", "最大", "Maximum");
     public static string Enable => T("开启", "開啟", "Enable");
     public static string Disable => T("关闭", "關閉", "Disable");
-    public static string Normal => T("正常", "正常", "Normal");
+    public static string Standard => T("标准", "標準", "Standard");
     public static string LowPower => T("低功耗", "低功耗", "Low Power");
     public static string Unlimited => T("无限制", "無限制", "Unlimited");
 
@@ -247,8 +247,8 @@
     public static string PpabPowerMenu => T("PPab条件(Tpp)", "PPab條件(Tpp)", "PPab (Tpp)");
     public static string DStateSubMenu => T("dState", "dState", "dState");
     public static string DbVersionMenu => T("DB版本", "DB版本", "DB Version");
-    public static string DbNormal => T("普通版本", "普通版本", "Normal");
-    public static string DbUnlocked => T("解锁版本", "解鎖版本", "Unlocked");
+    public static string DbNormal => T("普通版本", "普通版本", "Normal DB");
+    public static string DbUnlocked => T("解锁版本", "解鎖版本", "Unlocked DB");
     public static string GpuClockMenu => T("GPU频率限制", "GPU頻率限制", "GPU Clock Limit");
     public static string MaxFrameRateMenu => T("最大帧率", "最大幀率", "Max Frame Rate");
 

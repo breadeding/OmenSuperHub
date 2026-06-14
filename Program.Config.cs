@@ -655,7 +655,7 @@ namespace OmenSuperHub {
 
       // 获取不到温度时使用传感器温度备用
       if (monitorCPU && !monitorGPU) {
-        if (CPUPower < 0.01f && isAmbientSensorSupported) {
+        if (CPUPower == 0 && isAmbientSensorSupported) {
           resultSpeed = GetFanSpeedForSpecificTemperature(GetFittingTemperature(), CPUTempFanMap);
         }
       }
@@ -1019,7 +1019,7 @@ namespace OmenSuperHub {
       SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
       UpdateCheckedState("tgpPowerGroup", tgpPower == "on" ? Strings.Enable : Strings.Disable);
       UpdateCheckedState("ppabPowerGroup", ppabPower == "on" ? Strings.Enable : Strings.Disable);
-      UpdateCheckedState("dStateGroup", dState == "normal" ? Strings.Normal : Strings.LowPower);
+      UpdateCheckedState("dStateGroup", dState == "normal" ? Strings.Standard : Strings.LowPower);
 
       // NVIDIA 专属
       if (hasNVIDIAGpu) {

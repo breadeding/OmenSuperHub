@@ -722,7 +722,7 @@ namespace OmenSuperHub {
       ToolStripMenuItem dStateMenu = new ToolStripMenuItem(Strings.DStateSubMenu);
       dStateMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfDStateTip) { Enabled = false });
       dStateMenu.DropDownItems.Add(new ToolStripSeparator());
-      dStateMenu.DropDownItems.Add(CreateMenuItem(Strings.Normal, "dStateGroup", (s, e) => {
+      dStateMenu.DropDownItems.Add(CreateMenuItem(Strings.Standard, "dStateGroup", (s, e) => {
         dState = "normal";
         SetGpuPowerState(tgpPower == "on", ppabPower == "on", 1);
         SaveConfig("DState");

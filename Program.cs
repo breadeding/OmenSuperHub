@@ -102,7 +102,7 @@ namespace OmenSuperHub {
     static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
     static bool powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
-    static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, omenKeyTriggered = false, isTwoBytePL4 = false;
+    static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, omenKeyTriggered = false; // isTwoBytePL4 = false;
     static bool hasNVIDIAGpu; // 启动时一次性检测，硬件状态不会改变
     static string monitorRefreshRate = "low"; // 刷新频率：low=1s, high=0.25s
     static List<int> fanSpeedNow = new List<int> { 20, 20, 0 };
@@ -988,7 +988,7 @@ namespace OmenSuperHub {
       if (countDB > 0) {
         countDB--;
         // 提前判断是否符合条件
-        if (CPUPower > 0.01f && CPUPower < CPULimitDB) {
+        if (CPUPower > 0 && CPUPower < CPULimitDB) {
           float[] limits = GetGpuPowerLimits();   // limits[0] = Current, limits[1] = Max
           if (!powerOnline || Math.Abs(limits[1] - limits[0]) < 1f)
             countDB = 0;
@@ -1322,7 +1322,7 @@ namespace OmenSuperHub {
     static string monitorText() {
       string str = "";
       if (monitorCPU) {
-        if (CPUPower > 0.01f)
+        if (CPUPower > 0)
           str += $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
         else {
           if (pawnIOState == "RUNNING")
@@ -1333,7 +1333,7 @@ namespace OmenSuperHub {
       }
       if (monitorGPU) {
         if (str.Length > 0) str += "\n";
-        if (pawnIOState == "RUNNING" && GPUPower < 0.01f)
+        if (pawnIOState == "RUNNING" && !gpuTempReady)
           str += $"GPU: {Strings.MonitorPrepareLabel}";
         else if (pawnIOState.Length > 0)
           str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
