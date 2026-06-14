@@ -30,7 +30,6 @@ namespace OmenSuperHub {
     }
 
     private void ApplySupersampling(string text, int textSize) {
-      // 参数校验，防止 textSize 无效导致 ArgumentException
       if (string.IsNullOrEmpty(text) || textSize <= 0)
         return;
 
@@ -48,33 +47,44 @@ namespace OmenSuperHub {
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         graphics.Clear(Color.Transparent);
 
-        Color customColor = Color.FromArgb(255, 128, 0);
         using (Font font = new Font("Calibri", textSize, FontStyle.Bold, GraphicsUnit.World)) {
-          using (Brush brush = new SolidBrush(Color.FromArgb(255, 128, 0))) {
-            graphics.DrawString(text, font, brush, new PointF(0, 0));
-          }
-
           PointF point = new PointF(0, 0);
           for (int i = 0; i < lines.Length; i++) {
             string[] parts = lines[i].Split(':');
             if (parts.Length > 1) {
-              string title = parts[0].Trim();
-              customColor = GetColorForTitle(title);
-              using (Brush brush = new SolidBrush(customColor)) {
-                for (int j = 1; j <= i; j++)
-                  title = '\n' + title;
-                graphics.DrawString(title, font, brush, point);
-              }
+              string title = parts[0].Trim() + ":";
+              string value = " " + parts[1].Trim();
+              Color titleColor = GetColorForTitle(parts[0].Trim());
+
+              // 单独绘制标题
+              string titleWithNewlines = title;
+              for (int j = 0; j < i; j++)
+                titleWithNewlines = '\n' + titleWithNewlines;
+              SizeF titleSize = graphics.MeasureString(titleWithNewlines, font);
+              using (Brush brush = new SolidBrush(titleColor))
+                graphics.DrawString(titleWithNewlines, font, brush, point);
+
+              // 单独绘制值，紧接标题之后
+              string valueWithNewlines = value;
+              for (int j = 0; j < i; j++)
+                valueWithNewlines = '\n' + valueWithNewlines;
+              using (Brush brush = new SolidBrush(Color.FromArgb(255, 128, 0)))
+                graphics.DrawString(valueWithNewlines, font, brush, new PointF(titleSize.Width, point.Y));
+            } else {
+              string lineWithNewlines = lines[i];
+              for (int j = 0; j < i; j++)
+                lineWithNewlines = '\n' + lineWithNewlines;
+              using (Brush brush = new SolidBrush(Color.FromArgb(255, 128, 0)))
+                graphics.DrawString(lineWithNewlines, font, brush, point);
             }
           }
         }
       }
 
-      // 先释放旧图像，再赋新值
       var oldImage = displayPictureBox.Image;
       displayPictureBox.Image = newBitmap;
       displayPictureBox.Size = newBitmap.Size;
-      oldImage?.Dispose();   // Dispose 放在赋值之后，避免控件引用悬空
+      oldImage?.Dispose();
 
       if (IsHandleCreated)
         RenderLayered(newBitmap);

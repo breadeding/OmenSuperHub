@@ -11,6 +11,7 @@ internal sealed class NvidiaGpu : GenericGpu
     private readonly NvidiaML.NvmlDevice? _nvmlDevice;
     private readonly Sensor _powerUsage;
     private readonly Sensor _temperature;
+    private bool _firstUpdate = true;
 
     public NvidiaGpu(int adapterIndex, NvApi.NvPhysicalGpuHandle handle, NvApi.NvDisplayHandle? displayHandle, ISettings settings)
         : base(GetName(handle), new Identifier("gpu-nvidia", adapterIndex.ToString(CultureInfo.InvariantCulture)), settings)
@@ -63,13 +64,15 @@ internal sealed class NvidiaGpu : GenericGpu
     {
         try
         {
-            if (!IsGpuPowered())
+            if (!_firstUpdate && !IsGpuPowered())
             {
                 _temperature.Value = null;
                 if (_powerUsage != null)
                     _powerUsage.Value = null;
                 return;
             }
+            else
+                _firstUpdate = false;
 
             // 温度
             var thermalSettings = new NvApi.NvThermalSettings

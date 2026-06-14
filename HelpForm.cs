@@ -147,11 +147,12 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 自动转速下，仅CPU监控且获取不到数据时自动启用传感器拟合</a></li>
+<li>✨ 识别显卡节能状态，同时不再自动开关GPU监控</a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 大幅提升硬件监控启动速度及效率</li>
-<li>⚡ 移除AcLoadLine可以超出限制的功能</li>
-<li>⚡ 优化本机信息传感器不支持时的显示</li>
+<li>⚡ 保存部分机型参数以避免重复初始化</li>
+<p><strong>修复：</strong></p>
+<li>🐛 修复悬浮窗显示中文时标题出现重影的问题</li>
+<li>🐛 修复部分选项英文均为“Normal”导致的混淆</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -213,11 +214,12 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 自動轉速下，僅CPU監控且取得不到數據時自動啟用感測器擬合 </a></li>
+<li>✨ 辨識顯示卡節能狀態，同時不再自動開關GPU監控</a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ 大幅提升硬體監控啟動速度及效率</li>
-<li>⚡ 移除AcLoadLine可以超出限制的功能</li>
-<li>⚡ 優化本機資訊感測器不支援時的顯示</li>
+<li>⚡ Cache parameters for certain models to avoid redundant initialization</li>
+<p><strong>修復：</strong></p>
+<li>🐛 修復懸浮窗顯示中文時標題出現重影的問題</li>
+<li>🐛 修復部分選項英文皆為「Normal」所造成的混淆</li>
 </div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -279,11 +281,13 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
-<li>✨ In auto-speed mode, automatically enable sensor simulation if only the CPU is being monitored and no data is retrieved</li>
+<li>✨ Detects the graphics card's power-saving state and no longer automatically toggles GPU monitoring</a></li>
 <p><strong>Improvements:</strong></p>
-<li>⚡ Significantly improved startup speed and efficiency for hardware monitoring</li>
-<li>⚡ Removed the ability for AcLoadLine to exceed limits</li>
-<li>⚡ Optimized display when local system sensors are unsupported</li>
+<li>⚡ Cache parameters for certain models to avoid redundant initialization</li>
+<p><strong>Fixes:</strong></p>
+<li>🐛 Fixed an issue where the title appeared to have a ""ghosting"" effect when the floating window displayed Chinese text</li>
+<li>🐛 Fixed confusion caused by multiple options being labeled ""Normal"" in English</li>
+<li>🐛 Fixed an issue where the title appeared to have a ""ghosting"" effect when the floating window displayed Chinese text</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
