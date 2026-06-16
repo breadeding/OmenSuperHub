@@ -54,7 +54,6 @@ namespace OmenSuperHub {
       }
 
       BuildTrayMenu(trayIcon.ContextMenuStrip);
-      UpdateTrayIconText();
       // 延迟安装低级鼠标钩子，避免 SetWindowsHookEx 在启动时造成鼠标卡顿
       var hookDelayTimer = new System.Windows.Forms.Timer { Interval = 10 };
       hookDelayTimer.Tick += (s, e) => {

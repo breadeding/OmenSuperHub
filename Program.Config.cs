@@ -1129,6 +1129,7 @@ namespace OmenSuperHub {
         UpdateCheckedState("presetsGroup", null, item);
       ApplyPresetSettings(targetPreset);                                 // 应用到硬件 + 刷新其余菜单
       UpdateTrayIconText();
+      UpdateFloatingText();
     }
 
     /// <summary>
