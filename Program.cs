@@ -98,7 +98,7 @@ namespace OmenSuperHub {
     static int DBVersion = 2, countDB = 0, countDBInit = 10, tryTimes = 0, maxRetry = 5, CPULimitDB = 20;
     static ToolStripMenuItem performanceControlMenu;
     static int textSize = 40;
-    static int countRestore = 0, gpuClock = 0, maxFrameRate = -1;
+    static int countRestore = 0, gpuClock = 0, gpuCoreOverclock = -1, gpuMemoryOverclock = -1, maxFrameRate = -1, graphicsBoostClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
     static readonly string[] PresetOrder = { "PresetExtreme", "PresetGpuPriority", "PresetLightUse", "PresetCustom1", "PresetCustom2", "PresetCustom3" };
     static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
@@ -139,8 +139,8 @@ namespace OmenSuperHub {
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
-    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuClockTrackBar, maxFrameRateTrackBar, textSizeTrackBar;
-    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuClockValueLabel, maxFrameRateValueLabel, textSizeLabel;
+    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuCoreOverclockTrackBar, gpuMemoryOverclockTrackBar, gpuClockTrackBar, maxFrameRateTrackBar, textSizeTrackBar;
+    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuCoreOverclockValueLabel, gpuMemoryOverclockValueLabel, gpuClockValueLabel, maxFrameRateValueLabel, textSizeLabel;
 
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
@@ -227,7 +227,7 @@ namespace OmenSuperHub {
           //Console.WriteLine($"1.1: {sw.ElapsedMilliseconds}ms");
           platformSettings = PerformanceControlHelper.GetPlatformSettings(deviceType.ToString(), sku);
           //Console.WriteLine($"1.2: {sw.ElapsedMilliseconds}ms");
-          
+
           if (platformSettings != null) {
             currentPreset = "PresetExtreme";
             isCPUPowerControlSupported = true;
@@ -244,6 +244,7 @@ namespace OmenSuperHub {
           if (hasNVIDIAGpu) {
             ExtractAndPreloadNativeDll("NvidiaApi.dll");
             maxFrameRate = NvApiWrapper.NVAPI_GetMaxFrameRate();
+            graphicsBoostClock = GetGraphicsBoostClock();
           }
         });
         var t4 = Task.Run(() => kbType = GetKeyboardType());
@@ -343,23 +344,6 @@ namespace OmenSuperHub {
         //Console.WriteLine($"IsGpuSupport: {OmenHsaClient.IsGpuSupport}");
         //Console.WriteLine($"IsIntelGraphics: {OmenHsaClient.IsIntelGraphics()}");
 
-        //Console.WriteLine($"{GetCoreClockOffset()}");
-        //Console.WriteLine($"{GetMemoryClockOffset()}");
-        //PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
-        //if (gpus.Length == 0)
-        //  throw new Exception("未找到 GPU");
-
-        //PhysicalGPU gpu = gpus[0];
-        //var info = GPUApi.GetAllClockFrequencies(gpu.Handle, new ClockFrequenciesV2(ClockType.BoostClock));
-
-        //foreach (var kvp in info.Clocks) {
-        //  var clockInfo = kvp.Value;          // ClockDomainInfo
-        //  if (clockInfo.IsPresent) {
-        //    // 使用 kvp.Key 作为域标识（枚举名称或整数值）
-        //    Console.WriteLine($"{kvp.Key}: {clockInfo.Frequency / 1000} MHz");
-        //    // 如果喜欢整数，可改为：Console.WriteLine($"{(int)kvp.Key}: {clockInfo.Frequency / 1000} MHz");
-        //  }
-        //}
         Logger.Info($"version: {version}");
         Application.Run();
       }
@@ -444,8 +428,7 @@ namespace OmenSuperHub {
       IntPtr handle = LoadLibrary(outputPath);
       if (handle == IntPtr.Zero) {
         Logger.Error($"LoadLibrary 失败，错误码: {Marshal.GetLastWin32Error()}");
-      }
-      else {
+      } else {
         supportHotSwitch = true;
       }
     }
@@ -618,8 +601,7 @@ namespace OmenSuperHub {
                     if (sensor.Value.HasValue) {
                       pGpu = sensor.Value.GetValueOrDefault();
                       gGpu = true;
-                    }
-                    else {
+                    } else {
                       pGpu = -1;
                       gGpu = false;
                     }
@@ -1374,8 +1356,7 @@ namespace OmenSuperHub {
             str += $"GPU: {Strings.GpuPoweredOff}";
           else
             str += $"GPU: {Strings.MonitorPrepareLabel}";
-        }
-        else if (pawnIOState.Length > 0)
+        } else if (pawnIOState.Length > 0)
           str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
       }
       if (monitorFan) {

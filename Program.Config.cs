@@ -681,6 +681,8 @@ namespace OmenSuperHub {
               key.SetValue("PpabPower", ppabPower);
               key.SetValue("DState", dState);
               if (hasNVIDIAGpu) {
+                key.SetValue("GpuCoreOverclock", gpuCoreOverclock);
+                key.SetValue("GpuMemoryOverclock", gpuMemoryOverclock);
                 key.SetValue("GpuClock", gpuClock);
                 key.SetValue("MaxFrameRate", maxFrameRate);
                 key.SetValue("DBVersion", DBVersion);
@@ -735,6 +737,12 @@ namespace OmenSuperHub {
                   break;
                 case "CpuPower":
                   key.SetValue("CpuPower", cpuPower);
+                  break;
+                case "GpuCoreOverclock":
+                  key.SetValue("GpuCoreOverclock", gpuCoreOverclock);
+                  break;
+                case "GpuMemoryOverclock":
+                  key.SetValue("GpuMemoryOverclock", gpuMemoryOverclock);
                   break;
                 case "TgpPower":
                   key.SetValue("TgpPower", tgpPower);
@@ -828,7 +836,8 @@ namespace OmenSuperHub {
                   break;
               }
               if (configName == "FanTable" || configName == "FanControl" || configName == "TempSensitivity" || configName == "CpuPower" || configName == "TgpPower" || configName == "PpabPower" || configName == "DState" || configName == "GpuClock" || configName == "MaxFrameRate" || configName == "TppPower" || configName == "IccMax" || configName == "AcLoadLine" ||
-                  configName == "MonitorCPU" || configName == "MonitorGPU" || configName == "MonitorFan" || configName == "MonitorRefreshRate" || configName == "TempDisplayMode") {
+                  configName == "MonitorCPU" || configName == "MonitorGPU" || configName == "MonitorFan" || configName == "MonitorRefreshRate" || configName == "TempDisplayMode" ||
+                   configName == "GpuCoreOverclock" || configName == "GpuMemoryOverclock") {
                 SavePresetToRegistry(currentPreset);
               }
             }
@@ -853,6 +862,8 @@ namespace OmenSuperHub {
             fanControl = (string)key.GetValue("FanControl", "auto");
             tempSensitivity = (string)key.GetValue("TempSensitivity", "high");
             cpuPower = (string)key.GetValue("CpuPower", "null");
+            gpuCoreOverclock = (int)key.GetValue("GpuCoreOverclock", -1);
+            gpuMemoryOverclock = (int)key.GetValue("GpuMemoryOverclock", -1);
             tgpPower = (string)key.GetValue("TgpPower", "on");
             ppabPower = (string)key.GetValue("PpabPower", "on");
             dState = (string)key.GetValue("DState", "normal");
@@ -870,6 +881,8 @@ namespace OmenSuperHub {
             fanControl = (string)key.GetValue("FanControl", fanControl);
             tempSensitivity = (string)key.GetValue("TempSensitivity", tempSensitivity);
             cpuPower = (string)key.GetValue("CpuPower", cpuPower);
+            gpuCoreOverclock = (int)key.GetValue("GpuCoreOverclock", -1);
+            gpuMemoryOverclock = (int)key.GetValue("GpuMemoryOverclock", -1);
             tgpPower = (string)key.GetValue("TgpPower", tgpPower);
             ppabPower = (string)key.GetValue("PpabPower", ppabPower);
             dState = (string)key.GetValue("DState", dState);
@@ -1023,6 +1036,33 @@ namespace OmenSuperHub {
 
       // NVIDIA 专属
       if (hasNVIDIAGpu) {
+        if (gpuCoreOverclockTrackBar != null) {
+          int coreValue = gpuCoreOverclock >= 0 ? gpuCoreOverclock : 0;
+          int coreIndex = Math.Max(gpuCoreOverclockTrackBar.Minimum, Math.Min(gpuCoreOverclockTrackBar.Maximum, coreValue / 15));
+          gpuCoreOverclockTrackBar.Value = coreIndex;
+          gpuCoreOverclockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{coreIndex * 15} MHz");
+        }
+        if (gpuMemoryOverclockTrackBar != null) {
+          int memValue = gpuMemoryOverclock >= 0 ? gpuMemoryOverclock : 0;
+          int memIndex = Math.Max(gpuMemoryOverclockTrackBar.Minimum, Math.Min(gpuMemoryOverclockTrackBar.Maximum, memValue / 100));
+          gpuMemoryOverclockTrackBar.Value = memIndex;
+          gpuMemoryOverclockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{memIndex * 100} MHz");
+        }
+
+        if (gpuCoreOverclock < 0) {
+          UpdateCheckedState("gpuCoreOverclockGroup", Strings.NotSet);
+        } else {
+          System.Threading.Tasks.Task.Run(() => SetCoreClockOffset(gpuCoreOverclock));
+          UpdateCheckedState("gpuCoreOverclockGroup", Strings.SetGpuCoreOverclockSlider);
+        }
+
+        if (gpuMemoryOverclock < 0) {
+          UpdateCheckedState("gpuMemoryOverclockGroup", Strings.NotSet);
+        } else {
+          System.Threading.Tasks.Task.Run(() => SetMemoryClockOffset(gpuMemoryOverclock));
+          UpdateCheckedState("gpuMemoryOverclockGroup", Strings.SetGpuMemoryOverclockSlider);
+        }
+
         if (gpuClockTrackBar != null) {
           if (gpuClock < gpuClockTrackBar.Minimum * 10) {
             System.Threading.Tasks.Task.Run(() => SetGPUClockReset());
@@ -1097,6 +1137,7 @@ namespace OmenSuperHub {
 
         fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
         tgpPower = "on"; ppabPower = "on"; dState = "normal";
+        gpuCoreOverclock = 120; gpuMemoryOverclock = targetPreset == "PresetExtreme" ? 400 : 0;
         gpuClock = 0; iccMax = "null"; acLoadline = "null";
 
         switch (targetPreset) {
@@ -1165,6 +1206,7 @@ namespace OmenSuperHub {
             int targetPL1Default = (platformSettings?.NbPL1UpperBoundDefault > 0) ? platformSettings.NbPL1UpperBoundDefault : 55;
             fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
             tgpPower = "on"; ppabPower = "on"; dState = "normal";
+            gpuCoreOverclock = 120; gpuMemoryOverclock = currentPreset == "PresetExtreme" ? 400 : 0;
             gpuClock = 0; iccMax = "null"; acLoadline = "null";
             switch (currentPreset) {
               case "PresetExtreme":
@@ -1184,6 +1226,8 @@ namespace OmenSuperHub {
             fanControl = (string)key.GetValue("FanControl", fanControl);
             tempSensitivity = (string)key.GetValue("TempSensitivity", tempSensitivity);
             cpuPower = (string)key.GetValue("CpuPower", cpuPower);
+            gpuCoreOverclock = (int)key.GetValue("GpuCoreOverclock", gpuCoreOverclock);
+            gpuMemoryOverclock = (int)key.GetValue("GpuMemoryOverclock", gpuMemoryOverclock);
             tgpPower = (string)key.GetValue("TgpPower", tgpPower);
             ppabPower = (string)key.GetValue("PpabPower", ppabPower);
             dState = (string)key.GetValue("DState", dState);
@@ -1195,12 +1239,12 @@ namespace OmenSuperHub {
           } else {
             LoadPresetFields(currentPreset);
           }
-          
+
           var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
           if (item != null)
             UpdateCheckedState("presetsGroup", null, item);
           ApplyPresetSettings("Restore");
-          
+
           // ── DB 版本（仅启动时处理）────────────────────────────────────────────
           if (hasNVIDIAGpu && performanceControlMenu.Enabled) {
             DBVersion = (int)key.GetValue("DBVersion", 2);
@@ -1235,7 +1279,7 @@ namespace OmenSuperHub {
           } else {
             UpdateCheckedState("autoStartGroup", Strings.Disable);
           }
-          
+
           alreadyRead = (int)key.GetValue("AlreadyRead", 0);
 
           customIcon = (string)key.GetValue("CustomIcon", "original");
@@ -1252,7 +1296,7 @@ namespace OmenSuperHub {
           omenKeyPresetCandidates = (string)key.GetValue("OmenKeyPresetCandidates", GetDefaultOmenKeyPresetCandidates());
           GetOmenKeyPresetCandidateKeys();
           RestoreOmenKeyAction();
-          
+
           textSize = (int)key.GetValue("FloatingBarSize", 40);
           if (textSizeTrackBar != null) textSizeTrackBar.Value = textSize / 4;
 
@@ -1303,6 +1347,8 @@ namespace OmenSuperHub {
           key.SetValue("TgpPower", tgpPower);
           key.SetValue("PpabPower", ppabPower);
           key.SetValue("DState", dState);
+          key.SetValue("GpuCoreOverclock", gpuCoreOverclock);
+          key.SetValue("GpuMemoryOverclock", gpuMemoryOverclock);
           key.SetValue("GpuClock", gpuClock);
           key.SetValue("MaxFrameRate", maxFrameRate);
           key.SetValue("TppPower", tppPower);

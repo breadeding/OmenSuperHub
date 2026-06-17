@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.McuSDK2.Common.DataStructure;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
@@ -535,7 +536,7 @@ namespace OmenSuperHub {
         restartGpuMenu.ToolTipText = Strings.GpuRestartTooltip;
         restartGpuMenu.Click += (s, e) => {
           if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuRestartConfirm, Strings.GpuRestartTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-            RestartGpu();
+            Task.Run(() => RestartGpu());
           }
         };
         performanceControlMenu.DropDownItems.Add(restartGpuMenu);
@@ -737,16 +738,75 @@ namespace OmenSuperHub {
 
       performanceControlMenu.DropDownItems.Add(gpuPowerMenu);
       if (hasNVIDIAGpu) {
+        ToolStripMenuItem gpuCoreOverclockMenu = new ToolStripMenuItem(Strings.GpuCoreOverclock);
+        gpuCoreOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "gpuCoreOverclockGroup", (s, e) => {
+          gpuCoreOverclock = -1;
+          Task.Run(() => SetCoreClockOffset(0));
+          SaveConfig("GpuCoreOverclock");
+        }, true));
+        gpuCoreOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuCoreOverclockSlider, "gpuCoreOverclockGroup", (s, e) => { }, false));
+        gpuCoreOverclockTrackBar = new ToolStripTrackBar();
+        gpuCoreOverclockTrackBar.Minimum = 0;
+        gpuCoreOverclockTrackBar.Maximum = 18;
+        gpuCoreOverclockTrackBar.Value = gpuCoreOverclock >= 0 ? Math.Max(0, Math.Min(18, gpuCoreOverclock / 15)) : 0;
+        gpuCoreOverclockTrackBar.TickFrequency = gpuCoreOverclockTrackBar.Maximum - gpuCoreOverclockTrackBar.Minimum;
+        gpuCoreOverclockTrackBar.Width = 800;
+        gpuCoreOverclockValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{gpuCoreOverclockTrackBar.Value * 15} MHz")) { Enabled = false };
+        gpuCoreOverclockTrackBar.ValueChanged += (sender, e) => {
+          int val = gpuCoreOverclockTrackBar.Value * 15;
+          gpuCoreOverclockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} MHz");
+          UpdateCheckedState("gpuCoreOverclockGroup", Strings.SetGpuCoreOverclockSlider);
+        };
+        gpuCoreOverclockTrackBar.MouseUp += (sender, e) => {
+          gpuCoreOverclock = gpuCoreOverclockTrackBar.Value * 15;
+          Task.Run(() => SetCoreClockOffset(gpuCoreOverclock));
+          SaveConfig("GpuCoreOverclock");
+          UpdateCheckedState("gpuCoreOverclockGroup", Strings.SetGpuCoreOverclockSlider);
+        };
+        gpuCoreOverclockMenu.DropDownItems.Add(gpuCoreOverclockTrackBar);
+        gpuCoreOverclockMenu.DropDownItems.Add(gpuCoreOverclockValueLabel);
+        performanceControlMenu.DropDownItems.Add(gpuCoreOverclockMenu);
+
+        ToolStripMenuItem gpuMemoryOverclockMenu = new ToolStripMenuItem(Strings.GpuMemoryOverclock);
+        gpuMemoryOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "gpuMemoryOverclockGroup", (s, e) => {
+          gpuMemoryOverclock = -1;
+          Task.Run(() => SetMemoryClockOffset(0));
+          SaveConfig("GpuMemoryOverclock");
+        }, true));
+        gpuMemoryOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuMemoryOverclockSlider, "gpuMemoryOverclockGroup", (s, e) => { }, false));
+        gpuMemoryOverclockTrackBar = new ToolStripTrackBar();
+        gpuMemoryOverclockTrackBar.Minimum = 0;
+        gpuMemoryOverclockTrackBar.Maximum = 16;
+        gpuMemoryOverclockTrackBar.Value = gpuMemoryOverclock >= 0 ? Math.Max(0, Math.Min(16, gpuMemoryOverclock / 100)) : 0;
+        gpuMemoryOverclockTrackBar.TickFrequency = gpuMemoryOverclockTrackBar.Maximum - gpuMemoryOverclockTrackBar.Minimum;
+        gpuMemoryOverclockTrackBar.Width = 800;
+        gpuMemoryOverclockValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{gpuMemoryOverclockTrackBar.Value * 100} MHz")) { Enabled = false };
+        gpuMemoryOverclockTrackBar.ValueChanged += (sender, e) => {
+          int val = gpuMemoryOverclockTrackBar.Value * 100;
+          gpuMemoryOverclockValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} MHz");
+          UpdateCheckedState("gpuMemoryOverclockGroup", Strings.SetGpuMemoryOverclockSlider);
+        };
+        gpuMemoryOverclockTrackBar.MouseUp += (sender, e) => {
+          gpuMemoryOverclock = gpuMemoryOverclockTrackBar.Value * 100;
+          Task.Run(() => SetMemoryClockOffset(gpuMemoryOverclock));
+          SaveConfig("GpuMemoryOverclock");
+          UpdateCheckedState("gpuMemoryOverclockGroup", Strings.SetGpuMemoryOverclockSlider);
+        };
+        gpuMemoryOverclockMenu.DropDownItems.Add(gpuMemoryOverclockTrackBar);
+        gpuMemoryOverclockMenu.DropDownItems.Add(gpuMemoryOverclockValueLabel);
+        performanceControlMenu.DropDownItems.Add(gpuMemoryOverclockMenu);
+
         ToolStripMenuItem gpuClockMenu = new ToolStripMenuItem(Strings.GpuClockMenu);
+        gpuClockMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GraphicsBoostClockTip(graphicsBoostClock)) { Enabled = false });
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.Unlimited, "gpuClockGroup", (s, e) => {
           gpuClock = 0;
-          System.Threading.Tasks.Task.Run(() => SetGPUClockReset());
+          Task.Run(() => SetGPUClockReset());
           SaveConfig("GpuClock");
         }, true));
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuClockSlider, "gpuClockGroup", (s, e) => { }, false));
         gpuClockTrackBar = new ToolStripTrackBar();
         gpuClockTrackBar.Minimum = 21;
-        gpuClockTrackBar.Maximum = 250;
+        gpuClockTrackBar.Maximum = (graphicsBoostClock + 300) / 10;
         gpuClockTrackBar.Value = 150;
         gpuClockTrackBar.TickFrequency = gpuClockTrackBar.Maximum - gpuClockTrackBar.Minimum;
         gpuClockTrackBar.Width = 800;
@@ -755,7 +815,7 @@ namespace OmenSuperHub {
 
         gpuClockTrackBar.MouseDown += (sender, e) => {
           gpuClock = gpuClockTrackBar.Value * 10;
-          System.Threading.Tasks.Task.Run(() => SetGPUClockLimit(gpuClock));
+          Task.Run(() => SetGPUClockLimit(gpuClock));
           SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
         };
@@ -768,7 +828,7 @@ namespace OmenSuperHub {
 
         gpuClockTrackBar.MouseUp += (sender, e) => {
           gpuClock = gpuClockTrackBar.Value * 10;
-          System.Threading.Tasks.Task.Run(() => SetGPUClockLimit(gpuClock));
+          Task.Run(() => SetGPUClockLimit(gpuClock));
           SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
         };
@@ -782,7 +842,7 @@ namespace OmenSuperHub {
         maxFrameRateMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfMaxFrameRateTip) { Enabled = false });
         maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "maxFrameRateGroup", (s, e) => {
           maxFrameRate = -1;
-          System.Threading.Tasks.Task.Run(() => NvApiWrapper.NVAPI_SetMaxFrameRate(0));
+          Task.Run(() => NvApiWrapper.NVAPI_SetMaxFrameRate(0));
           SaveConfig("MaxFrameRate");
         }, true));
         maxFrameRateMenu.DropDownItems.Add(CreateMenuItem(Strings.SetMaxFrameRateSlider, "maxFrameRateGroup", (s, e) => { }, false));

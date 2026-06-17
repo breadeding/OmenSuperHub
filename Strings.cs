@@ -249,6 +249,16 @@
     public static string DbVersionMenu => T("DB版本", "DB版本", "DB Version");
     public static string DbNormal => T("普通版本", "普通版本", "Normal DB");
     public static string DbUnlocked => T("解锁版本", "解鎖版本", "Unlocked DB");
+    public static string GpuCoreOverclock => T("GPU核心超频", "GPU核心超頻", "GPU Core Overclock");
+    public static string GpuMemoryOverclock => T("GPU显存超频", "GPU顯存超頻", "GPU Memory Overclock");
+    public static string SetGpuCoreOverclockSlider =>
+        T("拖动滑块设置GPU核心超频 (MHz)", "拖曳滑桿設定GPU核心超頻 (MHz)", "Drag the slider to set the GPU core overclock (MHz).");
+    public static string SetGpuMemoryOverclockSlider =>
+        T("拖动滑块设置GPU显存超频 (MHz)", "拖曳滑桿設定GPU顯存超頻 (MHz)", "Drag the slider to set the GPU memory overclock (MHz).");
+    public static string GraphicsBoostClockTip(int offsetMHz) => T(
+        $"💡默认最大加速频率：{offsetMHz} MHz",
+        $"💡預設最大加速頻率：{offsetMHz} MHz",
+        $"💡 Default maximum boost frequency: {offsetMHz} MHz");
     public static string GpuClockMenu => T("GPU频率限制", "GPU頻率限制", "GPU Clock Limit");
     public static string MaxFrameRateMenu => T("最大帧率", "最大幀率", "Max Frame Rate");
 

@@ -147,12 +147,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 识别显卡节能状态，同时不再自动开关GPU监控</a></li>
+<li>✨ 新增GPU核心与显存超频菜单</a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 保存部分机型参数以避免重复初始化</li>
+<li>⚡ 优化更改预设后悬浮窗显示的延迟</li>
 <p><strong>修复：</strong></p>
-<li>🐛 修复悬浮窗显示中文时标题出现重影的问题</li>
-<li>🐛 修复部分选项英文均为“Normal”导致的混淆</li>
+<li>🐛 修复加载热切换依赖失败导致的异常</li>
 </div>
 
 <p>本项目已开源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -214,12 +213,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
-<li>✨ 辨識顯示卡節能狀態，同時不再自動開關GPU監控</a></li>
+<li>✨ 新增GPU核心與顯存超頻選單</a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ Cache parameters for certain models to avoid redundant initialization</li>
+<li>⚡ 最佳化更改預設後懸浮窗顯示的延遲</li>
 <p><strong>修復：</strong></p>
-<li>🐛 修復懸浮窗顯示中文時標題出現重影的問題</li>
-<li>🐛 修復部分選項英文皆為「Normal」所造成的混淆</li>
+<li>🐛 修復載入熱切換依賴失敗所導致的異常</li>
 </div>
 
 <p>本專案已開源至 Github：<a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>
@@ -281,13 +279,11 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
-<li>✨ Detects the graphics card's power-saving state and no longer automatically toggles GPU monitoring</a></li>
+<li>✨ Added GPU core and VRAM overclocking menu</li>
 <p><strong>Improvements:</strong></p>
-<li>⚡ Cache parameters for certain models to avoid redundant initialization</li>
+<li>⚡ Optimized the display latency of the overlay after changing presets</li>
 <p><strong>Fixes:</strong></p>
-<li>🐛 Fixed an issue where the title appeared to have a ""ghosting"" effect when the floating window displayed Chinese text</li>
-<li>🐛 Fixed confusion caused by multiple options being labeled ""Normal"" in English</li>
-<li>🐛 Fixed an issue where the title appeared to have a ""ghosting"" effect when the floating window displayed Chinese text</li>
+<li>🐛 Fixed an error caused by the failure to load hot-switching dependencies</li>
 </div>
 
 <p>This project is open-source on Github: <a href='https://github.com/breadeding/OmenSuperHub'>https://github.com/breadeding/OmenSuperHub</a></p>

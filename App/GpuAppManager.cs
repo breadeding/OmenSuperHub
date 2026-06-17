@@ -123,6 +123,56 @@ namespace OmenSuperHub {
       }
     }
 
+    public static int GetGraphicsBoostClock() {
+      try {
+        PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
+
+        if (gpus.Length == 0)
+          return 0;
+
+        PhysicalGPU gpu = gpus[0];
+
+        var info = GPUApi.GetAllClockFrequencies(
+            gpu.Handle,
+            new ClockFrequenciesV2(ClockType.BoostClock));
+
+        foreach (var kvp in info.Clocks) {
+          if (kvp.Key == PublicClockDomain.Graphics &&
+              kvp.Value.IsPresent) {
+            return (int)(kvp.Value.Frequency / 1000);
+          }
+        }
+      } catch {
+      }
+
+      return 0;
+    }
+
+    public static int GetMemoryBoostClock() {
+      try {
+        PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
+
+        if (gpus.Length == 0)
+          return 0;
+
+        PhysicalGPU gpu = gpus[0];
+
+        var info = GPUApi.GetAllClockFrequencies(
+            gpu.Handle,
+            new ClockFrequenciesV2(ClockType.BoostClock));
+
+        foreach (var kvp in info.Clocks) {
+          if (kvp.Key == PublicClockDomain.Memory &&
+              kvp.Value.IsPresent) {
+            return (int)(kvp.Value.Frequency / 1000);
+          }
+        }
+      } catch {
+      }
+
+      return 0;
+    }
+
     public static List<GpuAppInfo> GetGpuApps() {
       var apps = new List<GpuAppInfo>();
       try {
@@ -317,6 +367,14 @@ namespace OmenSuperHub {
 
     public static void SetGPUClockReset() {
       ExecuteCommand("nvidia-smi --reset-gpu-clocks");
+    }
+
+    public static void SetMemoryClockLimit(int freq) {
+      ExecuteCommand("nvidia-smi --lock-memory-clocks=0," + freq);
+    }
+
+    public static void SetMemoryClockReset() {
+      ExecuteCommand("nvidia-smi --reset-memory-clocks");
     }
 
     public static int GetGpuTemperatureTarget() {
