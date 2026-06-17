@@ -424,13 +424,15 @@ namespace OmenSuperHub {
 
       performanceControlMenu = new ToolStripMenuItem(Strings.PerfControl);
       // 图形模式
-      if (NvGraphicsMode == GraphicsSwitcherMode.Optimus || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
-        var hotSwitchItem = CreateMenuItem(Strings.HotSwitch, null, (s, e) => {
-          if (NvApiWrapper.NVAPI_SYS_UIControl(true) != 0)
-            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DdsInitFail, Strings.Warning, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }, false);
-        hotSwitchItem.CheckOnClick = false;
-        performanceControlMenu.DropDownItems.Add(hotSwitchItem);
+      if (supportHotSwitch) {
+        if (NvGraphicsMode == GraphicsSwitcherMode.Optimus || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
+          var hotSwitchItem = CreateMenuItem(Strings.HotSwitch, null, (s, e) => {
+            if (NvApiWrapper.NVAPI_SYS_UIControl(true) != 0)
+              MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DdsInitFail, Strings.Warning, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          }, false);
+          hotSwitchItem.CheckOnClick = false;
+          performanceControlMenu.DropDownItems.Add(hotSwitchItem);
+        }
       }
       ToolStripMenuItem graphicsModeControlMenu = null;
       if (hasNVIDIAGpu) {

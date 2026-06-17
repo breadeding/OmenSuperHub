@@ -134,6 +134,9 @@
     <Reference Include="Microsoft.Win32.TaskScheduler, Version=2.12.1.0, Culture=neutral, PublicKeyToken=2806574b39b74d4b, processorArchitecture=MSIL">
       <HintPath>packages\TaskScheduler.2.12.2\lib\net48\Microsoft.Win32.TaskScheduler.dll</HintPath>
     </Reference>
+    <Reference Include="NvAPIWrapper, Version=0.8.1.100, Culture=neutral, PublicKeyToken=310fd07b25df79b3, processorArchitecture=MSIL">
+      <HintPath>packages\NvAPIWrapper.Net.0.8.1.101\lib\net45\NvAPIWrapper.dll</HintPath>
+    </Reference>
     <Reference Include="PerformanceControl">
       <HintPath>Resources\PerformanceControl.dll</HintPath>
     </Reference>

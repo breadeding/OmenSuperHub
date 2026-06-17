@@ -17,6 +17,10 @@ using HP.Omen.Core.Common.NVidiaApi;
 using HP.Omen.Core.Model.Device.Enums;
 using HP.Omen.Core.Model.Device.Models;
 using Microsoft.Win32;
+using NvAPIWrapper.GPU;
+using NvAPIWrapper.Native;
+using NvAPIWrapper.Native.GPU;
+using NvAPIWrapper.Native.GPU.Structures;
 using static HP.Omen.Core.Model.Device.Models.GraphicsSwitcherHelper;
 using static OmenSuperHub.GpuAppManager;
 using static OmenSuperHub.OmenHardware;
@@ -141,7 +145,7 @@ namespace OmenSuperHub {
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
     static string systemSSID, sku, biosVersion;
-    static bool supportAni = false, supportDojo = false, supportLightbar = false;
+    static bool supportAni = false, supportDojo = false, supportLightbar = false, supportHotSwitch = false;
     static bool isCPUPowerControlSupported = false, isAmbientSensorSupported = false;
     static DeviceEnums.DeviceType deviceType;
     static string deviceDisplayName;
@@ -339,6 +343,23 @@ namespace OmenSuperHub {
         //Console.WriteLine($"IsGpuSupport: {OmenHsaClient.IsGpuSupport}");
         //Console.WriteLine($"IsIntelGraphics: {OmenHsaClient.IsIntelGraphics()}");
 
+        //Console.WriteLine($"{GetCoreClockOffset()}");
+        //Console.WriteLine($"{GetMemoryClockOffset()}");
+        //PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
+        //if (gpus.Length == 0)
+        //  throw new Exception("未找到 GPU");
+
+        //PhysicalGPU gpu = gpus[0];
+        //var info = GPUApi.GetAllClockFrequencies(gpu.Handle, new ClockFrequenciesV2(ClockType.BoostClock));
+
+        //foreach (var kvp in info.Clocks) {
+        //  var clockInfo = kvp.Value;          // ClockDomainInfo
+        //  if (clockInfo.IsPresent) {
+        //    // 使用 kvp.Key 作为域标识（枚举名称或整数值）
+        //    Console.WriteLine($"{kvp.Key}: {clockInfo.Frequency / 1000} MHz");
+        //    // 如果喜欢整数，可改为：Console.WriteLine($"{(int)kvp.Key}: {clockInfo.Frequency / 1000} MHz");
+        //  }
+        //}
         Logger.Info($"version: {version}");
         Application.Run();
       }
@@ -422,7 +443,10 @@ namespace OmenSuperHub {
       // 提前加载，之后 DllImport 会自动复用
       IntPtr handle = LoadLibrary(outputPath);
       if (handle == IntPtr.Zero) {
-        throw new Exception($"LoadLibrary 失败，错误码: {Marshal.GetLastWin32Error()}");
+        Logger.Error($"LoadLibrary 失败，错误码: {Marshal.GetLastWin32Error()}");
+      }
+      else {
+        supportHotSwitch = true;
       }
     }
 

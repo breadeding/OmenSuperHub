@@ -8,12 +8,119 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using NvAPIWrapper;
+using NvAPIWrapper.GPU;
+using NvAPIWrapper.Native;
+using NvAPIWrapper.Native.GPU;
+using NvAPIWrapper.Native.GPU.Structures;
 
 namespace OmenSuperHub {
   public static class GpuAppManager {
     public class GpuAppInfo {
       public int ProcessId { get; set; }
       public string ProcessName { get; set; }
+    }
+
+    public static void SetCoreClockOffset(int offsetMHz) {
+      NVIDIA.Initialize();
+
+      try {
+        PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
+        if (gpus.Length == 0)
+          throw new Exception("未找到 GPU");
+
+        PhysicalGPU gpu = gpus[0];
+
+        // 构造时钟偏移条目，单位 kHz
+        var clockDelta = new PerformanceStates20ClockEntryV1(
+            PublicClockDomain.Graphics,
+            new PerformanceStates20ParameterDelta(offsetMHz * 1000)
+        );
+
+        // 第三个参数类型是 PerformanceStates20BaseVoltageEntryV1[]
+        var pState = new PerformanceStates20InfoV1.PerformanceState20(
+            PerformanceStateId.P0_3DPerformance,
+            new PerformanceStates20ClockEntryV1[] { clockDelta },
+            new PerformanceStates20BaseVoltageEntryV1[0]
+        );
+
+        // clocksCount=1，baseVoltagesCount=0
+        var writeInfo = new PerformanceStates20InfoV1(
+            new PerformanceStates20InfoV1.PerformanceState20[] { pState },
+            1u,
+            0u
+        );
+
+        GPUApi.SetPerformanceStates20(gpu.Handle, writeInfo);
+      } finally {
+        NVIDIA.Unload();
+      }
+    }
+
+    public static void SetMemoryClockOffset(int offsetMHz) {
+      NVIDIA.Initialize();
+      try {
+        PhysicalGPU gpu = PhysicalGPU.GetPhysicalGPUs()[0];
+
+        var clockDelta = new PerformanceStates20ClockEntryV1(
+            PublicClockDomain.Memory,                              // 显存时钟域
+            new PerformanceStates20ParameterDelta(offsetMHz * 1000)
+        );
+
+        var pState = new PerformanceStates20InfoV1.PerformanceState20(
+            PerformanceStateId.P0_3DPerformance,
+            new PerformanceStates20ClockEntryV1[] { clockDelta },
+            new PerformanceStates20BaseVoltageEntryV1[0]
+        );
+
+        var writeInfo = new PerformanceStates20InfoV1(
+            new PerformanceStates20InfoV1.PerformanceState20[] { pState },
+            1u,
+            0u
+        );
+
+        GPUApi.SetPerformanceStates20(gpu.Handle, writeInfo);
+      } finally { NVIDIA.Unload(); }
+    }
+
+    public static int GetCoreClockOffset() {
+      NVIDIA.Initialize();
+      try {
+        PhysicalGPU gpu = PhysicalGPU.GetPhysicalGPUs()[0];
+        var pstatesInfo = GPUApi.GetPerformanceStates20(gpu.Handle);
+
+        // 从 Clocks 字典中获取 P0 状态的时钟条目数组
+        if (pstatesInfo.Clocks.TryGetValue(PerformanceStateId.P0_3DPerformance, out var clockEntries)) {
+          foreach (var clock in clockEntries) {
+            if (clock.DomainId == PublicClockDomain.Graphics) {
+              // FrequencyDeltaInkHz.DeltaValue 即为当前偏移量（单位 kHz）
+              return clock.FrequencyDeltaInkHz.DeltaValue / 1000; // 转为 MHz
+            }
+          }
+        }
+        return 0;
+      } finally {
+        NVIDIA.Unload();
+      }
+    }
+
+    public static int GetMemoryClockOffset() {
+      NVIDIA.Initialize();
+      try {
+        PhysicalGPU gpu = PhysicalGPU.GetPhysicalGPUs()[0];
+        var pstatesInfo = GPUApi.GetPerformanceStates20(gpu.Handle);
+
+        if (pstatesInfo.Clocks.TryGetValue(PerformanceStateId.P0_3DPerformance, out var clockEntries)) {
+          foreach (var clock in clockEntries) {
+            if (clock.DomainId == PublicClockDomain.Memory) {
+              return clock.FrequencyDeltaInkHz.DeltaValue / 1000;
+            }
+          }
+        }
+        return 0;
+      } finally {
+        NVIDIA.Unload();
+      }
     }
 
     public static List<GpuAppInfo> GetGpuApps() {
