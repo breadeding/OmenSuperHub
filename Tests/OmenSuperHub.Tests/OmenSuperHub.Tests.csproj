@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="false" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9D3EB49C-B409-4BC6-9E56-9D939DF3138D}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>OmenSuperHub.Tests</RootNamespace>
+    <AssemblyName>OmenSuperHub.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <LangVersion>7.3</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="HP.Omen.Core.Common">
+      <HintPath>..\..\Resources\HP.Omen.Core.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="HP.Omen.Core.Model.Device">
+      <HintPath>..\..\Resources\HP.Omen.Core.Model.Device.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\..\App\Models\OperationResult.cs">
+      <Link>App\Models\OperationResult.cs</Link>
+    </Compile>
+    <Compile Include="..\..\App\Models\PresetSettings.cs">
+      <Link>App\Models\PresetSettings.cs</Link>
+    </Compile>
+    <Compile Include="..\..\App\Models\MonitorSettings.cs">
+      <Link>App\Models\MonitorSettings.cs</Link>
+    </Compile>
+    <Compile Include="..\..\App\Models\HardwareMonitorSnapshot.cs">
+      <Link>App\Models\HardwareMonitorSnapshot.cs</Link>
+    </Compile>
+    <Compile Include="..\..\App\Services\AppSettingsService.cs">
+      <Link>App\Services\AppSettingsService.cs</Link>
+    </Compile>
+    <Compile Include="..\..\App\Services\PresetService.cs">
+      <Link>App\Services\PresetService.cs</Link>
+    </Compile>
+    <Compile Include="..\..\App\Logger.cs">
+      <Link>App\Logger.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
