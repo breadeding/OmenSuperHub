@@ -602,6 +602,12 @@
     // ─────────────────────────────────────────────────────────────────────────
     public static string MonitorCpuLabel => T("CPU", "CPU", "CPU");
     public static string MonitorGpuLabel => T("GPU", "GPU", "GPU");
+    public static string MonitorCpuTempLabel => T("CPU温度", "CPU溫度", "CPU Temp");
+    public static string MonitorCpuPowerLabel => T("CPU功率", "CPU功率", "CPU Power");
+    public static string MonitorCpuFrequencyLabel => T("CPU0频率", "CPU0頻率", "CPU0 Frequency");
+    public static string MonitorGpuTempLabel => T("GPU温度", "GPU溫度", "GPU Temp");
+    public static string MonitorGpuPowerLabel => T("GPU功率", "GPU功率", "GPU Power");
+    public static string MonitorGpuFrequencyLabel => T("GPU频率", "GPU頻率", "GPU Frequency");
     public static string MonitorFanLabel => T("风扇", "風扇", "Fan");
     public static string GpuPoweredOff => T("节能", "節能", "PoweredOff");
     public static string MonitorPrepareLabel => T("数据获取中...", "數據獲取中...", "Retrieving data...");

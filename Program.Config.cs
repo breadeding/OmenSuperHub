@@ -701,6 +701,12 @@ namespace OmenSuperHub {
               key.SetValue("MonitorFan", monitorFan);
               key.SetValue("MonitorRefreshRate", monitorRefreshRate);
               key.SetValue("TempDisplayMode", tempDisplayMode);
+              key.SetValue("ShowCPUTemp", showCPUTemp);
+              key.SetValue("ShowCPUPower", showCPUPower);
+              key.SetValue("ShowCPUFrequency", showCPUFrequency);
+              key.SetValue("ShowGPUTemp", showGPUTemp);
+              key.SetValue("ShowGPUPower", showGPUPower);
+              key.SetValue("ShowGPUFrequency", showGPUFrequency);
               key.SetValue("FloatingBarLoc", floatingBarLoc);
               key.SetValue("FloatingBar", floatingBar);
               key.SetValue("FloatingBarScreen", floatingBarScreen);
@@ -800,6 +806,24 @@ namespace OmenSuperHub {
                   break;
                 case "TempDisplayMode":
                   key.SetValue("TempDisplayMode", tempDisplayMode);
+                  break;
+                case "ShowCPUTemp":
+                  key.SetValue("ShowCPUTemp", showCPUTemp);
+                  break;
+                case "ShowCPUPower":
+                  key.SetValue("ShowCPUPower", showCPUPower);
+                  break;
+                case "ShowCPUFrequency":
+                  key.SetValue("ShowCPUFrequency", showCPUFrequency);
+                  break;
+                case "ShowGPUTemp":
+                  key.SetValue("ShowGPUTemp", showGPUTemp);
+                  break;
+                case "ShowGPUPower":
+                  key.SetValue("ShowGPUPower", showGPUPower);
+                  break;
+                case "ShowGPUFrequency":
+                  key.SetValue("ShowGPUFrequency", showGPUFrequency);
                   break;
                 case "FloatingBarSize":
                   key.SetValue("FloatingBarSize", textSize);
@@ -1322,6 +1346,19 @@ namespace OmenSuperHub {
 
           autoFanProtect = (string)key.GetValue("AutoFanProtect", "on");
           UpdateCheckedState("autoFanProtectGroup", autoFanProtect == "on" ? Strings.FanAutoProtectOn : Strings.FanAutoProtectOff);
+
+          showCPUTemp = Convert.ToBoolean(key.GetValue("ShowCPUTemp", true));
+          showCPUPower = Convert.ToBoolean(key.GetValue("ShowCPUPower", true));
+          showCPUFrequency = Convert.ToBoolean(key.GetValue("ShowCPUFrequency", true));
+          showGPUTemp = Convert.ToBoolean(key.GetValue("ShowGPUTemp", true));
+          showGPUPower = Convert.ToBoolean(key.GetValue("ShowGPUPower", true));
+          showGPUFrequency = Convert.ToBoolean(key.GetValue("ShowGPUFrequency", true));
+          SetMenuItemChecked("showCPUTempGroup", Strings.MonitorCpuTempLabel, showCPUTemp);
+          SetMenuItemChecked("showCPUPowerGroup", Strings.MonitorCpuPowerLabel, showCPUPower);
+          SetMenuItemChecked("showCPUFrequencyGroup", Strings.MonitorCpuFrequencyLabel, showCPUFrequency);
+          SetMenuItemChecked("showGPUTempGroup", Strings.MonitorGpuTempLabel, showGPUTemp);
+          SetMenuItemChecked("showGPUPowerGroup", Strings.MonitorGpuPowerLabel, showGPUPower);
+          SetMenuItemChecked("showGPUFrequencyGroup", Strings.MonitorGpuFrequencyLabel, showGPUFrequency);
 
           appLanguage = (string)key.GetValue("AppLanguage", "zh-CN");
           RestoreLanguageChecked();

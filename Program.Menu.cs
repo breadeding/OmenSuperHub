@@ -1007,6 +1007,21 @@ namespace OmenSuperHub {
       }
 
       menu.Items.Add(new ToolStripSeparator()); // Separator between groups
+      ToolStripMenuItem CreateMonitorMetricItem(string text, string group, Func<bool> getValue, Action<bool> setValue, string configName) {
+        var item = new ToolStripMenuItem(text) {
+          Tag = group,
+          Checked = getValue()
+        };
+        item.Click += (s, e) => {
+          bool value = !getValue();
+          setValue(value);
+          item.Checked = value;
+          SaveConfig(configName);
+          RefreshMonitorDisplay();
+        };
+        return item;
+      }
+
       ToolStripMenuItem hardwareMonitorMenu = new ToolStripMenuItem(Strings.HwMonitor);
       ToolStripMenuItem monitorCPUMenu = new ToolStripMenuItem(Strings.MonitorCpuLabel);
       monitorCPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorCpuOn, "monitorCPUGroup", (s, e) => {
@@ -1014,7 +1029,9 @@ namespace OmenSuperHub {
         monitorCPU = true;
         cpuTempReady = false; // 等待获取到温度后再参与风扇控制
         rawPowerCPU = 0f;     // 清除可能残留的脏功率值
+        rawFrequencyCPU = 0f;
         CPUPower = 0f;
+        CPUFrequency = 0f;
         if (wasAllOff) {
           // 从全关状态重启监控进程
           tempReady = false;
@@ -1036,7 +1053,9 @@ namespace OmenSuperHub {
         monitorCPU = false;
         cpuTempReady = false;
         rawPowerCPU = 0f;  // 关闭时清零，避免重新开启时读到旧值
+        rawFrequencyCPU = 0f;
         CPUPower = 0f;
+        CPUFrequency = 0f;
         SetCpuMonitorState(false);
         // 若CPU和GPU均已关闭，停止监控进程
         if (!monitorCPU && !monitorGPU) {
@@ -1045,6 +1064,10 @@ namespace OmenSuperHub {
         SaveConfig("MonitorCPU");
         // 手动更新勾选状态（因为提前 return 会跳过 CreateMenuItem 的自动勾选）
       }, false));
+      monitorCPUMenu.DropDownItems.Add(new ToolStripSeparator());
+      monitorCPUMenu.DropDownItems.Add(CreateMonitorMetricItem(Strings.MonitorCpuTempLabel, "showCPUTempGroup", () => showCPUTemp, value => showCPUTemp = value, "ShowCPUTemp"));
+      monitorCPUMenu.DropDownItems.Add(CreateMonitorMetricItem(Strings.MonitorCpuPowerLabel, "showCPUPowerGroup", () => showCPUPower, value => showCPUPower = value, "ShowCPUPower"));
+      monitorCPUMenu.DropDownItems.Add(CreateMonitorMetricItem(Strings.MonitorCpuFrequencyLabel, "showCPUFrequencyGroup", () => showCPUFrequency, value => showCPUFrequency = value, "ShowCPUFrequency"));
       hardwareMonitorMenu.DropDownItems.Add(monitorCPUMenu);
       if (hasNVIDIAGpu) {
         ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem(Strings.MonitorGpuLabel);
@@ -1053,7 +1076,9 @@ namespace OmenSuperHub {
           monitorGPU = true;
           gpuTempReady = false; // 等待获取到温度后再参与风扇控制
           rawPowerGPU = 0f;     // 清除可能残留的脏功率值
+          rawFrequencyGPU = 0f;
           GPUPower = 0f;
+          GPUFrequency = 0f;
           if (hasStopAuto)
             autoStopMonitorGPU = false;
           //重置自动开启标志
@@ -1064,7 +1089,9 @@ namespace OmenSuperHub {
             tempReady = false;
             cpuTempReady = false;
             rawPowerCPU = 0f;
+            rawFrequencyCPU = 0f;
             CPUPower = 0f;
+            CPUFrequency = 0f;
             StartHardwareMonitor();
           } else {
             SetGpuMonitorState(true);
@@ -1082,7 +1109,9 @@ namespace OmenSuperHub {
           monitorGPU = false;
           gpuTempReady = false;
           rawPowerGPU = 0f;  // 关闭时清零，避免重新开启时读到旧值
+          rawFrequencyGPU = 0f;
           GPUPower = 0f;
+          GPUFrequency = 0f;
           if (hasStartAuto)
             autoStartMonitorGPU = false;
           //重置自动关闭标志
@@ -1095,6 +1124,10 @@ namespace OmenSuperHub {
           }
           SaveConfig("MonitorGPU");
         }, false));
+        monitorGPUMenu.DropDownItems.Add(new ToolStripSeparator());
+        monitorGPUMenu.DropDownItems.Add(CreateMonitorMetricItem(Strings.MonitorGpuTempLabel, "showGPUTempGroup", () => showGPUTemp, value => showGPUTemp = value, "ShowGPUTemp"));
+        monitorGPUMenu.DropDownItems.Add(CreateMonitorMetricItem(Strings.MonitorGpuPowerLabel, "showGPUPowerGroup", () => showGPUPower, value => showGPUPower = value, "ShowGPUPower"));
+        monitorGPUMenu.DropDownItems.Add(CreateMonitorMetricItem(Strings.MonitorGpuFrequencyLabel, "showGPUFrequencyGroup", () => showGPUFrequency, value => showGPUFrequency = value, "ShowGPUFrequency"));
         hardwareMonitorMenu.DropDownItems.Add(monitorGPUMenu);
       }
       ToolStripMenuItem monitorFanMenu = new ToolStripMenuItem(Strings.MonitorFanLabel);
@@ -2257,6 +2290,24 @@ namespace OmenSuperHub {
       }
       // 从ContextMenuStrip的根菜单项开始递归
       UpdateMenuItemsCheckedState(trayIcon.ContextMenuStrip.Items, menuItemToCheck);
+    }
+
+    static void SetMenuItemChecked(string group, string itemText, bool isChecked) {
+      if (trayIcon?.ContextMenuStrip == null) return;
+
+      ToolStripMenuItem FindExact(ToolStripItemCollection items) {
+        foreach (ToolStripMenuItem item in items.OfType<ToolStripMenuItem>()) {
+          if (item.Text == itemText && string.Equals(item.Tag as string, group)) return item;
+          if (item.HasDropDownItems) {
+            var found = FindExact(item.DropDownItems);
+            if (found != null) return found;
+          }
+        }
+        return null;
+      }
+
+      var menuItem = FindExact(trayIcon.ContextMenuStrip.Items);
+      if (menuItem != null) menuItem.Checked = isChecked;
     }
 
     // 递归查找指定文本的菜单项
