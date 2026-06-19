@@ -62,7 +62,7 @@
     public static string PresetCustom1 => T("自定义预设1", "自定義預設1", "Custom 1");
     public static string PresetCustom2 => T("自定义预设2", "自定義預設2", "Custom 2");
     public static string PresetCustom3 => T("自定义预设3", "自定義預設3", "Custom 3");
-    public static string ActivePreset => T("预设：", "預設：", "Preset: ");
+    public static string ActivePreset => T("预设 ", "預設 ", "Preset ");
     public static string RenamePreset => T("重命名", "重新命名", "Rename");
     public static string RenamePresetTitle => T("重命名预设", "重新命名預設", "Rename Preset");
     public static string RenamePresetPrompt => T("请输入新的预设名称：", "請輸入新的預設名稱：", "Please enter new preset name:");

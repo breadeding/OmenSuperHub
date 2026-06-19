@@ -663,9 +663,24 @@ namespace OmenSuperHub {
       return resultSpeed;
     }
 
+    static bool IsBuiltInPreset(string presetKey) {
+      return presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse";
+    }
+
+    static bool IsMonitorMetricConfig(string configName) {
+      return configName == "ShowCPUTemp" || configName == "ShowCPUPower" || configName == "ShowCPUFrequency" ||
+             configName == "ShowGPUTemp" || configName == "ShowGPUPower" || configName == "ShowGPUFrequency";
+    }
+
     static void SaveConfig(string configName = null) {
       // 内置预设下调整设置时，不再强制切换到 Custom1，直接保存注册表（不关联任何预设子键）
       try {
+        // 六项监控显示开关在自定义预设下只写入当前预设，避免污染内置预设的全局值。
+        if (!IsBuiltInPreset(currentPreset) && IsMonitorMetricConfig(configName)) {
+          SavePresetToRegistry(currentPreset);
+          return;
+        }
+
         using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\OmenSuperHub")) {
           if (key != null) {
             if (configName == null) {
@@ -701,12 +716,14 @@ namespace OmenSuperHub {
               key.SetValue("MonitorFan", monitorFan);
               key.SetValue("MonitorRefreshRate", monitorRefreshRate);
               key.SetValue("TempDisplayMode", tempDisplayMode);
-              key.SetValue("ShowCPUTemp", showCPUTemp);
-              key.SetValue("ShowCPUPower", showCPUPower);
-              key.SetValue("ShowCPUFrequency", showCPUFrequency);
-              key.SetValue("ShowGPUTemp", showGPUTemp);
-              key.SetValue("ShowGPUPower", showGPUPower);
-              key.SetValue("ShowGPUFrequency", showGPUFrequency);
+              if (IsBuiltInPreset(currentPreset)) {
+                key.SetValue("ShowCPUTemp", showCPUTemp);
+                key.SetValue("ShowCPUPower", showCPUPower);
+                key.SetValue("ShowCPUFrequency", showCPUFrequency);
+                key.SetValue("ShowGPUTemp", showGPUTemp);
+                key.SetValue("ShowGPUPower", showGPUPower);
+                key.SetValue("ShowGPUFrequency", showGPUFrequency);
+              }
               key.SetValue("FloatingBarLoc", floatingBarLoc);
               key.SetValue("FloatingBar", floatingBar);
               key.SetValue("FloatingBarScreen", floatingBarScreen);
@@ -926,6 +943,58 @@ namespace OmenSuperHub {
       } catch (Exception ex) {
         Logger.Error($"LoadPresetFields({presetKey}): {ex.Message}");
       }
+    }
+
+    static void LoadMonitorMetricSettings(string presetKey) {
+      bool globalShowCPUTemp = true;
+      bool globalShowCPUPower = true;
+      bool globalShowCPUFrequency = true;
+      bool globalShowGPUTemp = true;
+      bool globalShowGPUPower = true;
+      bool globalShowGPUFrequency = true;
+
+      try {
+        using (RegistryKey globalKey = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+          if (globalKey != null) {
+            globalShowCPUTemp = Convert.ToBoolean(globalKey.GetValue("ShowCPUTemp", true));
+            globalShowCPUPower = Convert.ToBoolean(globalKey.GetValue("ShowCPUPower", true));
+            globalShowCPUFrequency = Convert.ToBoolean(globalKey.GetValue("ShowCPUFrequency", true));
+            globalShowGPUTemp = Convert.ToBoolean(globalKey.GetValue("ShowGPUTemp", true));
+            globalShowGPUPower = Convert.ToBoolean(globalKey.GetValue("ShowGPUPower", true));
+            globalShowGPUFrequency = Convert.ToBoolean(globalKey.GetValue("ShowGPUFrequency", true));
+          }
+        }
+
+        if (IsBuiltInPreset(presetKey)) {
+          showCPUTemp = globalShowCPUTemp;
+          showCPUPower = globalShowCPUPower;
+          showCPUFrequency = globalShowCPUFrequency;
+          showGPUTemp = globalShowGPUTemp;
+          showGPUPower = globalShowGPUPower;
+          showGPUFrequency = globalShowGPUFrequency;
+          return;
+        }
+
+        using (RegistryKey presetKeyHandle = Registry.CurrentUser.OpenSubKey($@"Software\OmenSuperHub\{presetKey}")) {
+          showCPUTemp = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowCPUTemp", globalShowCPUTemp) ?? globalShowCPUTemp);
+          showCPUPower = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowCPUPower", globalShowCPUPower) ?? globalShowCPUPower);
+          showCPUFrequency = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowCPUFrequency", globalShowCPUFrequency) ?? globalShowCPUFrequency);
+          showGPUTemp = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowGPUTemp", globalShowGPUTemp) ?? globalShowGPUTemp);
+          showGPUPower = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowGPUPower", globalShowGPUPower) ?? globalShowGPUPower);
+          showGPUFrequency = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowGPUFrequency", globalShowGPUFrequency) ?? globalShowGPUFrequency);
+        }
+      } catch (Exception ex) {
+        Logger.Error($"LoadMonitorMetricSettings({presetKey}): {ex.Message}");
+      }
+    }
+
+    static void UpdateMonitorMetricCheckedStates() {
+      SetMenuItemChecked("showCPUTempGroup", Strings.MonitorCpuTempLabel, showCPUTemp);
+      SetMenuItemChecked("showCPUPowerGroup", Strings.MonitorCpuPowerLabel, showCPUPower);
+      SetMenuItemChecked("showCPUFrequencyGroup", Strings.MonitorCpuFrequencyLabel, showCPUFrequency);
+      SetMenuItemChecked("showGPUTempGroup", Strings.MonitorGpuTempLabel, showGPUTemp);
+      SetMenuItemChecked("showGPUPowerGroup", Strings.MonitorGpuPowerLabel, showGPUPower);
+      SetMenuItemChecked("showGPUFrequencyGroup", Strings.MonitorGpuFrequencyLabel, showGPUFrequency);
     }
 
     /// <summary>
@@ -1188,7 +1257,12 @@ namespace OmenSuperHub {
         LoadPresetFields(targetPreset);
       }
 
-      SaveConfig();                                          // 持久化到注册表
+      LoadMonitorMetricSettings(targetPreset);
+      UpdateMonitorMetricCheckedStates();
+      if (IsBuiltInPreset(targetPreset))
+        SaveConfig();                                        // 内置预设沿用主键保存路径
+      else
+        SaveConfig("CurrentPreset");                         // 切换自定义预设时只记录当前项，不回写旧配置
       var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
       if (item != null)
         UpdateCheckedState("presetsGroup", null, item);
@@ -1263,6 +1337,7 @@ namespace OmenSuperHub {
           } else {
             LoadPresetFields(currentPreset);
           }
+          LoadMonitorMetricSettings(currentPreset);
 
           var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
           if (item != null)
@@ -1347,18 +1422,7 @@ namespace OmenSuperHub {
           autoFanProtect = (string)key.GetValue("AutoFanProtect", "on");
           UpdateCheckedState("autoFanProtectGroup", autoFanProtect == "on" ? Strings.FanAutoProtectOn : Strings.FanAutoProtectOff);
 
-          showCPUTemp = Convert.ToBoolean(key.GetValue("ShowCPUTemp", true));
-          showCPUPower = Convert.ToBoolean(key.GetValue("ShowCPUPower", true));
-          showCPUFrequency = Convert.ToBoolean(key.GetValue("ShowCPUFrequency", true));
-          showGPUTemp = Convert.ToBoolean(key.GetValue("ShowGPUTemp", true));
-          showGPUPower = Convert.ToBoolean(key.GetValue("ShowGPUPower", true));
-          showGPUFrequency = Convert.ToBoolean(key.GetValue("ShowGPUFrequency", true));
-          SetMenuItemChecked("showCPUTempGroup", Strings.MonitorCpuTempLabel, showCPUTemp);
-          SetMenuItemChecked("showCPUPowerGroup", Strings.MonitorCpuPowerLabel, showCPUPower);
-          SetMenuItemChecked("showCPUFrequencyGroup", Strings.MonitorCpuFrequencyLabel, showCPUFrequency);
-          SetMenuItemChecked("showGPUTempGroup", Strings.MonitorGpuTempLabel, showGPUTemp);
-          SetMenuItemChecked("showGPUPowerGroup", Strings.MonitorGpuPowerLabel, showGPUPower);
-          SetMenuItemChecked("showGPUFrequencyGroup", Strings.MonitorGpuFrequencyLabel, showGPUFrequency);
+          UpdateMonitorMetricCheckedStates();
 
           appLanguage = (string)key.GetValue("AppLanguage", "zh-CN");
           RestoreLanguageChecked();
@@ -1397,6 +1461,12 @@ namespace OmenSuperHub {
           key.SetValue("MonitorFan", monitorFan);
           key.SetValue("MonitorRefreshRate", monitorRefreshRate);
           key.SetValue("TempDisplayMode", tempDisplayMode);
+          key.SetValue("ShowCPUTemp", showCPUTemp);
+          key.SetValue("ShowCPUPower", showCPUPower);
+          key.SetValue("ShowCPUFrequency", showCPUFrequency);
+          key.SetValue("ShowGPUTemp", showGPUTemp);
+          key.SetValue("ShowGPUPower", showGPUPower);
+          key.SetValue("ShowGPUFrequency", showGPUFrequency);
         }
       } catch { }
     }

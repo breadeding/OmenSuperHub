@@ -1439,24 +1439,100 @@ namespace OmenSuperHub {
       return GetPresetDisplayName(currentPreset);
     }
 
+    const int NotifyIconTextLimit = 63;
+
+    static List<string> BuildTrayMonitorLines() {
+      var lines = new List<string>();
+
+      if (monitorCPU && (showCPUTemp || showCPUPower || showCPUFrequency)) {
+        if (cpuTempReady || CPUPower > 0 || CPUFrequency > 0) {
+          var cpuParts = new List<string>();
+          if (showCPUTemp && cpuTempReady) cpuParts.Add($"{CPUTemp:F0}°C");
+          if (showCPUPower && CPUPower > 0) cpuParts.Add($"{CPUPower:F0}W");
+          if (showCPUFrequency && CPUFrequency > 0) cpuParts.Add($"{CPUFrequency / 1000f:F1}G");
+          if (cpuParts.Count > 0) lines.Add($"CPU {string.Join(" ", cpuParts)}");
+          else if (pawnIOState == "RUNNING") lines.Add($"CPU {Strings.MonitorPrepareLabel}");
+        } else if (pawnIOState == "RUNNING") {
+          lines.Add($"CPU {Strings.MonitorPrepareLabel}");
+        } else if (pawnIOState.Length > 0) {
+          lines.Add($"CPU PawnIO {pawnIOState}");
+        }
+      }
+
+      if (monitorGPU && (showGPUTemp || showGPUPower || showGPUFrequency)) {
+        if (pawnIOState == "RUNNING" && !gpuTempReady) {
+          lines.Add(rawPowerGPU < 0
+            ? $"GPU {Strings.GpuPoweredOff}"
+            : $"GPU {Strings.MonitorPrepareLabel}");
+        } else if (pawnIOState.Length > 0) {
+          var gpuParts = new List<string>();
+          if (showGPUTemp && gpuTempReady) gpuParts.Add($"{GPUTemp:F0}°C");
+          if (showGPUPower) gpuParts.Add($"{GPUPower:F0}W");
+          if (showGPUFrequency && GPUFrequency > 0) gpuParts.Add($"{GPUFrequency / 1000f:F1}G");
+          if (gpuParts.Count > 0) lines.Add($"GPU {string.Join(" ", gpuParts)}");
+          else if (pawnIOState == "RUNNING") lines.Add($"GPU {Strings.MonitorPrepareLabel}");
+        }
+      }
+
+      if (monitorFan) {
+        int fanCount = Is3FanNb ? 3 : 2;
+        var fanParts = new List<string>();
+        for (int i = 0; i < fanCount; i++)
+          fanParts.Add((fanSpeedNow[i] * 100).ToString(CultureInfo.CurrentCulture));
+        lines.Add($"Fan {string.Join(" ", fanParts)}");
+      }
+
+      if (lines.Count == 0) lines.Add(Strings.MonitorClosed);
+      return lines;
+    }
+
+    static string EllipsizeUnicode(string value, int maxLength) {
+      if (string.IsNullOrEmpty(value) || value.Length <= maxLength) return value ?? "";
+      if (maxLength <= 0) return "";
+      if (maxLength == 1) return "…";
+
+      int safeEnd = 0;
+      int[] elementIndexes = StringInfo.ParseCombiningCharacters(value);
+      for (int i = 0; i < elementIndexes.Length; i++) {
+        int elementEnd = i + 1 < elementIndexes.Length ? elementIndexes[i + 1] : value.Length;
+        if (elementEnd > maxLength - 1) break;
+        safeEnd = elementEnd;
+      }
+      return value.Substring(0, safeEnd) + "…";
+    }
+
+    static string FormatTrayIconText(string activePresetLabel, string presetName,
+        IList<string> monitorLines, int maxLength) {
+      string monitor = string.Join("\n", monitorLines ?? new List<string>());
+      if (monitor.Length > maxLength)
+        return EllipsizeUnicode(monitor, maxLength);
+
+      string presetLabel = activePresetLabel ?? "";
+      string name = presetName ?? "";
+      int firstLineMaxLength = maxLength - monitor.Length - 1;
+
+      // 至少需要容纳标签和省略号；否则整行预设信息都省略。
+      if (firstLineMaxLength < presetLabel.Length + 1)
+        return monitor;
+
+      string fullPresetLine = presetLabel + name;
+      if (fullPresetLine.Length <= firstLineMaxLength)
+        return fullPresetLine + "\n" + monitor;
+
+      int availableNameLength = firstLineMaxLength - presetLabel.Length;
+      string shortenedName = EllipsizeUnicode(name, availableNameLength);
+      return presetLabel + shortenedName + "\n" + monitor;
+    }
+
     static void UpdateTrayIconText() {
       if (trayIcon == null) return;
 
-      string text = "";
       string presetName = GetCurrentPresetDisplayName();
-      string monitor = monitorText();
-      if (Strings.ActivePreset.Length + presetName.Length + 1 + monitor.Length <= 63) {
-        text = $"{Strings.ActivePreset + presetName}\n{monitor}";
-      } else if (presetName.Length + 1 + monitor.Length <= 63) {
-        text = presetName + "\n" + monitor;
-      } else {
-        text = monitor;
-      }
+      string text = FormatTrayIconText(
+        Strings.ActivePreset, presetName, BuildTrayMonitorLines(), NotifyIconTextLimit);
 
-      const int notifyIconTextLimit = 63;
-      if (text.Length > notifyIconTextLimit)
-        text = text.Substring(0, notifyIconTextLimit);
-
+      // 最终防线：即使未来格式化逻辑发生变化，也不允许 NotifyIcon.Text 超限。
+      text = EllipsizeUnicode(text, NotifyIconTextLimit);
       trayIcon.Text = text;
     }
 
