@@ -18,9 +18,12 @@ internal sealed class IntelCpu : GenericCpu
     private readonly uint[] _lastEnergyConsumed;
     private readonly DateTime[] _lastEnergyTime;
 
+    private readonly Sensor _busClock;
+    private readonly Sensor[] _coreClocks;
     private readonly MicroArchitecture _microArchitecture;
     private readonly Sensor _packageTemperature;
     private readonly Sensor[] _powerSensors;
+    private readonly double _timeStampCounterMultiplier;
 
     private readonly IntelMsr _pawnModule;
 
@@ -281,6 +284,47 @@ internal sealed class IntelCpu : GenericCpu
                 break;
         }
 
+        switch (_microArchitecture)
+        {
+            case MicroArchitecture.Atom:
+            case MicroArchitecture.Core:
+            case MicroArchitecture.NetBurst:
+                if (_pawnModule.ReadMsr(IA32_PERF_STATUS, out uint _, out uint edx))
+                    _timeStampCounterMultiplier = ((edx >> 8) & 0x1F) + (0.5 * ((edx >> 14) & 1));
+                break;
+            case MicroArchitecture.Airmont:
+            case MicroArchitecture.AlderLake:
+            case MicroArchitecture.ArrowLake:
+            case MicroArchitecture.Broadwell:
+            case MicroArchitecture.CannonLake:
+            case MicroArchitecture.CometLake:
+            case MicroArchitecture.Goldmont:
+            case MicroArchitecture.GoldmontPlus:
+            case MicroArchitecture.Haswell:
+            case MicroArchitecture.IceLake:
+            case MicroArchitecture.IvyBridge:
+            case MicroArchitecture.JasperLake:
+            case MicroArchitecture.KabyLake:
+            case MicroArchitecture.LunarLake:
+            case MicroArchitecture.MeteorLake:
+            case MicroArchitecture.PantherLake:
+            case MicroArchitecture.RaptorLake:
+            case MicroArchitecture.RocketLake:
+            case MicroArchitecture.SandyBridge:
+            case MicroArchitecture.Silvermont:
+            case MicroArchitecture.Skylake:
+            case MicroArchitecture.TigerLake:
+            case MicroArchitecture.SapphireRapids:
+            case MicroArchitecture.ElkhartLake:
+            case MicroArchitecture.Tremont:
+                if (_pawnModule.ReadMsr(MSR_PLATFORM_INFO, out eax, out uint _))
+                    _timeStampCounterMultiplier = (eax >> 8) & 0xFF;
+                break;
+            default:
+                _timeStampCounterMultiplier = 0;
+                break;
+        }
+
         // check if processor supports a digital thermal sensor at package level
         if (cpuId[0][0].Data.GetLength(0) > 6 && (cpuId[0][0].Data[6, 0] & 0x40) != 0 && _microArchitecture != MicroArchitecture.Unknown)
         {
@@ -295,6 +339,15 @@ internal sealed class IntelCpu : GenericCpu
                                              settings);
 
             ActivateSensor(_packageTemperature);
+        }
+
+        _busClock = new Sensor("Bus Speed", 0, SensorType.Clock, this, settings);
+        _coreClocks = new Sensor[_coreCount];
+        for (int i = 0; i < _coreClocks.Length; i++)
+        {
+            _coreClocks[i] = new Sensor(CoreString(i), i + 1, SensorType.Clock, this, settings);
+            if (HasTimeStampCounter && _timeStampCounterMultiplier > 0 && _microArchitecture != MicroArchitecture.Unknown)
+                ActivateSensor(_coreClocks[i]);
         }
 
         if (_microArchitecture is MicroArchitecture.Airmont or
@@ -427,6 +480,63 @@ internal sealed class IntelCpu : GenericCpu
             else
             {
                 _packageTemperature.Value = null;
+            }
+        }
+
+        if (HasTimeStampCounter && _timeStampCounterMultiplier > 0 && _coreClocks != null)
+        {
+            double newBusClock = TimeStampCounterFrequency / _timeStampCounterMultiplier;
+            for (int i = 0; i < _coreClocks.Length; i++)
+            {
+                if (_pawnModule.ReadMsr(IA32_PERF_STATUS, out eax, out _, _cpuId[i][0].Affinity))
+                {
+                    switch (_microArchitecture)
+                    {
+                        case MicroArchitecture.Nehalem:
+                            _coreClocks[i].Value = (float)((eax & 0xFF) * newBusClock);
+                            break;
+                        case MicroArchitecture.Airmont:
+                        case MicroArchitecture.AlderLake:
+                        case MicroArchitecture.ArrowLake:
+                        case MicroArchitecture.Broadwell:
+                        case MicroArchitecture.CannonLake:
+                        case MicroArchitecture.CometLake:
+                        case MicroArchitecture.Goldmont:
+                        case MicroArchitecture.GoldmontPlus:
+                        case MicroArchitecture.Haswell:
+                        case MicroArchitecture.IceLake:
+                        case MicroArchitecture.IvyBridge:
+                        case MicroArchitecture.JasperLake:
+                        case MicroArchitecture.KabyLake:
+                        case MicroArchitecture.LunarLake:
+                        case MicroArchitecture.MeteorLake:
+                        case MicroArchitecture.PantherLake:
+                        case MicroArchitecture.RaptorLake:
+                        case MicroArchitecture.RocketLake:
+                        case MicroArchitecture.SandyBridge:
+                        case MicroArchitecture.Silvermont:
+                        case MicroArchitecture.Skylake:
+                        case MicroArchitecture.TigerLake:
+                        case MicroArchitecture.SapphireRapids:
+                        case MicroArchitecture.ElkhartLake:
+                        case MicroArchitecture.Tremont:
+                            _coreClocks[i].Value = (float)(((eax >> 8) & 0xFF) * newBusClock);
+                            break;
+                        default:
+                            _coreClocks[i].Value = (float)((((eax >> 8) & 0x1F) + (0.5 * ((eax >> 14) & 1))) * newBusClock);
+                            break;
+                    }
+                }
+                else
+                {
+                    _coreClocks[i].Value = (float)TimeStampCounterFrequency;
+                }
+            }
+
+            if (newBusClock > 0)
+            {
+                _busClock.Value = (float)newBusClock;
+                ActivateSensor(_busClock);
             }
         }
 

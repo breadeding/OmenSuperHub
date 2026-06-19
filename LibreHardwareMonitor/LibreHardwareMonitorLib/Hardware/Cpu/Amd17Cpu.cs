@@ -18,6 +18,8 @@ internal sealed class Amd17Cpu : AmdCpu
     private readonly RyzenSMU _smu;
     private readonly AmdFamily17 _pawnModule;
 
+    private bool IsZen5 => _family == 0x1a;
+
     public Amd17Cpu(int processorIndex, CpuId[][] cpuId, ISettings settings) : base(processorIndex, cpuId, settings)
     {
         _pawnModule = new AmdFamily17();
@@ -163,6 +165,12 @@ internal sealed class Amd17Cpu : AmdCpu
                 Mutexes.ReleasePciBus();
             }
 
+            foreach (NumaNode node in Nodes)
+            {
+                foreach (Core core in node.Cores)
+                    core.UpdateSensors();
+            }
+
             ThreadAffinity.Set(previousAffinity);
         }
 
@@ -225,15 +233,54 @@ internal sealed class Amd17Cpu : AmdCpu
 
     private class Core
     {
+        private readonly Sensor _clock;
+        private readonly Amd17Cpu _cpu;
+
         public Core(Amd17Cpu cpu, int id)
         {
             CoreId = id;
+            _cpu = cpu;
+            _clock = new Sensor("CPU Core #" + CoreId, _cpu._sensorTypeIndex[SensorType.Clock]++, SensorType.Clock, _cpu, _cpu._settings);
+            _cpu.ActivateSensor(_clock);
             _ = cpu; // 保留参数以维持 AppendThread 调用链（Processor.AppendThread 需要构造 Core）
         }
 
         public int CoreId { get; }
 
         public List<CpuId> Threads { get; } = new();
+
+        public void UpdateSensors()
+        {
+            CpuId thread = Threads.FirstOrDefault();
+            if (thread == null)
+                return;
+
+            GroupAffinity previousAffinity = ThreadAffinity.Set(thread.Affinity);
+            try
+            {
+                if (!_cpu._pawnModule.ReadMsr(MSR_HARDWARE_PSTATE_STATUS, out uint eax, out _))
+                    return;
+
+                if (_cpu.IsZen5)
+                {
+                    uint cpuFid = eax & 0xFFF;
+                    _clock.Value = cpuFid * 5;
+                }
+                else
+                {
+                    uint cpuDfsId = (eax >> 8) & 0x3F;
+                    uint cpuFid = eax & 0xFF;
+                    if (cpuDfsId == 0)
+                        return;
+
+                    _clock.Value = (float)(cpuFid / (double)cpuDfsId * 200.0);
+                }
+            }
+            finally
+            {
+                ThreadAffinity.Set(previousAffinity);
+            }
+        }
 
         public void AppendThread(CpuId cpuId)
         {
@@ -246,6 +293,7 @@ internal sealed class Amd17Cpu : AmdCpu
     private const uint F17H_M01H_THM_TCON_CUR_TMP = 0x00059800;
     private const uint F17H_TEMP_RANGE_SEL_MASK = 0x80000;
     private const uint F17H_TEMP_TJ_SEL_MASK = 0x30000;
+    private const uint MSR_HARDWARE_PSTATE_STATUS = 0xC0010293;
     private const uint MSR_PKG_ENERGY_STAT = 0xC001029B;
     private const uint MSR_PWR_UNIT = 0xC0010299;
     // ReSharper restore InconsistentNaming

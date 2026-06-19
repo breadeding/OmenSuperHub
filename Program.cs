@@ -105,6 +105,7 @@ namespace OmenSuperHub {
     static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", floatingBarScreen = "", omenKey = OmenKeyActions.Default, omenKeyAppPath = "", omenKeyAppName = "", omenKeyShortcut = "", omenKeyPresetCandidates = "", dataLocalize = "off", appLanguage = "zh-CN", autoFanProtect = "on";
     static volatile bool monitorFan = false;
     static bool skipCheckedUpdate = false; // action 内拦截时置 true，阻止 CreateMenuItem 覆盖勾选
+    static bool showCPUTemp = true, showCPUPower = true, showCPUFrequency = true, showGPUTemp = true, showGPUPower = true, showGPUFrequency = true;
     static bool powerOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
     static bool monitorCPU = true, monitorGPU = true, isConnectedToNVIDIA = true, prevIsConnectedToNVIDIA = true, omenKeyTriggered = false; // isTwoBytePL4 = false;
     static bool hasNVIDIAGpu; // 启动时一次性检测，硬件状态不会改变
@@ -115,7 +116,7 @@ namespace OmenSuperHub {
     static int? maxCPUTemp = null;
     static int? maxGPUTemp = null;
     static float CPUTemp = 50, GPUTemp = 40, rawTempCPU = 50f, rawTempGPU = 40f;
-    static float CPUPower = 0, GPUPower = 0, rawPowerCPU = 0f, rawPowerGPU = 0f;
+    static float CPUPower = 0, GPUPower = 0, CPUFrequency = 0f, GPUFrequency = 0f, rawPowerCPU = 0f, rawPowerGPU = 0f, rawFrequencyCPU = 0f, rawFrequencyGPU = 0f;
     static bool rawGotGPU = false;
     static volatile bool tempReady = false;   // 子进程首次输出有效温度后置 true
     static volatile bool cpuTempReady = false; // CPU 温度已初始化给平滑值，允许参与风扇控制
@@ -574,6 +575,8 @@ namespace OmenSuperHub {
       //Console.Error.WriteLine("CRASH: " + $"4: {sw.ElapsedMilliseconds}ms");
       while (true) {
         bool gGpu = false;
+        bool exactCpuClockFound = false;
+        float fCpu = 0, fGpu = 0;
         try {
           foreach (LibreIHardware hw in computer.Hardware) {
             if (hw.HardwareType != LibreHardwareType.Cpu && hw.HardwareType != LibreHardwareType.GpuNvidia && hw.HardwareType != LibreHardwareType.GpuAmd) continue;
@@ -594,6 +597,14 @@ namespace OmenSuperHub {
                     tCpu = sensor.Value.GetValueOrDefault();
                   if (sensor.SensorType == LibreSensorType.Power && sensor.Name.Contains("Package"))
                     pCpu = sensor.Value.GetValueOrDefault();
+                  if (sensor.SensorType == LibreSensorType.Clock && sensor.Value.HasValue) {
+                    if (sensor.Name == "CPU Core" || sensor.Name == "CPU Core #1") {
+                      fCpu = sensor.Value.GetValueOrDefault();
+                      exactCpuClockFound = true;
+                    } else if (!exactCpuClockFound && fCpu <= 0 && sensor.Name != "Bus Speed") {
+                      fCpu = sensor.Value.GetValueOrDefault();
+                    }
+                  }
                 } else if (hw.HardwareType == LibreHardwareType.GpuNvidia || hw.HardwareType == LibreHardwareType.GpuAmd) {
                   if (sensor.SensorType == LibreSensorType.Temperature && sensor.Name == "GPU Core")
                     tGpu = sensor.Value.GetValueOrDefault();
@@ -606,11 +617,13 @@ namespace OmenSuperHub {
                       gGpu = false;
                     }
                   }
+                  if (sensor.SensorType == LibreSensorType.Clock && sensor.Name == "GPU Core" && sensor.Value.HasValue)
+                    fGpu = sensor.Value.GetValueOrDefault();
                 }
               } catch { }
             }
           }
-          Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F2};{1:F2};{2:F2};{3:F2};{4}", tCpu, pCpu, tGpu, pGpu, gGpu ? 1 : 0));
+          Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F2};{1:F2};{2:F2};{3:F2};{4};{5:F2};{6:F2}", tCpu, pCpu, tGpu, pGpu, gGpu ? 1 : 0, fCpu, fGpu));
         } catch (Exception ex) {
           Console.Error.WriteLine("CRASH: " + ex.Message);
           Environment.Exit(1);
@@ -640,12 +653,18 @@ namespace OmenSuperHub {
         //Debug.WriteLine("[HWMonitor OUT] " + e.Data); // 将子进程输出重定向到VS的输出窗口
         if (e.Data.StartsWith("CRASH:")) return;
         var parts = e.Data.Split(';');
-        if (parts.Length == 5) {
+        if (parts.Length == 5 || parts.Length == 7) {
           if (float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float tc)) rawTempCPU = tc;
           if (float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float pc) && pc < 9999) rawPowerCPU = pc;
           if (float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float tg)) rawTempGPU = tg;
           if (float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float pg)) rawPowerGPU = pg;
           rawGotGPU = parts[4] == "1";
+          rawFrequencyCPU = 0f;
+          rawFrequencyGPU = 0f;
+          if (parts.Length == 7) {
+            if (float.TryParse(parts[5], NumberStyles.Float, CultureInfo.InvariantCulture, out float fc)) rawFrequencyCPU = fc;
+            if (float.TryParse(parts[6], NumberStyles.Float, CultureInfo.InvariantCulture, out float fg)) rawFrequencyGPU = fg;
+          }
           // 首次收到数据时，初始化对应传感器的平滑温度
           if (!cpuTempReady) {
             smoothedCPUTemp = rawTempCPU;
@@ -659,6 +678,8 @@ namespace OmenSuperHub {
             gpuTempReady = false;
             GPUTemp = 40;
             GPUPower = 0;
+            rawFrequencyGPU = 0f;
+            GPUFrequency = 0f;
           }
 
           if (!tempReady) {
@@ -904,6 +925,7 @@ namespace OmenSuperHub {
     // CPU监控开 → CPU温度；CPU关GPU开 → GPU温度；均关 → 原版图标（不改 customIcon 设置）
     static void UpdateDynamicIcon() {
       if (customIcon != "dynamic") return;
+      if (trayIcon?.ContextMenuStrip != null && trayIcon.ContextMenuStrip.Visible) return;
       if (monitorCPU) {
         GenerateDynamicIcon((int)CPUTemp);
       } else if (monitorGPU) {
@@ -1141,6 +1163,7 @@ namespace OmenSuperHub {
 
       if (monitorCPU && cpuTempReady) {
         CPUPower = rawPowerCPU;
+        CPUFrequency = rawFrequencyCPU;
       }
       if (monitorGPU) {
         getGPU = rawGotGPU;
@@ -1149,6 +1172,9 @@ namespace OmenSuperHub {
             GPUPower = 0;
           else
             GPUPower = rawPowerGPU;
+          GPUFrequency = rawFrequencyGPU;
+        } else {
+          GPUFrequency = 0f;
         }
       }
 
@@ -1324,13 +1350,20 @@ namespace OmenSuperHub {
 
     // 更新浮窗的文字内容
     static void UpdateFloatingText() {
+      FloatingForm form;
+      lock (_floatingLock) {
+        form = floatingForm;
+      }
+
+      if (form == null || form.IsDisposed) return;
+
       lock (_floatingLock) {
         if (floatingForm == null || floatingForm.IsDisposed) return;
         // debug模式下需取消注释，release模式下需注释以避免打断右键菜单
-        //if (floatingForm.InvokeRequired) {
+        // if (floatingForm.InvokeRequired) {
         //  floatingForm.BeginInvoke(new System.Action(() => UpdateFloatingText()));
         //  return;
-        //}
+        // }
         floatingForm.TopMost = true;
         floatingForm.SetText(monitorText(), textSize, floatingBarLoc, GetFloatingScreen());
       }
@@ -1339,25 +1372,38 @@ namespace OmenSuperHub {
     //生成监控信息
     static string monitorText() {
       string str = "";
-      if (monitorCPU) {
-        if (CPUPower > 0)
-          str += $"CPU: {CPUTemp:F1}°C, {CPUPower:F1}W";
-        else {
+      if (monitorCPU && (showCPUTemp || showCPUPower || showCPUFrequency)) {
+        if (cpuTempReady || CPUPower > 0 || CPUFrequency > 0) {
+          var cpuParts = new List<string>();
+          if (showCPUTemp && cpuTempReady) cpuParts.Add($"{CPUTemp:F1}°C");
+          if (showCPUPower && CPUPower > 0) cpuParts.Add($"{CPUPower:F1}W");
+          if (showCPUFrequency && CPUFrequency > 0) cpuParts.Add($"{CPUFrequency / 1000f:F1}GHz");
+          if (cpuParts.Count > 0) str += $"CPU: {string.Join(", ", cpuParts)}";
+          else if (pawnIOState == "RUNNING") str += $"CPU: {Strings.MonitorPrepareLabel}";
+        } else {
           if (pawnIOState == "RUNNING")
             str += $"CPU: {Strings.MonitorPrepareLabel}";
           else if (pawnIOState.Length > 0)
             str += $"CPU: PawnIO {pawnIOState}";
         }
       }
-      if (monitorGPU) {
+      if (monitorGPU && (showGPUTemp || showGPUPower || showGPUFrequency)) {
         if (str.Length > 0) str += "\n";
         if (pawnIOState == "RUNNING" && !gpuTempReady) {
           if (rawPowerGPU < 0)
             str += $"GPU: {Strings.GpuPoweredOff}";
           else
             str += $"GPU: {Strings.MonitorPrepareLabel}";
-        } else if (pawnIOState.Length > 0)
-          str += $"GPU: {GPUTemp:F1}°C, {GPUPower:F1}W";
+        }
+        else if (pawnIOState.Length > 0)
+        {
+          var gpuParts = new List<string>();
+          if (showGPUTemp && gpuTempReady) gpuParts.Add($"{GPUTemp:F1}°C");
+          if (showGPUPower) gpuParts.Add($"{GPUPower:F1}W");
+          if (showGPUFrequency && GPUFrequency > 0) gpuParts.Add($"{GPUFrequency:F0}MHz");
+          if (gpuParts.Count > 0) str += $"GPU: {string.Join(", ", gpuParts)}";
+          else if (pawnIOState == "RUNNING") str += $"GPU: {Strings.MonitorPrepareLabel}";
+        }
       }
       if (monitorFan) {
         if (str.Length > 0) str += "\n";
@@ -1368,6 +1414,13 @@ namespace OmenSuperHub {
       }
       if (str.Length == 0) str = Strings.MonitorClosed;
       return str;
+    }
+
+    static void RefreshMonitorDisplay() {
+      UpdateTrayIconText();
+      if (floatingForm != null) {
+        floatingForm.SetText(monitorText(), textSize, floatingBarLoc, GetFloatingScreen());
+      }
     }
 
     static string GetPresetDisplayName(string presetKey) {
@@ -1386,24 +1439,100 @@ namespace OmenSuperHub {
       return GetPresetDisplayName(currentPreset);
     }
 
+    const int NotifyIconTextLimit = 63;
+
+    static List<string> BuildTrayMonitorLines() {
+      var lines = new List<string>();
+
+      if (monitorCPU && (showCPUTemp || showCPUPower || showCPUFrequency)) {
+        if (cpuTempReady || CPUPower > 0 || CPUFrequency > 0) {
+          var cpuParts = new List<string>();
+          if (showCPUTemp && cpuTempReady) cpuParts.Add($"{CPUTemp:F0}°C");
+          if (showCPUPower && CPUPower > 0) cpuParts.Add($"{CPUPower:F0}W");
+          if (showCPUFrequency && CPUFrequency > 0) cpuParts.Add($"{CPUFrequency / 1000f:F1}G");
+          if (cpuParts.Count > 0) lines.Add($"CPU {string.Join(" ", cpuParts)}");
+          else if (pawnIOState == "RUNNING") lines.Add($"CPU {Strings.MonitorPrepareLabel}");
+        } else if (pawnIOState == "RUNNING") {
+          lines.Add($"CPU {Strings.MonitorPrepareLabel}");
+        } else if (pawnIOState.Length > 0) {
+          lines.Add($"CPU PawnIO {pawnIOState}");
+        }
+      }
+
+      if (monitorGPU && (showGPUTemp || showGPUPower || showGPUFrequency)) {
+        if (pawnIOState == "RUNNING" && !gpuTempReady) {
+          lines.Add(rawPowerGPU < 0
+            ? $"GPU {Strings.GpuPoweredOff}"
+            : $"GPU {Strings.MonitorPrepareLabel}");
+        } else if (pawnIOState.Length > 0) {
+          var gpuParts = new List<string>();
+          if (showGPUTemp && gpuTempReady) gpuParts.Add($"{GPUTemp:F0}°C");
+          if (showGPUPower) gpuParts.Add($"{GPUPower:F0}W");
+          if (showGPUFrequency && GPUFrequency > 0) gpuParts.Add($"{GPUFrequency / 1000f:F1}G");
+          if (gpuParts.Count > 0) lines.Add($"GPU {string.Join(" ", gpuParts)}");
+          else if (pawnIOState == "RUNNING") lines.Add($"GPU {Strings.MonitorPrepareLabel}");
+        }
+      }
+
+      if (monitorFan) {
+        int fanCount = Is3FanNb ? 3 : 2;
+        var fanParts = new List<string>();
+        for (int i = 0; i < fanCount; i++)
+          fanParts.Add((fanSpeedNow[i] * 100).ToString(CultureInfo.CurrentCulture));
+        lines.Add($"Fan {string.Join(" ", fanParts)}");
+      }
+
+      if (lines.Count == 0) lines.Add(Strings.MonitorClosed);
+      return lines;
+    }
+
+    static string EllipsizeUnicode(string value, int maxLength) {
+      if (string.IsNullOrEmpty(value) || value.Length <= maxLength) return value ?? "";
+      if (maxLength <= 0) return "";
+      if (maxLength == 1) return "…";
+
+      int safeEnd = 0;
+      int[] elementIndexes = StringInfo.ParseCombiningCharacters(value);
+      for (int i = 0; i < elementIndexes.Length; i++) {
+        int elementEnd = i + 1 < elementIndexes.Length ? elementIndexes[i + 1] : value.Length;
+        if (elementEnd > maxLength - 1) break;
+        safeEnd = elementEnd;
+      }
+      return value.Substring(0, safeEnd) + "…";
+    }
+
+    static string FormatTrayIconText(string activePresetLabel, string presetName,
+        IList<string> monitorLines, int maxLength) {
+      string monitor = string.Join("\n", monitorLines ?? new List<string>());
+      if (monitor.Length > maxLength)
+        return EllipsizeUnicode(monitor, maxLength);
+
+      string presetLabel = activePresetLabel ?? "";
+      string name = presetName ?? "";
+      int firstLineMaxLength = maxLength - monitor.Length - 1;
+
+      // 至少需要容纳标签和省略号；否则整行预设信息都省略。
+      if (firstLineMaxLength < presetLabel.Length + 1)
+        return monitor;
+
+      string fullPresetLine = presetLabel + name;
+      if (fullPresetLine.Length <= firstLineMaxLength)
+        return fullPresetLine + "\n" + monitor;
+
+      int availableNameLength = firstLineMaxLength - presetLabel.Length;
+      string shortenedName = EllipsizeUnicode(name, availableNameLength);
+      return presetLabel + shortenedName + "\n" + monitor;
+    }
+
     static void UpdateTrayIconText() {
       if (trayIcon == null) return;
 
-      string text = "";
       string presetName = GetCurrentPresetDisplayName();
-      string monitor = monitorText();
-      if (Strings.ActivePreset.Length + presetName.Length + 1 + monitor.Length <= 63) {
-        text = $"{Strings.ActivePreset + presetName}\n{monitor}";
-      } else if (presetName.Length + 1 + monitor.Length <= 63) {
-        text = presetName + "\n" + monitor;
-      } else {
-        text = monitor;
-      }
+      string text = FormatTrayIconText(
+        Strings.ActivePreset, presetName, BuildTrayMonitorLines(), NotifyIconTextLimit);
 
-      const int notifyIconTextLimit = 63;
-      if (text.Length > notifyIconTextLimit)
-        text = text.Substring(0, notifyIconTextLimit);
-
+      // 最终防线：即使未来格式化逻辑发生变化，也不允许 NotifyIcon.Text 超限。
+      text = EllipsizeUnicode(text, NotifyIconTextLimit);
       trayIcon.Text = text;
     }
 
