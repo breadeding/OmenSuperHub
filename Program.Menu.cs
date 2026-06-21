@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -353,11 +353,11 @@ namespace OmenSuperHub {
           if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CleanCreekConfirmMessage, Strings.CleanCreekTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK) {
             fanControlMenu.Enabled = false;
             if (isFanCleanSupported) {
-              SetMaxFanSpeedOff();
+              hardwareControlService.SetMaxFanSpeedOff();
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
               // 准备开始清洁
               Action start = () => {
-                SetFanLevel(platformSettings.CleanCreekCpuFanSpeed, platformSettings.CleanCreekGpuFanSpeed, Is3FanNb, true);
+                hardwareControlService.SetFanLevel(platformSettings.CleanCreekCpuFanSpeed, platformSettings.CleanCreekGpuFanSpeed, Is3FanNb, true);
               };
               Action stop = () => {
                 fanControlMenu.Enabled = true;
@@ -366,7 +366,7 @@ namespace OmenSuperHub {
               // 显示进度窗体，持续时间从配置读取（单位毫秒）
               StartCleanCreekWithProgress(platformSettings.CleanCreekDuration, Strings.CleanCreekTitle, start, stop);
             } else if (isFanLegacyCleanSupported) {
-              SetMaxFanSpeedOff();
+              hardwareControlService.SetMaxFanSpeedOff();
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
               Action start = () => SetLegacyCleanCreek(true);
               Action stop = () => {
@@ -382,13 +382,13 @@ namespace OmenSuperHub {
       }
       fanControlMenu.DropDownItems.Add(CreateMenuItem(Strings.FanAuto, "fanControlGroup", (s, e) => {
         fanControl = "auto";
-        SetMaxFanSpeedOff();
+        hardwareControlService.SetMaxFanSpeedOff();
         fanControlTimer.Change(0, 1000);
         SaveConfig("FanControl");
       }, true));
       fanControlMenu.DropDownItems.Add(CreateMenuItem(Strings.FanMax, "fanControlGroup", (s, e) => {
         fanControl = "max";
-        SetMaxFanSpeedOn();
+        hardwareControlService.SetMaxFanSpeedOn();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         SaveConfig("FanControl");
       }, false));
@@ -405,13 +405,13 @@ namespace OmenSuperHub {
       fanTrackBar.ValueChanged += (sender, e) => {
         fanControl = fanTrackBar.Value * 100 + " RPM";
         fanValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM");
-        SetFanLevel((byte)fanTrackBar.Value, (byte)fanTrackBar.Value, Is3FanNb);
+        hardwareControlService.SetFanLevel((byte)fanTrackBar.Value, (byte)fanTrackBar.Value, Is3FanNb);
       };
 
       fanTrackBar.MouseDown += (sender, e) => {
-        SetMaxFanSpeedOff();
+        hardwareControlService.SetMaxFanSpeedOff();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        SetFanLevel((byte)fanTrackBar.Value, (byte)fanTrackBar.Value, Is3FanNb);
+        hardwareControlService.SetFanLevel((byte)fanTrackBar.Value, (byte)fanTrackBar.Value, Is3FanNb);
         UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
       };
 
@@ -536,7 +536,7 @@ namespace OmenSuperHub {
         restartGpuMenu.ToolTipText = Strings.GpuRestartTooltip;
         restartGpuMenu.Click += (s, e) => {
           if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuRestartConfirm, Strings.GpuRestartTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-            Task.Run(() => RestartGpu());
+            Task.Run(() => gpuService.RestartGpu()).ContinueWith(t => ShowGpuOperationWarningAsync(t.Result));
           }
         };
         performanceControlMenu.DropDownItems.Add(restartGpuMenu);
@@ -580,7 +580,7 @@ namespace OmenSuperHub {
           int currentAmpere = ampere;
           iccMaxMenu.DropDownItems.Add(CreateMenuItem(currentAmpere + " A", "iccMaxGroup", (s, e) => {
             iccMax = currentAmpere + " A";
-            SetIccMaxByWmi((decimal)currentAmpere);
+            hardwareControlService.SetIccMaxByWmi((decimal)currentAmpere);
             SaveConfig("IccMax");
           }, false));
         }
@@ -598,7 +598,7 @@ namespace OmenSuperHub {
           string displayText = (180 - 10 * currentLevel).ToString();
           acLoadLineMenu.DropDownItems.Add(CreateMenuItem(displayText, "acLoadLineGroup", (s, e) => {
             acLoadline = currentLevel.ToString();
-            SetLoadLine(currentLevel);
+            hardwareControlService.SetLoadLine(currentLevel);
             SaveConfig("AcLoadLine");
           }, false));
         }
@@ -644,7 +644,7 @@ namespace OmenSuperHub {
         cpuPowerTrackBar.MouseUp += (sender, e) => {
           cpuPower = cpuPowerTrackBar.Value + " W";
           if (isCPUPowerControlSupported)
-            SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
+            hardwareControlService.SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
           SaveConfig("CpuPower");
           UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
         };
@@ -661,12 +661,12 @@ namespace OmenSuperHub {
       tgpMenu.DropDownItems.Add(new ToolStripSeparator());
       tgpMenu.DropDownItems.Add(CreateMenuItem(Strings.Enable, "tgpPowerGroup", (s, e) => {
         tgpPower = "on";
-        SetGpuPowerState(true, ppabPower == "on", dState == "normal" ? 1 : 2);
+        hardwareControlService.SetGpuPowerState(true, ppabPower == "on", dState == "normal" ? 1 : 2);
         SaveConfig("TgpPower");
       }, true));
       tgpMenu.DropDownItems.Add(CreateMenuItem(Strings.Disable, "tgpPowerGroup", (s, e) => {
         tgpPower = "off";
-        SetGpuPowerState(false, ppabPower == "on", dState == "normal" ? 1 : 2);
+        hardwareControlService.SetGpuPowerState(false, ppabPower == "on", dState == "normal" ? 1 : 2);
         SaveConfig("TgpPower");
       }, false));
       gpuPowerMenu.DropDownItems.Add(tgpMenu);
@@ -676,12 +676,12 @@ namespace OmenSuperHub {
       ppabMenu.DropDownItems.Add(new ToolStripSeparator());
       ppabMenu.DropDownItems.Add(CreateMenuItem(Strings.Enable, "ppabPowerGroup", (s, e) => {
         ppabPower = "on";
-        SetGpuPowerState(tgpPower == "on", true, dState == "normal" ? 1 : 2);
+        hardwareControlService.SetGpuPowerState(tgpPower == "on", true, dState == "normal" ? 1 : 2);
         SaveConfig("PpabPower");
       }, true));
       ppabMenu.DropDownItems.Add(CreateMenuItem(Strings.Disable, "ppabPowerGroup", (s, e) => {
         ppabPower = "off";
-        SetGpuPowerState(tgpPower == "on", false, dState == "normal" ? 1 : 2);
+        hardwareControlService.SetGpuPowerState(tgpPower == "on", false, dState == "normal" ? 1 : 2);
         SaveConfig("PpabPower");
       }, false));
       gpuPowerMenu.DropDownItems.Add(ppabMenu);
@@ -711,7 +711,7 @@ namespace OmenSuperHub {
 
         tppTrackBar.MouseUp += (sender, e) => {
           tppPower = tppTrackBar.Value + " W";
-          SetConcurrentTdp((byte)tppTrackBar.Value);
+          hardwareControlService.SetConcurrentTdp((byte)tppTrackBar.Value);
           SaveConfig("TppPower");
           UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
         };
@@ -726,12 +726,12 @@ namespace OmenSuperHub {
       dStateMenu.DropDownItems.Add(new ToolStripSeparator());
       dStateMenu.DropDownItems.Add(CreateMenuItem(Strings.Standard, "dStateGroup", (s, e) => {
         dState = "normal";
-        SetGpuPowerState(tgpPower == "on", ppabPower == "on", 1);
+        hardwareControlService.SetGpuPowerState(tgpPower == "on", ppabPower == "on", 1);
         SaveConfig("DState");
       }, true));
       dStateMenu.DropDownItems.Add(CreateMenuItem(Strings.LowPower, "dStateGroup", (s, e) => {
         dState = "low";
-        SetGpuPowerState(tgpPower == "on", ppabPower == "on", 2);
+        hardwareControlService.SetGpuPowerState(tgpPower == "on", ppabPower == "on", 2);
         SaveConfig("DState");
       }, false));
       gpuPowerMenu.DropDownItems.Add(dStateMenu);
@@ -741,7 +741,7 @@ namespace OmenSuperHub {
         ToolStripMenuItem gpuCoreOverclockMenu = new ToolStripMenuItem(Strings.GpuCoreOverclock);
         gpuCoreOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "gpuCoreOverclockGroup", (s, e) => {
           gpuCoreOverclock = -1;
-          Task.Run(() => SetCoreClockOffset(0));
+          Task.Run(() => gpuService.SetCoreClockOffset(0));
           SaveConfig("GpuCoreOverclock");
         }, true));
         gpuCoreOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuCoreOverclockSlider, "gpuCoreOverclockGroup", (s, e) => { }, false));
@@ -759,7 +759,7 @@ namespace OmenSuperHub {
         };
         gpuCoreOverclockTrackBar.MouseUp += (sender, e) => {
           gpuCoreOverclock = gpuCoreOverclockTrackBar.Value * 15;
-          Task.Run(() => SetCoreClockOffset(gpuCoreOverclock));
+          Task.Run(() => gpuService.SetCoreClockOffset(gpuCoreOverclock));
           SaveConfig("GpuCoreOverclock");
           UpdateCheckedState("gpuCoreOverclockGroup", Strings.SetGpuCoreOverclockSlider);
         };
@@ -770,7 +770,7 @@ namespace OmenSuperHub {
         ToolStripMenuItem gpuMemoryOverclockMenu = new ToolStripMenuItem(Strings.GpuMemoryOverclock);
         gpuMemoryOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "gpuMemoryOverclockGroup", (s, e) => {
           gpuMemoryOverclock = -1;
-          Task.Run(() => SetMemoryClockOffset(0));
+          Task.Run(() => gpuService.SetMemoryClockOffset(0));
           SaveConfig("GpuMemoryOverclock");
         }, true));
         gpuMemoryOverclockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuMemoryOverclockSlider, "gpuMemoryOverclockGroup", (s, e) => { }, false));
@@ -788,7 +788,7 @@ namespace OmenSuperHub {
         };
         gpuMemoryOverclockTrackBar.MouseUp += (sender, e) => {
           gpuMemoryOverclock = gpuMemoryOverclockTrackBar.Value * 100;
-          Task.Run(() => SetMemoryClockOffset(gpuMemoryOverclock));
+          Task.Run(() => gpuService.SetMemoryClockOffset(gpuMemoryOverclock));
           SaveConfig("GpuMemoryOverclock");
           UpdateCheckedState("gpuMemoryOverclockGroup", Strings.SetGpuMemoryOverclockSlider);
         };
@@ -800,7 +800,7 @@ namespace OmenSuperHub {
         gpuClockMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GraphicsBoostClockTip(graphicsBoostClock)) { Enabled = false });
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.Unlimited, "gpuClockGroup", (s, e) => {
           gpuClock = 0;
-          Task.Run(() => SetGPUClockReset());
+          Task.Run(() => gpuService.ResetGpuClockLimit());
           SaveConfig("GpuClock");
         }, true));
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuClockSlider, "gpuClockGroup", (s, e) => { }, false));
@@ -815,7 +815,7 @@ namespace OmenSuperHub {
 
         gpuClockTrackBar.MouseDown += (sender, e) => {
           gpuClock = gpuClockTrackBar.Value * 10;
-          Task.Run(() => SetGPUClockLimit(gpuClock));
+          Task.Run(() => gpuService.SetGpuClockLimit(gpuClock));
           SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
         };
@@ -828,7 +828,7 @@ namespace OmenSuperHub {
 
         gpuClockTrackBar.MouseUp += (sender, e) => {
           gpuClock = gpuClockTrackBar.Value * 10;
-          Task.Run(() => SetGPUClockLimit(gpuClock));
+          Task.Run(() => gpuService.SetGpuClockLimit(gpuClock));
           SaveConfig("GpuClock");
           UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
         };
@@ -2206,7 +2206,7 @@ namespace OmenSuperHub {
             UpdateCheckedState("DBGroup", Strings.DbNormal);
             return;
           }
-          if (!CheckDBVersion(1)) {
+          if (!CheckDBVersionWithUi(1)) {
             DBVersion = 2;
             countDB = 0;
             performanceControlMenu.Enabled = true;
@@ -2221,7 +2221,7 @@ namespace OmenSuperHub {
             countDB = countDBInit;
             // 启用DB驱动
             ChangeDBState(true);
-            SetGpuPowerState(true, true);
+            hardwareControlService.SetGpuPowerState(true, true);
             performanceControlMenu.Enabled = false;
             performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
             SaveConfig("DBVersion");
@@ -2229,7 +2229,7 @@ namespace OmenSuperHub {
             return;
           }
         }
-        if (item.Text == Strings.DbNormal && !CheckDBVersion(2))
+        if (item.Text == Strings.DbNormal && !CheckDBVersionWithUi(2))
           return;
         if (item.Text == Strings.IconCustom && !CheckCustomIcon())
           return;

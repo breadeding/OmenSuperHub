@@ -6,7 +6,6 @@ using System.Linq;
 using System.Management;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Microsoft.Win32;
 using NvAPIWrapper;
 using NvAPIWrapper.GPU;
@@ -196,7 +195,7 @@ namespace OmenSuperHub {
       return apps;
     }
 
-    public static void RestartGpu() {
+    public static OperationResult RestartGpuWithResult() {
       try {
         // 1. WMI 查询获取 NVIDIA 显卡的 PNPDeviceID（保持不变）
         string instanceId = null;
@@ -213,8 +212,7 @@ namespace OmenSuperHub {
         }
 
         if (string.IsNullOrEmpty(instanceId)) {
-          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DeviceNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-          return;
+          return OperationResult.Failure(Strings.DeviceNotFound);
         }
 
         // 2. 通过 ExecuteCommand 执行 pnputil 重启设备
@@ -223,11 +221,16 @@ namespace OmenSuperHub {
 
         // 可选：根据结果给出提示
         if (result.ExitCode != 0) {
-          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), $"{Strings.RestartGPUFailed} {Strings.Error}：{result.Error}", Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          return OperationResult.Failure($"{Strings.RestartGPUFailed} {Strings.Error}：{result.Error}");
         }
-      } catch {
-        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.RestartGPUFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return OperationResult.Success();
+      } catch (Exception ex) {
+        return OperationResult.Failure(Strings.RestartGPUFailed, ex);
       }
+    }
+
+    public static void RestartGpu() {
+      RestartGpuWithResult();
     }
 
     /// <summary>
@@ -393,7 +396,7 @@ namespace OmenSuperHub {
       return limit;
     }
 
-    public static bool CheckDBVersion(int kind) {
+    public static OperationResult CheckDBVersionWithResult(int kind) {
       ProcessResult result = ExecuteCommand("nvidia-smi");
 
       if (result.ExitCode == 0) {
@@ -409,19 +412,20 @@ namespace OmenSuperHub {
           //if(kind == 2)
           //  v2 = new Version("555.99");
           if (v1 >= v2 && v1 < v3) {
-            return true;
+            return OperationResult.Success();
           } else {
-            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DriverNotAllow + version, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return false;
+            return OperationResult.Failure(Strings.DriverNotAllow + version);
           }
         } else {
-          MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.DriverNotFound, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-          return false;
+          return OperationResult.Failure(Strings.DriverNotFound);
         }
       } else {
-        MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CheckDriverFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        return false;
+        return OperationResult.Failure(Strings.CheckDriverFailed);
       }
+    }
+
+    public static bool CheckDBVersion(int kind) {
+      return CheckDBVersionWithResult(kind).Succeeded;
     }
 
     public static void ChangeDBVersion(int kind) {

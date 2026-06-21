@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -92,7 +92,7 @@ namespace OmenSuperHub {
       bool needFetch = false;
       // ── alreadyRead（无论设备信息是否缓存都要读）────────────────────────────
       try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+        using (RegistryKey key = appSettingsService.OpenRootKey()) {
           if (key != null) {
             alreadyRead = (int)key.GetValue("AlreadyRead", 0);
             string cachedName = key.GetValue("DeviceDisplayName") as string;
@@ -159,7 +159,7 @@ namespace OmenSuperHub {
     /// </summary>
     static void SaveDeviceInfoToRegistry() {
       try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub", writable: true)) {
+        using (RegistryKey key = appSettingsService.OpenRootKey(writable: true)) {
           if (key == null) {
             Logger.Info($"全新安装，暂不保存键值。");
             return;
@@ -178,7 +178,7 @@ namespace OmenSuperHub {
 
     static void LoadLanguageSetting() {
       try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+        using (RegistryKey key = appSettingsService.OpenRootKey()) {
           if (key != null) {
             // 注册表中有保存的语言 → 使用保存的值
             string savedLang = (string)key.GetValue("AppLanguage", null);
@@ -344,20 +344,20 @@ namespace OmenSuperHub {
       if (cpuPower.Contains(" W")) {
         int value = int.Parse(cpuPower.Replace(" W", "").Trim());
         if (isCPUPowerControlSupported && value >= 10 && value <= 254) {
-          SetCpuPowerLimit((byte)value);
+          hardwareControlService.SetCpuPowerLimit((byte)value);
         }
       }
     }
 
     static void RestorePowerConfig() {
-      SetUnleashMode();
+      hardwareControlService.SetUnleashMode();
       System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
         RestoreCPUPower();
-        SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
+        hardwareControlService.SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
         if (tppPower.Contains(" W")) {
           int value = int.Parse(tppPower.Replace(" W", "").Trim());
           if (value >= 20 && value <= 254) {
-            SetConcurrentTdp((byte)value);
+            hardwareControlService.SetConcurrentTdp((byte)value);
           }
         }
       });
@@ -365,18 +365,18 @@ namespace OmenSuperHub {
 
     static void RestoreFanControl() {
       if (fanControl == "auto") {
-        SetMaxFanSpeedOff();
+        hardwareControlService.SetMaxFanSpeedOff();
         fanControlTimer.Change(0, 1000);
         UpdateCheckedState("fanControlGroup", Strings.FanAuto);
       } else if (fanControl.Contains("max")) {
-        SetMaxFanSpeedOn();
+        hardwareControlService.SetMaxFanSpeedOn();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         UpdateCheckedState("fanControlGroup", Strings.FanMax);
       } else if (fanControl.Contains(" RPM")) {
-        SetMaxFanSpeedOff();
+        hardwareControlService.SetMaxFanSpeedOff();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-        SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
+        hardwareControlService.SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
         if (fanTrackBar != null) {
           fanTrackBar.Value = rpmValue / 100;
         }
@@ -656,7 +656,7 @@ namespace OmenSuperHub {
       // 获取不到温度时使用传感器温度备用
       if (monitorCPU && !monitorGPU) {
         if (CPUPower == 0 && isAmbientSensorSupported) {
-          resultSpeed = GetFanSpeedForSpecificTemperature(GetFittingTemperature(), CPUTempFanMap);
+          resultSpeed = GetFanSpeedForSpecificTemperature(hardwareControlService.GetFittingTemperature(), CPUTempFanMap);
         }
       }
 
@@ -681,7 +681,7 @@ namespace OmenSuperHub {
           return;
         }
 
-        using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\OmenSuperHub")) {
+        using (RegistryKey key = appSettingsService.CreateRootKey()) {
           if (key != null) {
             if (configName == null) {
               key.SetValue("CurrentPreset", currentPreset);
@@ -895,54 +895,8 @@ namespace OmenSuperHub {
     /// 不执行任何硬件操作，不更新 UI。
     /// </summary>
     static void LoadPresetFields(string presetKey) {
-      try {
-        if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") {
-          using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
-            if (key == null) return;
-            fanTable = (string)key.GetValue("FanTable", fanTable);
-            fanControl = (string)key.GetValue("FanControl", "auto");
-            tempSensitivity = (string)key.GetValue("TempSensitivity", "high");
-            cpuPower = (string)key.GetValue("CpuPower", "null");
-            gpuCoreOverclock = (int)key.GetValue("GpuCoreOverclock", -1);
-            gpuMemoryOverclock = (int)key.GetValue("GpuMemoryOverclock", -1);
-            tgpPower = (string)key.GetValue("TgpPower", "on");
-            ppabPower = (string)key.GetValue("PpabPower", "on");
-            dState = (string)key.GetValue("DState", "normal");
-            gpuClock = (int)key.GetValue("GpuClock", 0);
-            maxFrameRate = (int)key.GetValue("MaxFrameRate", -1);
-            tppPower = (string)key.GetValue("TppPower", "null");
-            iccMax = (string)key.GetValue("IccMax", "null");
-            acLoadline = (string)key.GetValue("AcLoadLine", "null");
-          }
-        } else {
-          // 自定义预设：从子键读取
-          using (RegistryKey key = Registry.CurrentUser.OpenSubKey($@"Software\OmenSuperHub\{presetKey}")) {
-            if (key == null) return;
-            fanTable = (string)key.GetValue("FanTable", fanTable);
-            fanControl = (string)key.GetValue("FanControl", fanControl);
-            tempSensitivity = (string)key.GetValue("TempSensitivity", tempSensitivity);
-            cpuPower = (string)key.GetValue("CpuPower", cpuPower);
-            gpuCoreOverclock = (int)key.GetValue("GpuCoreOverclock", -1);
-            gpuMemoryOverclock = (int)key.GetValue("GpuMemoryOverclock", -1);
-            tgpPower = (string)key.GetValue("TgpPower", tgpPower);
-            ppabPower = (string)key.GetValue("PpabPower", ppabPower);
-            dState = (string)key.GetValue("DState", dState);
-            gpuClock = (int)key.GetValue("GpuClock", gpuClock);
-            maxFrameRate = (int)key.GetValue("MaxFrameRate", maxFrameRate);
-            tppPower = (string)key.GetValue("TppPower", tppPower);
-            iccMax = (string)key.GetValue("IccMax", iccMax);
-            acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
-            monitorCPU = Convert.ToBoolean(key.GetValue("MonitorCPU", monitorCPU));
-            if (hasNVIDIAGpu)
-              monitorGPU = Convert.ToBoolean(key.GetValue("MonitorGPU", monitorGPU));
-            monitorFan = Convert.ToBoolean(key.GetValue("MonitorFan", monitorFan));
-            monitorRefreshRate = (string)key.GetValue("MonitorRefreshRate", monitorRefreshRate);
-            tempDisplayMode = (string)key.GetValue("TempDisplayMode", tempDisplayMode);
-          }
-        }
-      } catch (Exception ex) {
-        Logger.Error($"LoadPresetFields({presetKey}): {ex.Message}");
-      }
+      PresetSettings settings = presetService.LoadPresetFields(presetKey, CapturePresetSettings(), hasNVIDIAGpu);
+      ApplyPresetSettingsToFields(settings, !AppSettingsService.IsBuiltInPreset(presetKey));
     }
 
     static void LoadMonitorMetricSettings(string presetKey) {
@@ -1006,7 +960,7 @@ namespace OmenSuperHub {
       if (presetKey == "Restore" || presetKey == "PresetCustom1" || presetKey == "PresetCustom2" || presetKey == "PresetCustom3") {
         if (presetKey == "Restore") {
           try {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+            using (RegistryKey key = appSettingsService.OpenRootKey()) {
               // Restore时已经判断过key
               if (key != null) {
                 // 硬件监控：内置预设从主键读取，自定义预设已由 LoadPresetFields 覆盖
@@ -1031,7 +985,7 @@ namespace OmenSuperHub {
         UpdateCheckedState("monitorGPUGroup", monitorGPU ? Strings.MonitorGpuOn : Strings.MonitorGpuOff);
         UpdateCheckedState("monitorFanGroup", monitorFan ? Strings.MonitorFanOn : Strings.MonitorFanOff);
 
-        bool wasMonitorRunning = hwMonitorProcess != null && !hwMonitorProcess.HasExited;
+        bool wasMonitorRunning = IsHardwareMonitorRunning();
         if (monitorCPU || monitorGPU) {
           if (!wasMonitorRunning) {
             cpuTempReady = gpuTempReady = tempReady = false;
@@ -1079,18 +1033,18 @@ namespace OmenSuperHub {
 
       // 风扇控制模式
       if (fanControl == "auto") {
-        SetMaxFanSpeedOff();
+        hardwareControlService.SetMaxFanSpeedOff();
         fanControlTimer.Change(0, 1000);
         UpdateCheckedState("fanControlGroup", Strings.FanAuto);
       } else if (fanControl.Contains("max")) {
-        SetMaxFanSpeedOn();
+        hardwareControlService.SetMaxFanSpeedOn();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         UpdateCheckedState("fanControlGroup", Strings.FanMax);
       } else if (fanControl.Contains(" RPM")) {
-        SetMaxFanSpeedOff();
+        hardwareControlService.SetMaxFanSpeedOff();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-        SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
+        hardwareControlService.SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
         if (fanTrackBar != null) fanTrackBar.Value = rpmValue / 100;
         UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
       }
@@ -1108,13 +1062,13 @@ namespace OmenSuperHub {
         if (cpuPower == "null") {
           UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
         } else if (cpuPower == "max") {
-          SetCpuPowerLimit(254);
+          hardwareControlService.SetCpuPowerLimit(254);
           if (cpuPowerTrackBar != null) cpuPowerTrackBar.Value = 254;
           UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
         } else if (cpuPower.Contains(" W")) {
           int value = int.Parse(cpuPower.Replace(" W", "").Trim());
           if (value >= 5 && value <= 254) {
-            SetCpuPowerLimit((byte)value);
+            hardwareControlService.SetCpuPowerLimit((byte)value);
             if (cpuPowerTrackBar != null) cpuPowerTrackBar.Value = value;
             UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
           }
@@ -1122,7 +1076,7 @@ namespace OmenSuperHub {
       }
 
       // GPU 电源状态
-      SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
+      hardwareControlService.SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
       UpdateCheckedState("tgpPowerGroup", tgpPower == "on" ? Strings.Enable : Strings.Disable);
       UpdateCheckedState("ppabPowerGroup", ppabPower == "on" ? Strings.Enable : Strings.Disable);
       UpdateCheckedState("dStateGroup", dState == "normal" ? Strings.Standard : Strings.LowPower);
@@ -1145,23 +1099,23 @@ namespace OmenSuperHub {
         if (gpuCoreOverclock < 0) {
           UpdateCheckedState("gpuCoreOverclockGroup", Strings.NotSet);
         } else {
-          System.Threading.Tasks.Task.Run(() => SetCoreClockOffset(gpuCoreOverclock));
+          System.Threading.Tasks.Task.Run(() => gpuService.SetCoreClockOffset(gpuCoreOverclock));
           UpdateCheckedState("gpuCoreOverclockGroup", Strings.SetGpuCoreOverclockSlider);
         }
 
         if (gpuMemoryOverclock < 0) {
           UpdateCheckedState("gpuMemoryOverclockGroup", Strings.NotSet);
         } else {
-          System.Threading.Tasks.Task.Run(() => SetMemoryClockOffset(gpuMemoryOverclock));
+          System.Threading.Tasks.Task.Run(() => gpuService.SetMemoryClockOffset(gpuMemoryOverclock));
           UpdateCheckedState("gpuMemoryOverclockGroup", Strings.SetGpuMemoryOverclockSlider);
         }
 
         if (gpuClockTrackBar != null) {
           if (gpuClock < gpuClockTrackBar.Minimum * 10) {
-            System.Threading.Tasks.Task.Run(() => SetGPUClockReset());
+            System.Threading.Tasks.Task.Run(() => gpuService.ResetGpuClockLimit());
             UpdateCheckedState("gpuClockGroup", Strings.Unlimited);
           } else {
-            System.Threading.Tasks.Task.Run(() => SetGPUClockLimit(gpuClock));
+            System.Threading.Tasks.Task.Run(() => gpuService.SetGpuClockLimit(gpuClock));
             gpuClockTrackBar.Value = gpuClock / 10;
             UpdateCheckedState("gpuClockGroup", Strings.SetGpuClockSlider);
           }
@@ -1184,7 +1138,7 @@ namespace OmenSuperHub {
         UpdateCheckedState("iccMaxGroup", Strings.NotSet);
       } else if (iccMax.Contains(" A")) {
         if (int.TryParse(iccMax.Replace(" A", "").Trim(), out int ampVal) && ampVal >= 150 && ampVal <= 350) {
-          SetIccMaxByWmi((decimal)ampVal);
+          hardwareControlService.SetIccMaxByWmi((decimal)ampVal);
           UpdateCheckedState("iccMaxGroup", iccMax);
         }
       }
@@ -1193,7 +1147,7 @@ namespace OmenSuperHub {
       if (acLoadline == "null") {
         UpdateCheckedState("acLoadLineGroup", Strings.NotSet);
       } else if (int.TryParse(acLoadline, out int llVal) && llVal >= 1) {
-        SetLoadLine(llVal);
+        hardwareControlService.SetLoadLine(llVal);
         UpdateCheckedState("acLoadLineGroup", (180 - 10 * llVal).ToString());
       }
 
@@ -1203,12 +1157,12 @@ namespace OmenSuperHub {
         if (tppSnapshot == "null") {
           UpdateCheckedState("tppPowerGroup", Strings.NotSet);
         } else if (tppSnapshot == "max") {
-          SetConcurrentTdp(254);
+          hardwareControlService.SetConcurrentTdp(254);
           if (tppTrackBar != null) tppTrackBar.Value = 254;
         } else if (tppSnapshot.Contains(" W")) {
           int value = int.Parse(tppSnapshot.Replace(" W", "").Trim());
           if (value >= 20 && value <= 254) {
-            SetConcurrentTdp((byte)value);
+            hardwareControlService.SetConcurrentTdp((byte)value);
             if (tppTrackBar != null) tppTrackBar.Value = value;
             UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
           }
@@ -1225,33 +1179,7 @@ namespace OmenSuperHub {
 
       if (targetPreset == "PresetExtreme" || targetPreset == "PresetGpuPriority" || targetPreset == "PresetLightUse") {
         // 内置预设：先写入默认值，再走通用保存路径
-        int targetPL1Perf = (platformSettings?.NbPL1UpperBoundPerformance > 0) ? platformSettings.NbPL1UpperBoundPerformance : 160;
-        int targetPL1Default = (platformSettings?.NbPL1UpperBoundDefault > 0) ? platformSettings.NbPL1UpperBoundDefault : 55;
-
-        fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
-        tgpPower = "on"; ppabPower = "on"; dState = "normal";
-        gpuCoreOverclock = 120; gpuMemoryOverclock = targetPreset == "PresetExtreme" ? 400 : 0;
-        gpuClock = 0; iccMax = "null"; acLoadline = "null";
-
-        switch (targetPreset) {
-          case "PresetExtreme":
-            cpuPower = $"{targetPL1Perf} W";
-            tppPower = $"{targetPL1Perf} W";
-            maxFrameRate = 0;
-            break;
-          case "PresetGpuPriority":
-            cpuPower = $"{targetPL1Default} W";
-            tppPower = $"{targetPL1Perf} W";
-            maxFrameRate = 0;
-            break;
-          case "PresetLightUse":
-            fanTable = "silent";
-            cpuPower = $"{(int)(targetPL1Default * 0.6)} W";
-            tppPower = "null";
-            tgpPower = "off"; ppabPower = "off";
-            maxFrameRate = 60;
-            break;
-        }
+        ApplyPresetSettingsToFields(PresetService.CreateBuiltInDefaults(targetPreset, platformSettings), false);
       } else {
         // 自定义预设：从注册表读取
         LoadPresetFields(targetPreset);
@@ -1277,7 +1205,7 @@ namespace OmenSuperHub {
     /// </summary>
     static void RestoreConfig() {
       try {
-        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
+        using (RegistryKey key = appSettingsService.OpenRootKey()) {
           if (key == null) {
             // 全新安装，无注册表键：应用默认预设
             applyPresetLogic(platformSettings != null ? "PresetExtreme" : "PresetCustom1");
@@ -1300,43 +1228,9 @@ namespace OmenSuperHub {
           // 内置预设：先按预设逻辑写入默认字段，再用注册表已保存的值覆盖
           // 自定义预设：直接从子键读取
           if (currentPreset == "PresetExtreme" || currentPreset == "PresetGpuPriority" || currentPreset == "PresetLightUse") {
-            int targetPL1Perf = (platformSettings?.NbPL1UpperBoundPerformance > 0) ? platformSettings.NbPL1UpperBoundPerformance : 160;
-            int targetPL1Default = (platformSettings?.NbPL1UpperBoundDefault > 0) ? platformSettings.NbPL1UpperBoundDefault : 55;
-            fanTable = "cool"; fanControl = "auto"; tempSensitivity = "high";
-            tgpPower = "on"; ppabPower = "on"; dState = "normal";
-            gpuCoreOverclock = 120; gpuMemoryOverclock = currentPreset == "PresetExtreme" ? 400 : 0;
-            gpuClock = 0; iccMax = "null"; acLoadline = "null";
-            switch (currentPreset) {
-              case "PresetExtreme":
-                cpuPower = $"{targetPL1Perf} W"; tppPower = $"{targetPL1Perf} W"; maxFrameRate = 0;
-                break;
-              case "PresetGpuPriority":
-                cpuPower = $"{targetPL1Default} W"; tppPower = $"{targetPL1Perf} W"; maxFrameRate = 0;
-                break;
-              case "PresetLightUse":
-                fanTable = "silent";
-                cpuPower = $"{(int)(targetPL1Default * 0.6)} W"; tppPower = "null";
-                tgpPower = "off"; ppabPower = "off"; maxFrameRate = 60;
-                break;
-            }
-            // 用注册表中已保存的值覆盖（上次修改过的字段会被保留）
-            fanTable = (string)key.GetValue("FanTable", fanTable);
-            fanControl = (string)key.GetValue("FanControl", fanControl);
-            tempSensitivity = (string)key.GetValue("TempSensitivity", tempSensitivity);
-            cpuPower = (string)key.GetValue("CpuPower", cpuPower);
-            gpuCoreOverclock = (int)key.GetValue("GpuCoreOverclock", gpuCoreOverclock);
-            gpuMemoryOverclock = (int)key.GetValue("GpuMemoryOverclock", gpuMemoryOverclock);
-            tgpPower = (string)key.GetValue("TgpPower", tgpPower);
-            ppabPower = (string)key.GetValue("PpabPower", ppabPower);
-            dState = (string)key.GetValue("DState", dState);
-            gpuClock = (int)key.GetValue("GpuClock", gpuClock);
-            maxFrameRate = (int)key.GetValue("MaxFrameRate", maxFrameRate);
-            tppPower = (string)key.GetValue("TppPower", tppPower);
-            iccMax = (string)key.GetValue("IccMax", iccMax);
-            acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
-          } else {
-            LoadPresetFields(currentPreset);
+            ApplyPresetSettingsToFields(PresetService.CreateBuiltInDefaults(currentPreset, platformSettings), false);
           }
+          LoadPresetFields(currentPreset);
           LoadMonitorMetricSettings(currentPreset);
 
           var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
@@ -1349,7 +1243,7 @@ namespace OmenSuperHub {
             DBVersion = (int)key.GetValue("DBVersion", 2);
             switch (DBVersion) {
               case 1:
-                if (IsAbove50Series() || !powerOnline || !CheckDBVersion(1)) {
+                if (IsAbove50Series() || !powerOnline || !CheckDBVersionWithUi(1)) {
                   DBVersion = 2;
                   ChangeDBState(true);
                   UpdateCheckedState("DBGroup", Strings.DbNormal);
@@ -1357,7 +1251,7 @@ namespace OmenSuperHub {
                   countDB = countDBInit + 60;
                   // 启用DB驱动
                   ChangeDBState(true);
-                  SetGpuPowerState(true, true);
+                  hardwareControlService.SetGpuPowerState(true, true);
                   performanceControlMenu.Enabled = false;
                   performanceControlMenu.ToolTipText = Strings.UnavailableReasonTip(countDB + 1);
                   UpdateCheckedState("DBGroup", Strings.DbUnlocked);
@@ -1439,7 +1333,7 @@ namespace OmenSuperHub {
     static void SavePresetToRegistry(string presetKey) {
       if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") return;
       try {
-        using (RegistryKey key = Registry.CurrentUser.CreateSubKey($@"Software\OmenSuperHub\{presetKey}")) {
+        using (RegistryKey key = appSettingsService.CreatePresetKey(presetKey)) {
           if (key == null) return;
           key.SetValue("FanTable", fanTable);
           key.SetValue("FanControl", fanControl);

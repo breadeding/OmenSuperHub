@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -121,10 +121,6 @@ namespace OmenSuperHub {
     static volatile bool tempReady = false;   // 子进程首次输出有效温度后置 true
     static volatile bool cpuTempReady = false; // CPU 温度已初始化给平滑值，允许参与风扇控制
     static volatile bool gpuTempReady = false; // GPU 温度已初始化给平滑值，允许参与风扇控制
-    static volatile bool hwMonitorStopping = false; // 主动停止时置 true，阻止 Exited 自动重启
-    static Process hwMonitorProcess;
-    static StreamWriter hwMonitorIn;
-
     // Cache last written values to avoid unnecessary disk reads/writes
     static string lastCpuText = null, lastGpuText = null, lastFanText = null, pawnIOState = "";
     static string tempDisplayMode = "smoothed"; // 温度显示方式：smoothed=平滑值, raw=原始值
@@ -196,6 +192,7 @@ namespace OmenSuperHub {
 
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+        InitializeServices();
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolveEmbeddedAssembly;
 
@@ -251,7 +248,7 @@ namespace OmenSuperHub {
         var t4 = Task.Run(() => kbType = GetKeyboardType());
         var t5 = Task.Run(() => NvGraphicsMode = GetGfxMode());
         var t6 = Task.Run(() => {
-          SetUnleashMode(); // 固定为释放全部性能模式
+          hardwareControlService.SetUnleashMode(); // 固定为释放全部性能模式
           Is3FanNb = IsThreeFanSupported();
         });
         var t7 = Task.Run(() => {
@@ -301,7 +298,7 @@ namespace OmenSuperHub {
           int s0, s1;
           lock (fanSpeedNow) { s0 = fanSpeedNow[0]; s1 = fanSpeedNow[1]; }
           if (Math.Abs(fanSpeed - s0) > 1 || Math.Abs(fanSpeed - s1) > 1) {
-            SetFanLevel(fanSpeed, fanSpeed, Is3FanNb);
+            hardwareControlService.SetFanLevel(fanSpeed, fanSpeed, Is3FanNb);
             if (!monitorFan) {
               lock (fanSpeedNow) { fanSpeedNow[0] = fanSpeed; fanSpeedNow[1] = fanSpeed; }
             }
@@ -633,123 +630,29 @@ namespace OmenSuperHub {
     }
 
     static void StartHardwareMonitor() {
-      if (hwMonitorProcess != null && !hwMonitorProcess.HasExited) return;
-
-      hwMonitorProcess = new Process {
-        StartInfo = new ProcessStartInfo {
-          FileName = Application.ExecutablePath,
-          Arguments = "--hwmonitor",
-          UseShellExecute = false,
-          RedirectStandardInput = true,
-          RedirectStandardOutput = true,
-          RedirectStandardError = true,
-          CreateNoWindow = true,
-          WindowStyle = ProcessWindowStyle.Hidden
-        }
-      };
-
-      hwMonitorProcess.OutputDataReceived += (s, e) => {
-        if (string.IsNullOrEmpty(e.Data)) return;
-        //Debug.WriteLine("[HWMonitor OUT] " + e.Data); // 将子进程输出重定向到VS的输出窗口
-        if (e.Data.StartsWith("CRASH:")) return;
-        var parts = e.Data.Split(';');
-        if (parts.Length == 5 || parts.Length == 7) {
-          if (float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float tc)) rawTempCPU = tc;
-          if (float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float pc) && pc < 9999) rawPowerCPU = pc;
-          if (float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float tg)) rawTempGPU = tg;
-          if (float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float pg)) rawPowerGPU = pg;
-          rawGotGPU = parts[4] == "1";
-          rawFrequencyCPU = 0f;
-          rawFrequencyGPU = 0f;
-          if (parts.Length == 7) {
-            if (float.TryParse(parts[5], NumberStyles.Float, CultureInfo.InvariantCulture, out float fc)) rawFrequencyCPU = fc;
-            if (float.TryParse(parts[6], NumberStyles.Float, CultureInfo.InvariantCulture, out float fg)) rawFrequencyGPU = fg;
-          }
-          // 首次收到数据时，初始化对应传感器的平滑温度
-          if (!cpuTempReady) {
-            smoothedCPUTemp = rawTempCPU;
-            cpuTempReady = true;
-          }
-          if (!gpuTempReady && rawGotGPU) {
-            smoothedGPUTemp = rawTempGPU;
-            gpuTempReady = true;
-          }
-          if (!rawGotGPU) {
-            gpuTempReady = false;
-            GPUTemp = 40;
-            GPUPower = 0;
-            rawFrequencyGPU = 0f;
-            GPUFrequency = 0f;
-          }
-
-          if (!tempReady) {
-            tempReady = true;
-            // 首次获取到数据立即刷新
-            try {
-              QueryHardware();
-            } catch (Exception ex) {
-              Logger.Error($"[UpdateTooltip] QueryHardware 异常: {ex.Message}");
-            }
-            UpdateFloatingText();
-            UpdateTrayIconText();
-
-            if (customIcon == "dynamic")
-              UpdateDynamicIcon();
-          }
-        }
-      };
-
-      hwMonitorProcess.ErrorDataReceived += (s, e) => {
-        if (string.IsNullOrEmpty(e.Data)) return;
-        Logger.Error("HardwareMonitor [HWMonitor ERR] " + e.Data);
-      };
-
-      hwMonitorProcess.EnableRaisingEvents = true;
-      hwMonitorProcess.Exited += (s, e) => {
-        if (hwMonitorStopping) {
-          hwMonitorStopping = false;
-          return;
-        }
-        //Logger.Info("StartHardwareMonitor [HWMonitor] 进程退出，准备重启...");
-        System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ => {
-          try { StartHardwareMonitor(); } catch { }
-        });
-      };
-
-      try {
-        hwMonitorProcess.Start();
-        hwMonitorIn = hwMonitorProcess.StandardInput;
-        hwMonitorProcess.BeginOutputReadLine();
-        hwMonitorProcess.BeginErrorReadLine(); // 必须读取错误流避免死锁
-        SetGpuMonitorState(monitorGPU);
-        SetCpuMonitorState(monitorCPU);
-        SetMonitorInterval(monitorRefreshRate == "high" ? 250 : 1000);
-      } catch (Exception) { }
+      if (hardwareMonitorService == null)
+        InitializeServices();
+      hardwareMonitorService.Start(monitorCPU, monitorGPU, monitorRefreshRate == "high" ? 250 : 1000);
     }
 
     static void SetGpuMonitorState(bool enable) {
-      if (hwMonitorIn != null && hwMonitorProcess != null && !hwMonitorProcess.HasExited) {
-        try { hwMonitorIn.WriteLine(enable ? "GPU:ON" : "GPU:OFF"); } catch { }
-      }
+      if (hardwareMonitorService != null)
+        hardwareMonitorService.SetGpuMonitorState(enable);
     }
 
     static void SetCpuMonitorState(bool enable) {
-      if (hwMonitorIn != null && hwMonitorProcess != null && !hwMonitorProcess.HasExited) {
-        try { hwMonitorIn.WriteLine(enable ? "CPU:ON" : "CPU:OFF"); } catch { }
-      }
+      if (hardwareMonitorService != null)
+        hardwareMonitorService.SetCpuMonitorState(enable);
     }
 
     static void SetMonitorInterval(int ms) {
-      if (hwMonitorIn != null && hwMonitorProcess != null && !hwMonitorProcess.HasExited) {
-        try { hwMonitorIn.WriteLine($"INTERVAL:{ms}"); } catch { }
-      }
+      if (hardwareMonitorService != null)
+        hardwareMonitorService.SetMonitorInterval(ms);
     }
 
     static void StopHardwareMonitor() {
-      if (hwMonitorProcess != null && !hwMonitorProcess.HasExited) {
-        hwMonitorStopping = true;
-        try { hwMonitorProcess.Kill(); } catch { hwMonitorStopping = false; }
-      }
+      if (hardwareMonitorService != null)
+        hardwareMonitorService.Stop();
     }
 
     static int flagStart = 0;
@@ -758,16 +661,16 @@ namespace OmenSuperHub {
       if (flagStart < 5) {
         flagStart++;
         if (fanControl.Contains("max")) {
-          SetMaxFanSpeedOn();
+          hardwareControlService.SetMaxFanSpeedOn();
         } else if (fanControl.Contains(" RPM")) {
-          SetMaxFanSpeedOff();
+          hardwareControlService.SetMaxFanSpeedOff();
           int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-          SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
+          hardwareControlService.SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
         }
       }
 
       //定时通信避免功耗锁定
-      if (GetFanCount(out bool ocp, out bool otp)) {
+      if (hardwareControlService.GetFanCount(out bool ocp, out bool otp)) {
         if (ocp || otp) {
           Logger.Info($"BIOS 保护状态 - 过流: {ocp}, 过温: {otp}");
         }
@@ -783,7 +686,7 @@ namespace OmenSuperHub {
       // 休眠重新启动
       if (e.Mode == PowerModes.Resume) {
         Logger.Info("系统已恢复启动。");
-        GetFanCount(out bool ocp, out bool otp);
+        hardwareControlService.GetFanCount(out bool ocp, out bool otp);
 
         tooltipUpdateTimer.Start();
         countRestore = 3;
@@ -1062,7 +965,7 @@ namespace OmenSuperHub {
               countDB = countDBInit;
               // 启用DB驱动
               ChangeDBState(true);
-              SetGpuPowerState(true, true);
+              hardwareControlService.SetGpuPowerState(true, true);
             }
           } else {
             tryTimes = 0;
@@ -1077,10 +980,10 @@ namespace OmenSuperHub {
             // 恢复CPU功耗设定
             RestoreCPUPower();
             // 恢复GPU功耗设定
-            SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
+            hardwareControlService.SetGpuPowerState(tgpPower == "on", ppabPower == "on", dState == "normal" ? 1 : 2);
           }
         } else if (countDB == countDBInit - 1) {
-          if (isCPUPowerControlSupported) SetCpuPowerLimit((byte)CPULimitDB);
+          if (isCPUPowerControlSupported) hardwareControlService.SetCpuPowerLimit((byte)CPULimitDB);
         }
       }
 
@@ -1211,7 +1114,7 @@ namespace OmenSuperHub {
 
           // 再切换为自动风扇控制
           fanControl = "auto";
-          SetMaxFanSpeedOff();
+          hardwareControlService.SetMaxFanSpeedOff();
           fanControlTimer.Change(0, 1000);
           UpdateCheckedState("fanControlGroup", Strings.FanAuto);
           SaveConfig("FanControl");
