@@ -11,6 +11,7 @@ namespace OmenSuperHub.Tests {
       Run("MonitorSettings maps high interval", MonitorSettingsMapsHighInterval);
       Run("MonitorSettings normalizes unknown interval", MonitorSettingsNormalizesUnknownInterval);
       Run("HardwareMonitorSnapshot parses invariant output", HardwareMonitorSnapshotParsesInvariantOutput);
+      Run("HardwareMonitorSnapshot parses frequency output", HardwareMonitorSnapshotParsesFrequencyOutput);
       Run("HardwareMonitorSnapshot rejects malformed output", HardwareMonitorSnapshotRejectsMalformedOutput);
       Run("PresetService creates extreme defaults", PresetServiceCreatesExtremeDefaults);
       Run("PresetService creates light-use defaults", PresetServiceCreatesLightUseDefaults);
@@ -56,6 +57,15 @@ namespace OmenSuperHub.Tests {
       AssertNear(44.75f, snapshot.GpuTemperature, "Expected GPU temperature.");
       AssertNear(80.00f, snapshot.GpuPower, "Expected GPU power.");
       AssertTrue(snapshot.GotGpuPower, "Expected GPU power flag.");
+    }
+
+    private static void HardwareMonitorSnapshotParsesFrequencyOutput() {
+      HardwareMonitorSnapshot snapshot;
+      bool parsed = HardwareMonitorSnapshot.TryParse("51.25;12.50;44.75;80.00;1;4250.00;2100.00", out snapshot);
+
+      AssertTrue(parsed, "Expected snapshot with frequency to parse.");
+      AssertNear(4250f, snapshot.CpuFrequency, "Expected CPU frequency.");
+      AssertNear(2100f, snapshot.GpuFrequency, "Expected GPU frequency.");
     }
 
     private static void HardwareMonitorSnapshotRejectsMalformedOutput() {

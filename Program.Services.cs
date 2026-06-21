@@ -31,6 +31,8 @@ namespace OmenSuperHub {
       rawTempGPU = snapshot.GpuTemperature;
       rawPowerGPU = snapshot.GpuPower;
       rawGotGPU = snapshot.GotGpuPower;
+      rawFrequencyCPU = snapshot.CpuFrequency;
+      rawFrequencyGPU = snapshot.GpuFrequency;
 
       if (!cpuTempReady) {
         smoothedCPUTemp = rawTempCPU;
@@ -44,6 +46,8 @@ namespace OmenSuperHub {
         gpuTempReady = false;
         GPUTemp = 40;
         GPUPower = 0;
+        rawFrequencyGPU = 0f;
+        GPUFrequency = 0f;
       }
 
       if (!tempReady) {
