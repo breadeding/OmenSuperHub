@@ -100,7 +100,8 @@ namespace OmenSuperHub {
     static int textSize = 40;
     static int countRestore = 0, gpuClock = 0, gpuCoreOverclock = -1, gpuMemoryOverclock = -1, maxFrameRate = -1, graphicsBoostClock = 0;
     static int alreadyRead = 0, alreadyReadCode = 1000;
-    static readonly string[] PresetOrder = { "PresetExtreme", "PresetGpuPriority", "PresetLightUse", "PresetCustom1", "PresetCustom2", "PresetCustom3" };
+    const string FanLockPresetKey = "PresetFanLock";
+    static readonly string[] PresetOrder = { "PresetExtreme", "PresetGpuPriority", "PresetLightUse", FanLockPresetKey, "PresetCustom1", "PresetCustom2", "PresetCustom3" };
     static string currentPreset = "PresetCustom1", presetCustom1Name = Strings.PresetCustom1, presetCustom2Name = Strings.PresetCustom2, presetCustom3Name = Strings.PresetCustom3;
     static string fanTable = "cool", fanControl = "auto", tempSensitivity = "high", tppPower = "null", iccMax = "null", acLoadline = "null", cpuPower = "null", tgpPower = "on", ppabPower = "on", dState = "normal", autoStart = "off", customIcon = "original", floatingBar = "off", floatingBarLoc = "left", floatingBarScreen = "", omenKey = OmenKeyActions.Default, omenKeyAppPath = "", omenKeyAppName = "", omenKeyShortcut = "", omenKeyPresetCandidates = "", dataLocalize = "off", appLanguage = "zh-CN", autoFanProtect = "on";
     static volatile bool monitorFan = false;
@@ -117,6 +118,10 @@ namespace OmenSuperHub {
     static int? maxGPUTemp = null;
     static float CPUTemp = 50, GPUTemp = 40, rawTempCPU = 50f, rawTempGPU = 40f;
     static float CPUPower = 0, GPUPower = 0, CPUFrequency = 0f, GPUFrequency = 0f, rawPowerCPU = 0f, rawPowerGPU = 0f, rawFrequencyCPU = 0f, rawFrequencyGPU = 0f;
+    static int fanLockMinimumPower = 20, fanLockTargetRpm = 3000, fanLockTargetTemperature = 80;
+    static int fanLockCurrentPower = -1;
+    static string fanLockReturnPreset = "PresetCustom1";
+    static bool fanLockUpdatingControls = false;
     static bool rawGotGPU = false;
     static volatile bool tempReady = false;   // 子进程首次输出有效温度后置 true
     static volatile bool cpuTempReady = false; // CPU 温度已初始化给平滑值，允许参与风扇控制
@@ -1186,6 +1191,8 @@ namespace OmenSuperHub {
         smoothedGPUTemp = rawTempGPU * respondSpeed + smoothedGPUTemp * (1.0f - respondSpeed);
       }
 
+      bool fanLockPowerHandledByProtection = false;
+
       // 根据显示方式决定展示原始值或平滑值
       if (monitorCPU && cpuTempReady)
         CPUTemp = (tempDisplayMode == "raw") ? tempCPU : smoothedCPUTemp;
@@ -1203,25 +1210,46 @@ namespace OmenSuperHub {
         }
 
         if (fanSpeedCondition) {
-          // 先切换为降温模式（cool配置）
-          fanTable = "cool";
-          LoadFanConfig("cool.txt");
-          UpdateCheckedState("fanTableGroup", Strings.FanCoolMode);
-          SaveConfig("FanTable");
+          bool exitedFanLockForSafety = false;
+          bool shouldSwitchFan = true;
+          if (currentPreset == FanLockPresetKey) {
+            shouldSwitchFan = PrepareFanLockOverheatProtection();
+            if (shouldSwitchFan) {
+              LeaveFanLockPresetForSafety();
+              exitedFanLockForSafety = true;
+            } else {
+              fanLockPowerHandledByProtection = true;
+              trayIcon.BalloonTipTitle = Strings.HighTempBalloonTitle;
+              trayIcon.BalloonTipText = Strings.FanLockPowerReducedBalloonText(currentMaxCPUTemp, smoothedCPUTemp, fanLockCurrentPower, fanLockMinimumPower);
+              trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
+              trayIcon.ShowBalloonTip(3000);
+            }
+          }
 
-          // 再切换为自动风扇控制
-          fanControl = "auto";
-          SetMaxFanSpeedOff();
-          fanControlTimer.Change(0, 1000);
-          UpdateCheckedState("fanControlGroup", Strings.FanAuto);
-          SaveConfig("FanControl");
+          if (shouldSwitchFan) {
+            // 先切换为降温模式（cool配置）
+            fanTable = "cool";
+            LoadFanConfig("cool.txt");
+            UpdateCheckedState("fanTableGroup", Strings.FanCoolMode);
+            if (!exitedFanLockForSafety) SaveConfig("FanTable");
 
-          trayIcon.BalloonTipTitle = Strings.HighTempBalloonTitle;
-          trayIcon.BalloonTipText = Strings.HighTempBalloonText(currentMaxCPUTemp, smoothedCPUTemp);
-          trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
-          trayIcon.ShowBalloonTip(3000);
+            // 再切换为自动风扇控制
+            fanControl = "auto";
+            SetMaxFanSpeedOff();
+            fanControlTimer.Change(0, 1000);
+            UpdateCheckedState("fanControlGroup", Strings.FanAuto);
+            if (!exitedFanLockForSafety) SaveConfig("FanControl");
+
+            trayIcon.BalloonTipTitle = Strings.HighTempBalloonTitle;
+            trayIcon.BalloonTipText = Strings.HighTempBalloonText(currentMaxCPUTemp, smoothedCPUTemp);
+            trayIcon.BalloonTipIcon = ToolTipIcon.Warning;
+            trayIcon.ShowBalloonTip(3000);
+          }
         }
       }
+
+      if (!fanLockPowerHandledByProtection)
+        AdjustFanLockPower();
 
       //通过countQuery延时来确保温度正常读取
       if (countQuery <= 5 && monitorGPU)
@@ -1428,6 +1456,7 @@ namespace OmenSuperHub {
         case "PresetExtreme": return Strings.PresetExtreme;
         case "PresetGpuPriority": return Strings.PresetGpuPriority;
         case "PresetLightUse": return Strings.PresetLightUse;
+        case FanLockPresetKey: return Strings.PresetFanLock;
         case "PresetCustom1": return presetCustom1Name;
         case "PresetCustom2": return presetCustom2Name;
         case "PresetCustom3": return presetCustom3Name;

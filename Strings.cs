@@ -59,6 +59,19 @@
     public static string PresetExtreme => T("极致性能", "極致性能", "Extreme Performance");
     public static string PresetGpuPriority => T("GPU优先", "GPU優先", "GPU Priority");
     public static string PresetLightUse => T("轻度使用", "輕度使用", "Light Use");
+    public static string PresetFanLock => T("锁定风扇转速模式", "鎖定風扇轉速模式", "Locked Fan Speed Mode");
+    public static string PresetFanLockTooltip => T(
+        "左键进入锁定风扇转速模式；右键修改目标转速、目标温度和CPU功耗墙下限。",
+        "左鍵進入鎖定風扇轉速模式；右鍵修改目標轉速、目標溫度和CPU功耗牆下限。",
+        "Left-click to activate locked fan speed mode; right-click to edit its fan, temperature, and minimum CPU power targets.");
+    public static string FanLockEditorTitle => T("锁定风扇转速模式", "鎖定風扇轉速模式", "Locked Fan Speed Mode");
+    public static string FanLockMinimumPower => T("CPU功耗墙下限 (W)", "CPU功耗牆下限 (W)", "Minimum CPU power (W)");
+    public static string FanLockTargetRpm => T("目标风扇转速 (RPM)", "目標風扇轉速 (RPM)", "Target fan speed (RPM)");
+    public static string FanLockTargetTemperature => T("目标CPU温度 (℃)", "目標CPU溫度 (℃)", "Target CPU temperature (°C)");
+    public static string FanLockNeedsCpuPower => T(
+        "当前预设没有设置CPU功率，无法确定锁定模式的PL1起点。请先设置一个CPU功率数值。",
+        "目前預設沒有設定CPU功率，無法確定鎖定模式的PL1起點。請先設定一個CPU功率數值。",
+        "The current preset has no CPU power setting, so the starting PL1 cannot be determined. Set a CPU power value first.");
     public static string PresetCustom1 => T("自定义预设1", "自定義預設1", "Custom 1");
     public static string PresetCustom2 => T("自定义预设2", "自定義預設2", "Custom 2");
     public static string PresetCustom3 => T("自定义预设3", "自定義預設3", "Custom 3");
@@ -288,9 +301,13 @@
     // 高温警告（气泡）
     public static string HighTempBalloonTitle => T("温度过高警告", "溫度過高警告", "High Temperature Warning");
     public static string HighTempBalloonText(int limit, float temp) => T(
-        $"检测到CPU温度高于{limit - 5}℃ ({temp:F1}℃)，且风扇处于固定转速状态，OSH已自动切换为降温模式并将风扇控制切换为自动模式。",
-        $"偵測到CPU溫度高於{limit - 5}℃ ({temp:F1}℃)，且風扇處於固定轉速狀態，OSH已自動切換至降溫模式並將風扇控制改為自動。",
-        $"CPU temperature exceeded {limit - 5}°C ({temp:F1}°C) with a fixed fan speed. OSH has switched to Cool mode and Auto fan control.");
+        $"检测到CPU温度高于{limit - 2}℃ ({temp:F1}℃)，且风扇处于固定转速状态，OSH已自动切换为降温模式并将风扇控制切换为自动模式。",
+        $"偵測到CPU溫度高於{limit - 2}℃ ({temp:F1}℃)，且風扇處於固定轉速狀態，OSH已自動切換至降溫模式並將風扇控制改為自動。",
+        $"CPU temperature exceeded {limit - 2}°C ({temp:F1}°C) with a fixed fan speed. OSH has switched to Cool mode and Auto fan control.");
+    public static string FanLockPowerReducedBalloonText(int limit, float temp, int power, int minimum) => T(
+        $"检测到CPU温度高于{limit - 2}℃ ({temp:F1}℃)。锁定风扇转速模式已优先将CPU功耗墙降低至{power} W，下限为{minimum} W；到达下限后若仍过热才会切换风扇控制。",
+        $"偵測到CPU溫度高於{limit - 2}℃ ({temp:F1}℃)。鎖定風扇轉速模式已優先將CPU功耗牆降低至{power} W，下限為{minimum} W；到達下限後若仍過熱才會切換風扇控制。",
+        $"CPU temperature exceeded {limit - 2}°C ({temp:F1}°C). Locked fan speed mode reduced CPU power to {power} W first (minimum {minimum} W); fan control will change only if overheating continues at the minimum.");
 
     // ─────────────────────────────────────────────────────────────────────────
     // 性能控制 — 提示文本

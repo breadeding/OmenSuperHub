@@ -194,6 +194,23 @@ namespace OmenSuperHub {
         lightUseItem.Name = "PresetLightUse";
         presetsMenu.DropDownItems.Add(lightUseItem);
         presetsMenu.DropDownItems.Add(new ToolStripSeparator());
+
+        var fanLockItem = new ToolStripMenuItem(Strings.PresetFanLock) {
+          Name = FanLockPresetKey,
+          Tag = "presetsGroup",
+          Checked = currentPreset == FanLockPresetKey,
+          ToolTipText = Strings.PresetFanLockTooltip
+        };
+        fanLockItem.MouseUp += (s, e) => {
+          if (e.Button == MouseButtons.Left) {
+            if (ActivateFanLockPreset())
+              UpdateCheckedState("presetsGroup", null, fanLockItem);
+          } else if (e.Button == MouseButtons.Right) {
+            ShowFanLockEditor();
+          }
+        };
+        presetsMenu.DropDownItems.Add(fanLockItem);
+        presetsMenu.DropDownItems.Add(new ToolStripSeparator());
       }
 
       var custom1Item = CreateMenuItem(presetCustom1Name, "presetsGroup", (s, e) => applyPresetLogic("PresetCustom1"), currentPreset == "PresetCustom1");
@@ -344,7 +361,7 @@ namespace OmenSuperHub {
 
       menu.Items.Add(fanConfigMenu);
 
-      ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl);
+      ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl) { Name = "FanControlMenu" };
       if (isFanCleanSupported || isFanLegacyCleanSupported) {
         string menuText = Strings.CleanCreekMenuItem;
         if (!isFanCleanSupported && isFanLegacyCleanSupported)
@@ -403,6 +420,7 @@ namespace OmenSuperHub {
       fanValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM")) { Enabled = false };
 
       fanTrackBar.ValueChanged += (sender, e) => {
+        if (fanLockUpdatingControls) return;
         fanControl = fanTrackBar.Value * 100 + " RPM";
         fanValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM");
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -609,7 +627,7 @@ namespace OmenSuperHub {
       }
 
       if (isCPUPowerControlSupported) {
-        ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
+        ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu) { Name = "CpuPowerMenu" };
 
         cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerTip) { Enabled = false });
         cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -638,6 +656,7 @@ namespace OmenSuperHub {
 
         // 滑块值改变时更新标签并应用设置
         cpuPowerTrackBar.ValueChanged += (sender, e) => {
+          if (fanLockUpdatingControls) return;
           int val = cpuPowerTrackBar.Value;
           cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
           cpuPower = cpuPowerTrackBar.Value + " W";
@@ -2163,6 +2182,69 @@ namespace OmenSuperHub {
             Strings.Error,
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
+      }
+    }
+
+    static void ShowFanLockEditor() {
+      int maximumRpm = platformMaxFanSpeed.HasValue && platformMaxFanSpeed.Value > 0
+          ? (int)(platformMaxFanSpeed.Value * 1.1)
+          : 6400;
+      maximumRpm = Math.Max(100, maximumRpm / 100 * 100);
+      int maximumTemperature = Math.Max(40, (maxCPUTemp ?? 97) - 3);
+
+      using (Form form = new Form {
+        Width = 430,
+        Height = 260,
+        FormBorderStyle = FormBorderStyle.FixedDialog,
+        MaximizeBox = false,
+        MinimizeBox = false,
+        StartPosition = FormStartPosition.CenterScreen,
+        Text = Strings.FanLockEditorTitle
+      }) {
+        Label powerLabel = new Label { Left = 15, Top = 22, Width = 230, Text = Strings.FanLockMinimumPower };
+        NumericUpDown powerInput = new NumericUpDown {
+          Left = 270, Top = 18, Width = 120, Minimum = 10, Maximum = 254,
+          Value = Math.Max(10, Math.Min(254, fanLockMinimumPower))
+        };
+
+        Label rpmLabel = new Label { Left = 15, Top = 70, Width = 230, Text = Strings.FanLockTargetRpm };
+        NumericUpDown rpmInput = new NumericUpDown {
+          Left = 270, Top = 66, Width = 120, Minimum = 0, Maximum = maximumRpm,
+          Increment = 100,
+          Value = Math.Max(0, Math.Min(maximumRpm, fanLockTargetRpm))
+        };
+
+        Label temperatureLabel = new Label { Left = 15, Top = 118, Width = 230, Text = Strings.FanLockTargetTemperature };
+        NumericUpDown temperatureInput = new NumericUpDown {
+          Left = 270, Top = 114, Width = 120, Minimum = 40, Maximum = maximumTemperature,
+          Value = Math.Max(40, Math.Min(maximumTemperature, fanLockTargetTemperature))
+        };
+
+        Button okButton = new Button {
+          Text = Strings.OK, Left = 110, Top = 165, Width = 95,
+          DialogResult = DialogResult.OK
+        };
+        Button cancelButton = new Button {
+          Text = Strings.Cancel, Left = 220, Top = 165, Width = 95,
+          DialogResult = DialogResult.Cancel
+        };
+
+        form.Controls.AddRange(new Control[] {
+          powerLabel, powerInput, rpmLabel, rpmInput, temperatureLabel, temperatureInput,
+          okButton, cancelButton
+        });
+        form.AcceptButton = okButton;
+        form.CancelButton = cancelButton;
+
+        if (form.ShowDialog() != DialogResult.OK) return;
+
+        fanLockMinimumPower = (int)powerInput.Value;
+        fanLockTargetRpm = (int)rpmInput.Value / 100 * 100;
+        fanLockTargetTemperature = (int)temperatureInput.Value;
+        SaveFanLockConfig();
+
+        if (currentPreset == FanLockPresetKey)
+          ApplyFanLockTargets();
       }
     }
 
