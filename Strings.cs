@@ -61,11 +61,12 @@
     public static string PresetLightUse => T("轻度使用", "輕度使用", "Light Use");
     public static string PresetFanLock => T("锁定风扇转速模式", "鎖定風扇轉速模式", "Locked Fan Speed Mode");
     public static string PresetFanLockTooltip => T(
-        "左键进入锁定风扇转速模式；右键修改目标转速、目标温度和CPU功耗墙下限。",
-        "左鍵進入鎖定風扇轉速模式；右鍵修改目標轉速、目標溫度和CPU功耗牆下限。",
-        "Left-click to activate locked fan speed mode; right-click to edit its fan, temperature, and minimum CPU power targets.");
+        "左键进入锁定风扇转速模式；右键修改目标转速、目标温度和CPU功耗范围。",
+        "左鍵進入鎖定風扇轉速模式；右鍵修改目標轉速、目標溫度和CPU功耗範圍。",
+        "Left-click to activate locked fan speed mode; right-click to edit its fan, temperature, and CPU power range targets.");
     public static string FanLockEditorTitle => T("锁定风扇转速模式", "鎖定風扇轉速模式", "Locked Fan Speed Mode");
     public static string FanLockMinimumPower => T("CPU功耗墙下限 (W)", "CPU功耗牆下限 (W)", "Minimum CPU power (W)");
+    public static string FanLockMaximumPower => T("CPU最大功率目标 (W)", "CPU最大功率目標 (W)", "Maximum CPU power target (W)");
     public static string FanLockTargetRpm => T("目标风扇转速 (RPM)", "目標風扇轉速 (RPM)", "Target fan speed (RPM)");
     public static string FanLockTargetTemperature => T("目标CPU温度 (℃)", "目標CPU溫度 (℃)", "Target CPU temperature (°C)");
     public static string FanLockNeedsCpuPower => T(

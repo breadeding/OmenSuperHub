@@ -118,7 +118,7 @@ namespace OmenSuperHub {
     static int? maxGPUTemp = null;
     static float CPUTemp = 50, GPUTemp = 40, rawTempCPU = 50f, rawTempGPU = 40f;
     static float CPUPower = 0, GPUPower = 0, CPUFrequency = 0f, GPUFrequency = 0f, rawPowerCPU = 0f, rawPowerGPU = 0f, rawFrequencyCPU = 0f, rawFrequencyGPU = 0f;
-    static int fanLockMinimumPower = 20, fanLockTargetRpm = 3000, fanLockTargetTemperature = 80;
+    static int fanLockMinimumPower = 20, fanLockMaximumPower = 120, fanLockTargetRpm = 3000, fanLockTargetTemperature = 80;
     static int fanLockCurrentPower = -1;
     static string fanLockReturnPreset = "PresetCustom1";
     static bool fanLockUpdatingControls = false;

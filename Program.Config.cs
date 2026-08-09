@@ -373,6 +373,7 @@ namespace OmenSuperHub {
     static void LoadFanLockConfig(RegistryKey key) {
       if (key == null) return;
       fanLockMinimumPower = Math.Max(10, Math.Min(254, Convert.ToInt32(key.GetValue("FanLockMinimumPower", 20))));
+      fanLockMaximumPower = Math.Max(fanLockMinimumPower, Math.Min(254, Convert.ToInt32(key.GetValue("FanLockMaximumPower", 120))));
       fanLockTargetRpm = Math.Max(0, Convert.ToInt32(key.GetValue("FanLockTargetRpm", 3000))) / 100 * 100;
       fanLockTargetTemperature = Math.Max(40, Convert.ToInt32(key.GetValue("FanLockTargetTemperature", 80)));
       fanLockReturnPreset = (string)key.GetValue("FanLockReturnPreset", "PresetCustom1");
@@ -381,7 +382,7 @@ namespace OmenSuperHub {
       if (fanLockCurrentPower < 0) {
         int savedStartPower = Convert.ToInt32(key.GetValue("FanLockStartPower", -1));
         if (savedStartPower >= 10)
-          fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(254, savedStartPower));
+          fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, savedStartPower));
       }
     }
 
@@ -390,6 +391,7 @@ namespace OmenSuperHub {
         using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\OmenSuperHub")) {
           if (key == null) return;
           key.SetValue("FanLockMinimumPower", fanLockMinimumPower);
+          key.SetValue("FanLockMaximumPower", fanLockMaximumPower);
           key.SetValue("FanLockTargetRpm", fanLockTargetRpm);
           key.SetValue("FanLockTargetTemperature", fanLockTargetTemperature);
           key.SetValue("FanLockReturnPreset", fanLockReturnPreset);
@@ -417,7 +419,7 @@ namespace OmenSuperHub {
         }
 
         fanLockReturnPreset = currentPreset;
-        fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(254, startingPower));
+        fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, startingPower));
         SavePresetToRegistry(FanLockPresetKey);
         currentPreset = FanLockPresetKey;
         SaveConfig("CurrentPreset");
@@ -453,7 +455,7 @@ namespace OmenSuperHub {
       fanLockTargetRpm = Math.Max(0, Math.Min(maximumRpm, fanLockTargetRpm));
       fanLockTargetRpm = fanLockTargetRpm / 100 * 100;
       fanLockTargetTemperature = Math.Max(40, Math.Min((maxCPUTemp ?? 97) - 3, fanLockTargetTemperature));
-      fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(254, fanLockCurrentPower));
+      fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, fanLockCurrentPower));
 
       fanControl = fanLockTargetRpm + " RPM";
       SetMaxFanSpeedOff();
@@ -487,7 +489,7 @@ namespace OmenSuperHub {
       else if (smoothedCPUTemp < fanLockTargetTemperature - 1f)
         nextPower++;
 
-      nextPower = Math.Max(fanLockMinimumPower, Math.Min(254, nextPower));
+      nextPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, nextPower));
       if (nextPower == fanLockCurrentPower) return;
 
       fanLockCurrentPower = nextPower;
@@ -1564,7 +1566,7 @@ namespace OmenSuperHub {
           if (currentPreset == FanLockPresetKey && fanLockCurrentPower < 10) {
             int restoredPower;
             if (TryGetCurrentCpuPowerSetting(out restoredPower))
-              fanLockCurrentPower = Math.Max(fanLockMinimumPower, restoredPower);
+              fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, restoredPower));
             else
               fanLockCurrentPower = fanLockMinimumPower;
           }

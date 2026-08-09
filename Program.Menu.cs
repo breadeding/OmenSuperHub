@@ -2194,51 +2194,67 @@ namespace OmenSuperHub {
 
       using (Form form = new Form {
         Width = 430,
-        Height = 260,
+        Height = 310,
         FormBorderStyle = FormBorderStyle.FixedDialog,
         MaximizeBox = false,
         MinimizeBox = false,
         StartPosition = FormStartPosition.CenterScreen,
         Text = Strings.FanLockEditorTitle
       }) {
-        Label powerLabel = new Label { Left = 15, Top = 22, Width = 230, Text = Strings.FanLockMinimumPower };
-        NumericUpDown powerInput = new NumericUpDown {
+        Label minimumPowerLabel = new Label { Left = 15, Top = 22, Width = 230, Text = Strings.FanLockMinimumPower };
+        NumericUpDown minimumPowerInput = new NumericUpDown {
           Left = 270, Top = 18, Width = 120, Minimum = 10, Maximum = 254,
           Value = Math.Max(10, Math.Min(254, fanLockMinimumPower))
         };
 
-        Label rpmLabel = new Label { Left = 15, Top = 70, Width = 230, Text = Strings.FanLockTargetRpm };
+        Label maximumPowerLabel = new Label { Left = 15, Top = 66, Width = 230, Text = Strings.FanLockMaximumPower };
+        NumericUpDown maximumPowerInput = new NumericUpDown {
+          Left = 270, Top = 62, Width = 120, Minimum = 10, Maximum = 254,
+          Value = Math.Max(10, Math.Min(254, fanLockMaximumPower))
+        };
+
+        minimumPowerInput.ValueChanged += (s, e) => {
+          if (minimumPowerInput.Value > maximumPowerInput.Value)
+            maximumPowerInput.Value = minimumPowerInput.Value;
+        };
+        maximumPowerInput.ValueChanged += (s, e) => {
+          if (maximumPowerInput.Value < minimumPowerInput.Value)
+            minimumPowerInput.Value = maximumPowerInput.Value;
+        };
+
+        Label rpmLabel = new Label { Left = 15, Top = 110, Width = 230, Text = Strings.FanLockTargetRpm };
         NumericUpDown rpmInput = new NumericUpDown {
-          Left = 270, Top = 66, Width = 120, Minimum = 0, Maximum = maximumRpm,
+          Left = 270, Top = 106, Width = 120, Minimum = 0, Maximum = maximumRpm,
           Increment = 100,
           Value = Math.Max(0, Math.Min(maximumRpm, fanLockTargetRpm))
         };
 
-        Label temperatureLabel = new Label { Left = 15, Top = 118, Width = 230, Text = Strings.FanLockTargetTemperature };
+        Label temperatureLabel = new Label { Left = 15, Top = 154, Width = 230, Text = Strings.FanLockTargetTemperature };
         NumericUpDown temperatureInput = new NumericUpDown {
-          Left = 270, Top = 114, Width = 120, Minimum = 40, Maximum = maximumTemperature,
+          Left = 270, Top = 150, Width = 120, Minimum = 40, Maximum = maximumTemperature,
           Value = Math.Max(40, Math.Min(maximumTemperature, fanLockTargetTemperature))
         };
 
         Button okButton = new Button {
-          Text = Strings.OK, Left = 110, Top = 165, Width = 95,
+          Text = Strings.OK, Left = 110, Top = 205, Width = 95,
           DialogResult = DialogResult.OK
         };
         Button cancelButton = new Button {
-          Text = Strings.Cancel, Left = 220, Top = 165, Width = 95,
+          Text = Strings.Cancel, Left = 220, Top = 205, Width = 95,
           DialogResult = DialogResult.Cancel
         };
 
         form.Controls.AddRange(new Control[] {
-          powerLabel, powerInput, rpmLabel, rpmInput, temperatureLabel, temperatureInput,
-          okButton, cancelButton
+          minimumPowerLabel, minimumPowerInput, maximumPowerLabel, maximumPowerInput,
+          rpmLabel, rpmInput, temperatureLabel, temperatureInput, okButton, cancelButton
         });
         form.AcceptButton = okButton;
         form.CancelButton = cancelButton;
 
         if (form.ShowDialog() != DialogResult.OK) return;
 
-        fanLockMinimumPower = (int)powerInput.Value;
+        fanLockMinimumPower = (int)minimumPowerInput.Value;
+        fanLockMaximumPower = (int)maximumPowerInput.Value;
         fanLockTargetRpm = (int)rpmInput.Value / 100 * 100;
         fanLockTargetTemperature = (int)temperatureInput.Value;
         SaveFanLockConfig();
