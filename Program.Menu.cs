@@ -105,9 +105,13 @@ namespace OmenSuperHub {
         gpuPowerLimitsMenu = new ToolStripMenuItem($"{Strings.SysNvidiaPower}: --W / --W") { Enabled = false };
         sysInfoMenu.DropDownItems.Add(gpuPowerLimitsMenu);
         System.Threading.Tasks.Task.Run(() => {
-          string gpuModel = GetGpuModelFromNvidiaSmi();
-          var limits = GetGpuPowerLimits();
-          string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+          string gpuModel = GetNvidiaGpuInfoList().FirstOrDefault().Name ?? Strings.GpuSleepTargetNotFound;
+          string limitsText = "--W / --W";
+          if (!ShouldBlockBackgroundGpuQueries) {
+            gpuModel = GetGpuModelFromNvidiaSmi();
+            var limits = GetGpuPowerLimits();
+            limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+          }
           Thread.Sleep(2000);
           uiContext.Post(_ => {
             gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
@@ -144,7 +148,7 @@ namespace OmenSuperHub {
 
       // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
       sysInfoMenu.DropDownOpening += (s, e) => {
-        if (hasNVIDIAGpu) {
+        if (hasNVIDIAGpu && !ShouldBlockBackgroundGpuQueries) {
           System.Threading.Tasks.Task.Run(() => {
             var limits = GetGpuPowerLimits();
             string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
@@ -532,24 +536,14 @@ namespace OmenSuperHub {
         ToolStripMenuItem gpuAppsMenu = new ToolStripMenuItem(Strings.GpuAppsMenu);
         gpuAppsMenu.DropDownOpening += (s, e) => {
           gpuAppsMenu.DropDownItems.Clear();
-          var apps = GetGpuApps();
-          if (apps.Count == 0) {
-            gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GpuAppsNone) { Enabled = false });
-          } else {
-            foreach (var app in apps) {
-              var appItem = new ToolStripMenuItem($"{app.ProcessName} (PID: {app.ProcessId})");
-              appItem.Click += (sender, args) => {
-                if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseConfirm(app.ProcessName), Strings.GpuCloseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-                  try {
-                    Process.GetProcessById(app.ProcessId).Kill();
-                  } catch (Exception ex) {
-                    MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseError(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                  }
-                }
-              };
-              gpuAppsMenu.DropDownItems.Add(appItem);
-            }
+          if (ShouldBlockBackgroundGpuQueries) {
+            gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GpuAppsQueryMayWake) { Enabled = false });
+            var queryItem = new ToolStripMenuItem(Strings.GpuAppsQueryNow);
+            queryItem.Click += (sender, args) => PopulateGpuAppsMenu(gpuAppsMenu);
+            gpuAppsMenu.DropDownItems.Add(queryItem);
+            return;
           }
+          PopulateGpuAppsMenu(gpuAppsMenu);
         };
         performanceControlMenu.DropDownItems.Add(gpuAppsMenu);
 
@@ -561,6 +555,16 @@ namespace OmenSuperHub {
           }
         };
         performanceControlMenu.DropDownItems.Add(restartGpuMenu);
+
+        ToolStripMenuItem gpuSleepMenu = new ToolStripMenuItem(Strings.GpuSleepMenu);
+        gpuSleepMenu.ToolTipText = Strings.GpuSleepTooltip;
+        gpuSleepMenu.Click += (s, e) => StartGpuSleepAttempt();
+        performanceControlMenu.DropDownItems.Add(gpuSleepMenu);
+
+        ToolStripMenuItem restoreGpuPreferencesMenu = new ToolStripMenuItem(Strings.GpuPreferenceRestore);
+        restoreGpuPreferencesMenu.Enabled = !string.IsNullOrEmpty(GpuSleepManager.GetLatestTransactionId());
+        restoreGpuPreferencesMenu.Click += (s, e) => RestoreLatestGpuPreferences();
+        performanceControlMenu.DropDownItems.Add(restoreGpuPreferencesMenu);
       }
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       //ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
@@ -1111,17 +1115,13 @@ namespace OmenSuperHub {
         ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem(Strings.MonitorGpuLabel);
         monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOn, "monitorGPUGroup", (s, e) => {
           bool wasAllOff = !monitorCPU && !monitorGPU;
+          gpuSleepGuardActive = false;
           monitorGPU = true;
           gpuTempReady = false; // 等待获取到温度后再参与风扇控制
           rawPowerGPU = 0f;     // 清除可能残留的脏功率值
           rawFrequencyGPU = 0f;
           GPUPower = 0f;
           GPUFrequency = 0f;
-          if (hasStopAuto)
-            autoStopMonitorGPU = false;
-          //重置自动开启标志
-          hasStartAuto = false;
-          autoStartMonitorGPU = true;
           if (wasAllOff) {
             // 从全关状态重启监控进程
             tempReady = false;
@@ -1136,7 +1136,7 @@ namespace OmenSuperHub {
           }
           SaveConfig("MonitorGPU");
         }, true));
-        monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOff, "monitorGPUGroup", (s, e) => {
+        monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOff, "monitorGPUGroup", async (s, e) => {
           // 自动转速模式下禁止彻底关闭监控
           if (!monitorCPU && fanControl == "auto") {
             MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.MonitorAutoFanWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1149,17 +1149,17 @@ namespace OmenSuperHub {
           rawPowerGPU = 0f;  // 关闭时清零，避免重新开启时读到旧值
           rawFrequencyGPU = 0f;
           GPUPower = 0f;
-          GPUFrequency = 0f;
-          if (hasStartAuto)
-            autoStartMonitorGPU = false;
-          //重置自动关闭标志
-          hasStopAuto = false;
-          autoStopMonitorGPU = true;
-          SetGpuMonitorState(false);
-          // 若CPU和GPU均已关闭，停止监控进程
-          if (!monitorCPU && !monitorGPU) {
-            StopHardwareMonitor();
+GPUFrequency = 0f;
+          bool stopped = await Task.Run(() => StopHardwareMonitorAndWait(5000));
+          if (!stopped) {
+            monitorGPU = true;
+            SetGpuMonitorState(true);
+            UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOn);
+            MessageBox.Show(Strings.MonitorGpuStopFailed, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SaveConfig("MonitorGPU");
+            return;
           }
+          if (monitorCPU) StartHardwareMonitor();
           SaveConfig("MonitorGPU");
         }, false));
         monitorGPUMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -2292,6 +2292,27 @@ namespace OmenSuperHub {
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
         return false;
+      }
+    }
+
+    static void PopulateGpuAppsMenu(ToolStripMenuItem gpuAppsMenu) {
+      gpuAppsMenu.DropDownItems.Clear();
+      var apps = GpuSleepManager.GetNvidiaProcesses();
+      if (apps.Count == 0) {
+        gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GpuAppsNone) { Enabled = false });
+        return;
+      }
+      foreach (var app in apps) {
+        var appItem = new ToolStripMenuItem($"{app.ProcessName} (PID: {app.ProcessId})");
+        appItem.Click += (sender, args) => {
+          if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseConfirm(app.ProcessName), Strings.GpuCloseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+          try {
+            Process.GetProcessById(app.ProcessId).Kill();
+          } catch (Exception ex) {
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseError(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+          }
+        };
+        gpuAppsMenu.DropDownItems.Add(appItem);
       }
     }
 
