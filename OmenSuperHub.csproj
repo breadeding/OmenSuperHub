@@ -39,6 +39,7 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -92,9 +93,6 @@
     <ManifestCertificateThumbprint>0FF25508E82D933D2889D9605B7F06A55C7283BB</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>OmenSuperHub_TemporaryKey.pfx</ManifestKeyFile>
-  </PropertyGroup>
-  <PropertyGroup>
     <GenerateManifests>false</GenerateManifests>
   </PropertyGroup>
   <PropertyGroup>
@@ -141,6 +139,9 @@
       <HintPath>Resources\PerformanceControl.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Resources.Extensions">
+      <HintPath>packages\System.Resources.Extensions.4.7.0\lib\netstandard2.0\System.Resources.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Win32.Primitives, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Win32.Primitives.4.3.0\lib\net46\Microsoft.Win32.Primitives.dll</HintPath>
       <Private>True</Private>
@@ -304,6 +305,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Program.Config.cs" />
+    <Compile Include="Program.GpuSleep.cs" />
     <Compile Include="Program.Menu.cs" />
     <Compile Include="Program.OmenKey.cs" />
     <Compile Include="Properties\AssemblyVersion.cs" />
@@ -338,7 +340,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="OmenSuperHub_TemporaryKey.pfx" />
     <None Include="packages.config" />
     <None Include="README.EN.md" />
     <None Include="README.md" />
@@ -393,6 +394,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="App\GpuAppManager.cs" />
+    <Compile Include="App\GpuSleepManager.cs" />
+    <Compile Include="GpuSleepRepairForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="LibreHardwareMonitor\LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj">

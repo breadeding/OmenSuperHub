@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows.Forms;
 using Hp.Bridge.Client.SDKs.PerformanceControl.DataStructure;
 using HP.Omen.Core.Common.NVidiaApi;
 using HP.Omen.Core.Model.Device.Models;
@@ -341,12 +342,226 @@ namespace OmenSuperHub {
 
     static void RestoreCPUPower() {
       // 恢复CPU功耗设定
+      if (currentPreset == FanLockPresetKey && fanLockCurrentPower >= 10 && fanLockCurrentPower <= 254) {
+        SetCpuPowerLimit((byte)fanLockCurrentPower);
+        return;
+      }
       if (cpuPower.Contains(" W")) {
         int value = int.Parse(cpuPower.Replace(" W", "").Trim());
         if (isCPUPowerControlSupported && value >= 10 && value <= 254) {
           SetCpuPowerLimit((byte)value);
         }
       }
+    }
+
+    static bool TryGetCurrentCpuPowerSetting(out int value) {
+      value = -1;
+      if (cpuPower == "max") {
+        value = 254;
+        return true;
+      }
+      if (!string.IsNullOrEmpty(cpuPower) && cpuPower.Contains(" W")) {
+        int parsed;
+        if (int.TryParse(cpuPower.Replace(" W", "").Trim(), out parsed) && parsed >= 10 && parsed <= 254) {
+          value = parsed;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    static void LoadFanLockConfig(RegistryKey key) {
+      if (key == null) return;
+      fanLockMinimumPower = Math.Max(10, Math.Min(254, Convert.ToInt32(key.GetValue("FanLockMinimumPower", 20))));
+      fanLockMaximumPower = Math.Max(fanLockMinimumPower, Math.Min(254, Convert.ToInt32(key.GetValue("FanLockMaximumPower", 120))));
+      fanLockTargetRpm = Math.Max(0, Convert.ToInt32(key.GetValue("FanLockTargetRpm", 3000))) / 100 * 100;
+      fanLockTargetTemperature = Math.Max(40, Convert.ToInt32(key.GetValue("FanLockTargetTemperature", 80)));
+      fanLockReturnPreset = (string)key.GetValue("FanLockReturnPreset", "PresetCustom1");
+      if (fanLockReturnPreset == FanLockPresetKey || !PresetOrder.Contains(fanLockReturnPreset))
+        fanLockReturnPreset = "PresetCustom1";
+      if (fanLockCurrentPower < 0) {
+        int savedStartPower = Convert.ToInt32(key.GetValue("FanLockStartPower", -1));
+        if (savedStartPower >= 10)
+          fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, savedStartPower));
+      }
+    }
+
+    static void SaveFanLockConfig() {
+      try {
+        using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\OmenSuperHub")) {
+          if (key == null) return;
+          key.SetValue("FanLockMinimumPower", fanLockMinimumPower);
+          key.SetValue("FanLockMaximumPower", fanLockMaximumPower);
+          key.SetValue("FanLockTargetRpm", fanLockTargetRpm);
+          key.SetValue("FanLockTargetTemperature", fanLockTargetTemperature);
+          key.SetValue("FanLockReturnPreset", fanLockReturnPreset);
+          if (fanLockCurrentPower >= 10)
+            key.SetValue("FanLockStartPower", fanLockCurrentPower);
+        }
+      } catch (Exception ex) {
+        Logger.Error($"SaveFanLockConfig: {ex.Message}");
+      }
+    }
+
+    static bool ActivateFanLockPreset() {
+      if (!isCPUPowerControlSupported) return false;
+
+      if (currentPreset != FanLockPresetKey) {
+        int startingPower;
+        if (!TryGetCurrentCpuPowerSetting(out startingPower)) {
+          MessageBox.Show(
+              Application.OpenForms.OfType<HelpForm>().FirstOrDefault(),
+              Strings.FanLockNeedsCpuPower,
+              Strings.Hint,
+              MessageBoxButtons.OK,
+              MessageBoxIcon.Warning);
+          return false;
+        }
+
+        fanLockReturnPreset = currentPreset;
+        fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, startingPower));
+        SavePresetToRegistry(FanLockPresetKey);
+        currentPreset = FanLockPresetKey;
+        SaveConfig("CurrentPreset");
+        SaveFanLockConfig();
+      }
+
+      LoadMonitorMetricSettings(FanLockPresetKey);
+      UpdateMonitorMetricCheckedStates();
+      ApplyFanLockTargets();
+      UpdateTrayIconText();
+      UpdateFloatingText();
+      return true;
+    }
+
+    static void EnsureCpuMonitorForFanLock() {
+      if (monitorCPU && hwMonitorProcess != null && !hwMonitorProcess.HasExited) return;
+      monitorCPU = true;
+      cpuTempReady = false;
+      if (hwMonitorProcess == null || hwMonitorProcess.HasExited)
+        StartHardwareMonitor();
+      else
+        SetCpuMonitorState(true);
+      UpdateCheckedState("monitorCPUGroup", Strings.MonitorCpuOn);
+    }
+
+    static void ApplyFanLockTargets() {
+      if (currentPreset != FanLockPresetKey) return;
+      EnsureCpuMonitorForFanLock();
+
+      int maximumRpm = platformMaxFanSpeed.HasValue && platformMaxFanSpeed.Value > 0
+          ? (int)(platformMaxFanSpeed.Value * 1.1)
+          : 6400;
+      fanLockTargetRpm = Math.Max(0, Math.Min(maximumRpm, fanLockTargetRpm));
+      fanLockTargetRpm = fanLockTargetRpm / 100 * 100;
+      fanLockTargetTemperature = Math.Max(40, Math.Min((maxCPUTemp ?? 97) - 3, fanLockTargetTemperature));
+      fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, fanLockCurrentPower));
+
+      fanControl = fanLockTargetRpm + " RPM";
+      SetMaxFanSpeedOff();
+      fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+      SetFanLevel(fanLockTargetRpm / 100, fanLockTargetRpm / 100, Is3FanNb);
+      SetCpuPowerLimit((byte)fanLockCurrentPower);
+      SetFanLockControlledMenusEnabled(false);
+      UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
+      fanLockUpdatingControls = true;
+      try {
+        if (fanTrackBar != null)
+          fanTrackBar.Value = Math.Max(fanTrackBar.Minimum, Math.Min(fanTrackBar.Maximum, fanLockTargetRpm / 100));
+        if (cpuPowerTrackBar != null)
+          cpuPowerTrackBar.Value = Math.Max(cpuPowerTrackBar.Minimum, Math.Min(cpuPowerTrackBar.Maximum, fanLockCurrentPower));
+      } finally {
+        fanLockUpdatingControls = false;
+      }
+      if (fanValueLabel != null)
+        fanValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanLockTargetRpm} RPM");
+      if (cpuPowerValueLabel != null)
+        cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanLockCurrentPower} W");
+    }
+
+    static void AdjustFanLockPower() {
+      if (currentPreset != FanLockPresetKey || !monitorCPU || !cpuTempReady || fanLockCurrentPower < 0)
+        return;
+
+      int nextPower = fanLockCurrentPower;
+      if (smoothedCPUTemp > fanLockTargetTemperature + 1f)
+        nextPower--;
+      else if (smoothedCPUTemp < fanLockTargetTemperature - 1f)
+        nextPower++;
+
+      nextPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, nextPower));
+      if (nextPower == fanLockCurrentPower) return;
+
+      fanLockCurrentPower = nextPower;
+      SetCpuPowerLimit((byte)fanLockCurrentPower);
+      if (cpuPowerValueLabel != null && uiContext != null) {
+        uiContext.Post(_ => {
+          fanLockUpdatingControls = true;
+          try {
+            if (cpuPowerTrackBar != null)
+              cpuPowerTrackBar.Value = Math.Max(cpuPowerTrackBar.Minimum, Math.Min(cpuPowerTrackBar.Maximum, fanLockCurrentPower));
+          } finally {
+            fanLockUpdatingControls = false;
+          }
+          if (cpuPowerValueLabel != null)
+            cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanLockCurrentPower} W");
+        }, null);
+      }
+    }
+
+    static void LeaveFanLockPresetForSafety() {
+      if (currentPreset != FanLockPresetKey) return;
+      string targetPreset = fanLockReturnPreset;
+      if (targetPreset == FanLockPresetKey || !PresetOrder.Contains(targetPreset))
+        targetPreset = "PresetCustom1";
+      // 使用进入模式时保存的快照恢复全部设置，避免内置预设重新生成默认值。
+      LoadPresetFields(FanLockPresetKey);
+      LoadMonitorMetricSettings(FanLockPresetKey);
+      currentPreset = targetPreset;
+      SaveConfig("CurrentPreset");
+      SetFanLockControlledMenusEnabled(true);
+
+      var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
+      if (item != null)
+        UpdateCheckedState("presetsGroup", null, item);
+      ApplyPresetSettings(FanLockPresetKey);
+      UpdateMonitorMetricCheckedStates();
+      UpdateTrayIconText();
+      UpdateFloatingText();
+    }
+
+    // 返回 true 表示功耗已经处于下限，可以进入风扇安全切换阶段。
+    static bool PrepareFanLockOverheatProtection() {
+      if (currentPreset != FanLockPresetKey || fanLockCurrentPower <= fanLockMinimumPower)
+        return true;
+
+      int distanceToMinimum = fanLockCurrentPower - fanLockMinimumPower;
+      int reduction = Math.Max(5, (distanceToMinimum + 1) / 2);
+      fanLockCurrentPower = Math.Max(fanLockMinimumPower, fanLockCurrentPower - reduction);
+      SetCpuPowerLimit((byte)fanLockCurrentPower);
+
+      if (uiContext != null) {
+        uiContext.Post(_ => {
+          fanLockUpdatingControls = true;
+          try {
+            if (cpuPowerTrackBar != null)
+              cpuPowerTrackBar.Value = Math.Max(cpuPowerTrackBar.Minimum, Math.Min(cpuPowerTrackBar.Maximum, fanLockCurrentPower));
+          } finally {
+            fanLockUpdatingControls = false;
+          }
+          if (cpuPowerValueLabel != null)
+            cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanLockCurrentPower} W");
+        }, null);
+      }
+      return false;
+    }
+
+    static void SetFanLockControlledMenusEnabled(bool enabled) {
+      if (trayIcon == null || trayIcon.ContextMenuStrip == null) return;
+      var fanMenu = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, "FanControlMenu");
+      var cpuPowerMenu = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, "CpuPowerMenu");
+      if (fanMenu != null) fanMenu.Enabled = enabled;
+      if (cpuPowerMenu != null) cpuPowerMenu.Enabled = enabled;
     }
 
     static void RestorePowerConfig() {
@@ -675,12 +890,6 @@ namespace OmenSuperHub {
     static void SaveConfig(string configName = null) {
       // 内置预设下调整设置时，不再强制切换到 Custom1，直接保存注册表（不关联任何预设子键）
       try {
-        // 六项监控显示开关在自定义预设下只写入当前预设，避免污染内置预设的全局值。
-        if (!IsBuiltInPreset(currentPreset) && IsMonitorMetricConfig(configName)) {
-          SavePresetToRegistry(currentPreset);
-          return;
-        }
-
         using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\OmenSuperHub")) {
           if (key != null) {
             if (configName == null) {
@@ -716,14 +925,12 @@ namespace OmenSuperHub {
               key.SetValue("MonitorFan", monitorFan);
               key.SetValue("MonitorRefreshRate", monitorRefreshRate);
               key.SetValue("TempDisplayMode", tempDisplayMode);
-              if (IsBuiltInPreset(currentPreset)) {
-                key.SetValue("ShowCPUTemp", showCPUTemp);
-                key.SetValue("ShowCPUPower", showCPUPower);
-                key.SetValue("ShowCPUFrequency", showCPUFrequency);
-                key.SetValue("ShowGPUTemp", showGPUTemp);
-                key.SetValue("ShowGPUPower", showGPUPower);
-                key.SetValue("ShowGPUFrequency", showGPUFrequency);
-              }
+              key.SetValue("ShowCPUTemp", showCPUTemp);
+              key.SetValue("ShowCPUPower", showCPUPower);
+              key.SetValue("ShowCPUFrequency", showCPUFrequency);
+              key.SetValue("ShowGPUTemp", showGPUTemp);
+              key.SetValue("ShowGPUPower", showGPUPower);
+              key.SetValue("ShowGPUFrequency", showGPUFrequency);
               key.SetValue("FloatingBarLoc", floatingBarLoc);
               key.SetValue("FloatingBar", floatingBar);
               key.SetValue("FloatingBarScreen", floatingBarScreen);
@@ -956,6 +1163,11 @@ namespace OmenSuperHub {
       try {
         using (RegistryKey globalKey = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
           if (globalKey != null) {
+            monitorCPU = Convert.ToBoolean(globalKey.GetValue("MonitorCPU", true));
+            monitorGPU = hasNVIDIAGpu && Convert.ToBoolean(globalKey.GetValue("MonitorGPU", true));
+            monitorFan = Convert.ToBoolean(globalKey.GetValue("MonitorFan", false));
+            monitorRefreshRate = (string)globalKey.GetValue("MonitorRefreshRate", "low");
+            tempDisplayMode = (string)globalKey.GetValue("TempDisplayMode", "smoothed");
             globalShowCPUTemp = Convert.ToBoolean(globalKey.GetValue("ShowCPUTemp", true));
             globalShowCPUPower = Convert.ToBoolean(globalKey.GetValue("ShowCPUPower", true));
             globalShowCPUFrequency = Convert.ToBoolean(globalKey.GetValue("ShowCPUFrequency", false));
@@ -965,24 +1177,12 @@ namespace OmenSuperHub {
           }
         }
 
-        if (IsBuiltInPreset(presetKey)) {
-          showCPUTemp = globalShowCPUTemp;
-          showCPUPower = globalShowCPUPower;
-          showCPUFrequency = globalShowCPUFrequency;
-          showGPUTemp = globalShowGPUTemp;
-          showGPUPower = globalShowGPUPower;
-          showGPUFrequency = globalShowGPUFrequency;
-          return;
-        }
-
-        using (RegistryKey presetKeyHandle = Registry.CurrentUser.OpenSubKey($@"Software\OmenSuperHub\{presetKey}")) {
-          showCPUTemp = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowCPUTemp", globalShowCPUTemp) ?? globalShowCPUTemp);
-          showCPUPower = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowCPUPower", globalShowCPUPower) ?? globalShowCPUPower);
-          showCPUFrequency = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowCPUFrequency", globalShowCPUFrequency) ?? globalShowCPUFrequency);
-          showGPUTemp = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowGPUTemp", globalShowGPUTemp) ?? globalShowGPUTemp);
-          showGPUPower = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowGPUPower", globalShowGPUPower) ?? globalShowGPUPower);
-          showGPUFrequency = Convert.ToBoolean(presetKeyHandle?.GetValue("ShowGPUFrequency", globalShowGPUFrequency) ?? globalShowGPUFrequency);
-        }
+        showCPUTemp = globalShowCPUTemp;
+        showCPUPower = globalShowCPUPower;
+        showCPUFrequency = globalShowCPUFrequency;
+        showGPUTemp = globalShowGPUTemp;
+        showGPUPower = globalShowGPUPower;
+        showGPUFrequency = globalShowGPUFrequency;
       } catch (Exception ex) {
         Logger.Error($"LoadMonitorMetricSettings({presetKey}): {ex.Message}");
       }
@@ -1003,7 +1203,7 @@ namespace OmenSuperHub {
     /// </summary>
     static void ApplyPresetSettings(string presetKey) {
       // 自定义预设特有字段：监控项、温度显示模式等
-      if (presetKey == "Restore" || presetKey == "PresetCustom1" || presetKey == "PresetCustom2" || presetKey == "PresetCustom3") {
+      if (presetKey == "Restore" || presetKey == FanLockPresetKey || presetKey == "PresetCustom1" || presetKey == "PresetCustom2" || presetKey == "PresetCustom3") {
         if (presetKey == "Restore") {
           try {
             using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\OmenSuperHub")) {
@@ -1036,9 +1236,13 @@ namespace OmenSuperHub {
           if (!wasMonitorRunning) {
             cpuTempReady = gpuTempReady = tempReady = false;
             StartHardwareMonitor();
+          } else if (!monitorGPU) {
+            gpuTempReady = false;
+            rawPowerGPU = rawFrequencyGPU = GPUPower = GPUFrequency = 0f;
+            StopHardwareMonitorAndWait(5000);
+            if (monitorCPU) StartHardwareMonitor();
           } else {
             if (!monitorCPU) { cpuTempReady = false; rawPowerCPU = 0f; CPUPower = 0f; }
-            if (!monitorGPU) { gpuTempReady = false; rawPowerGPU = 0f; GPUPower = 0f; }
             SetCpuMonitorState(monitorCPU);
             SetGpuMonitorState(monitorGPU);
           }
@@ -1077,22 +1281,24 @@ namespace OmenSuperHub {
         UpdateCheckedState("fanTableGroup", Strings.FanCustomMode);
       }
 
-      // 风扇控制模式
-      if (fanControl == "auto") {
-        SetMaxFanSpeedOff();
-        fanControlTimer.Change(0, 1000);
-        UpdateCheckedState("fanControlGroup", Strings.FanAuto);
-      } else if (fanControl.Contains("max")) {
-        SetMaxFanSpeedOn();
-        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        UpdateCheckedState("fanControlGroup", Strings.FanMax);
-      } else if (fanControl.Contains(" RPM")) {
-        SetMaxFanSpeedOff();
-        fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
-        SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
-        if (fanTrackBar != null) fanTrackBar.Value = rpmValue / 100;
-        UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
+      // 风扇控制模式；锁定风扇预设在本方法末尾单独应用。
+      if (currentPreset != FanLockPresetKey) {
+        if (fanControl == "auto") {
+          SetMaxFanSpeedOff();
+          fanControlTimer.Change(0, 1000);
+          UpdateCheckedState("fanControlGroup", Strings.FanAuto);
+        } else if (fanControl.Contains("max")) {
+          SetMaxFanSpeedOn();
+          fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+          UpdateCheckedState("fanControlGroup", Strings.FanMax);
+        } else if (fanControl.Contains(" RPM")) {
+          SetMaxFanSpeedOff();
+          fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
+          int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());
+          SetFanLevel(rpmValue / 100, rpmValue / 100, Is3FanNb);
+          if (fanTrackBar != null) fanTrackBar.Value = rpmValue / 100;
+          UpdateCheckedState("fanControlGroup", Strings.SetFanSpeedSlider);
+        }
       }
 
       // 风扇响应速度
@@ -1104,7 +1310,7 @@ namespace OmenSuperHub {
       }
 
       // CPU 功耗
-      if (isCPUPowerControlSupported) {
+      if (isCPUPowerControlSupported && currentPreset != FanLockPresetKey) {
         if (cpuPower == "null") {
           UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
         } else if (cpuPower == "max") {
@@ -1214,6 +1420,9 @@ namespace OmenSuperHub {
           }
         }
       });
+
+      if (currentPreset == FanLockPresetKey)
+        ApplyFanLockTargets();
     }
 
     /// <summary>
@@ -1221,6 +1430,11 @@ namespace OmenSuperHub {
     /// 保存到注册表，然后应用到硬件。
     /// </summary>
     static void applyPresetLogic(string targetPreset) {
+      if (targetPreset == FanLockPresetKey) {
+        ActivateFanLockPreset();
+        return;
+      }
+      SetFanLockControlledMenusEnabled(true);
       currentPreset = targetPreset;
 
       if (targetPreset == "PresetExtreme" || targetPreset == "PresetGpuPriority" || targetPreset == "PresetLightUse") {
@@ -1289,6 +1503,7 @@ namespace OmenSuperHub {
           presetCustom1Name = (string)key.GetValue("PresetCustom1Name", Strings.PresetCustom1);
           presetCustom2Name = (string)key.GetValue("PresetCustom2Name", Strings.PresetCustom2);
           presetCustom3Name = (string)key.GetValue("PresetCustom3Name", Strings.PresetCustom3);
+          LoadFanLockConfig(key);
 
           // 旧版升级兼容：不存在 CurrentPreset 键时迁移
           if (key.GetValue("CurrentPreset") == null) {
@@ -1336,6 +1551,13 @@ namespace OmenSuperHub {
             acLoadline = (string)key.GetValue("AcLoadLine", acLoadline);
           } else {
             LoadPresetFields(currentPreset);
+          }
+          if (currentPreset == FanLockPresetKey && fanLockCurrentPower < 10) {
+            int restoredPower;
+            if (TryGetCurrentCpuPowerSetting(out restoredPower))
+              fanLockCurrentPower = Math.Max(fanLockMinimumPower, Math.Min(fanLockMaximumPower, restoredPower));
+            else
+              fanLockCurrentPower = fanLockMinimumPower;
           }
           LoadMonitorMetricSettings(currentPreset);
 
@@ -1438,6 +1660,8 @@ namespace OmenSuperHub {
     /// </summary>
     static void SavePresetToRegistry(string presetKey) {
       if (presetKey == "PresetExtreme" || presetKey == "PresetGpuPriority" || presetKey == "PresetLightUse") return;
+      // 此子键在进入锁定模式前保存完整快照；模式运行期间不得被后续菜单修改覆盖。
+      if (presetKey == FanLockPresetKey && currentPreset == FanLockPresetKey) return;
       try {
         using (RegistryKey key = Registry.CurrentUser.CreateSubKey($@"Software\OmenSuperHub\{presetKey}")) {
           if (key == null) return;

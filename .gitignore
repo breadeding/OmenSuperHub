@@ -1,6 +1,9 @@
 *.user
 *.suo
+*.pfx
 Bin/
 obj/
-packages/ 
+packages/
 .vs/
+.omo/
+4060.ps1

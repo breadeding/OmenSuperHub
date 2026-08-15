@@ -59,6 +59,20 @@
     public static string PresetExtreme => T("极致性能", "極致性能", "Extreme Performance");
     public static string PresetGpuPriority => T("GPU优先", "GPU優先", "GPU Priority");
     public static string PresetLightUse => T("轻度使用", "輕度使用", "Light Use");
+    public static string PresetFanLock => T("锁定风扇转速模式", "鎖定風扇轉速模式", "Locked Fan Speed Mode");
+    public static string PresetFanLockTooltip => T(
+        "左键进入锁定风扇转速模式；右键修改目标转速、目标温度和CPU功耗范围。",
+        "左鍵進入鎖定風扇轉速模式；右鍵修改目標轉速、目標溫度和CPU功耗範圍。",
+        "Left-click to activate locked fan speed mode; right-click to edit its fan, temperature, and CPU power range targets.");
+    public static string FanLockEditorTitle => T("锁定风扇转速模式", "鎖定風扇轉速模式", "Locked Fan Speed Mode");
+    public static string FanLockMinimumPower => T("CPU功耗墙下限 (W)", "CPU功耗牆下限 (W)", "Minimum CPU power (W)");
+    public static string FanLockMaximumPower => T("CPU最大功率目标 (W)", "CPU最大功率目標 (W)", "Maximum CPU power target (W)");
+    public static string FanLockTargetRpm => T("目标风扇转速 (RPM)", "目標風扇轉速 (RPM)", "Target fan speed (RPM)");
+    public static string FanLockTargetTemperature => T("目标CPU温度 (℃)", "目標CPU溫度 (℃)", "Target CPU temperature (°C)");
+    public static string FanLockNeedsCpuPower => T(
+        "当前预设没有设置CPU功率，无法确定锁定模式的PL1起点。请先设置一个CPU功率数值。",
+        "目前預設沒有設定CPU功率，無法確定鎖定模式的PL1起點。請先設定一個CPU功率數值。",
+        "The current preset has no CPU power setting, so the starting PL1 cannot be determined. Set a CPU power value first.");
     public static string PresetCustom1 => T("自定义预设1", "自定義預設1", "Custom 1");
     public static string PresetCustom2 => T("自定义预设2", "自定義預設2", "Custom 2");
     public static string PresetCustom3 => T("自定义预设3", "自定義預設3", "Custom 3");
@@ -209,6 +223,9 @@
     // ─────────────────────────────────────────────────────────────────────────
     public static string GpuAppsMenu => T("占用GPU的程序", "佔用GPU的程式", "GPU Processes");
     public static string GpuAppsNone => T("无", "無", "None");
+    public static string GpuAppsQueryMayWake => T("GPU 查询已暂停（可能唤醒独显）",
+        "GPU 查詢已暫停（可能喚醒獨顯）", "GPU query paused (may wake dGPU)");
+    public static string GpuAppsQueryNow => T("立即查询一次", "立即查詢一次", "Query once now");
     public static string GpuRestartMenu => T("重启显卡", "重啟顯示卡", "Restart GPU");
     public static string GpuRestartTooltip => T("通过重启独立 GPU 减少不必要的占用 GPU 情况。",
         "透過重啟獨立 GPU 減少不必要的 GPU 佔用情況。",
@@ -288,9 +305,13 @@
     // 高温警告（气泡）
     public static string HighTempBalloonTitle => T("温度过高警告", "溫度過高警告", "High Temperature Warning");
     public static string HighTempBalloonText(int limit, float temp) => T(
-        $"检测到CPU温度高于{limit - 5}℃ ({temp:F1}℃)，且风扇处于固定转速状态，OSH已自动切换为降温模式并将风扇控制切换为自动模式。",
-        $"偵測到CPU溫度高於{limit - 5}℃ ({temp:F1}℃)，且風扇處於固定轉速狀態，OSH已自動切換至降溫模式並將風扇控制改為自動。",
-        $"CPU temperature exceeded {limit - 5}°C ({temp:F1}°C) with a fixed fan speed. OSH has switched to Cool mode and Auto fan control.");
+        $"检测到CPU温度高于{limit - 2}℃ ({temp:F1}℃)，且风扇处于固定转速状态，OSH已自动切换为降温模式并将风扇控制切换为自动模式。",
+        $"偵測到CPU溫度高於{limit - 2}℃ ({temp:F1}℃)，且風扇處於固定轉速狀態，OSH已自動切換至降溫模式並將風扇控制改為自動。",
+        $"CPU temperature exceeded {limit - 2}°C ({temp:F1}°C) with a fixed fan speed. OSH has switched to Cool mode and Auto fan control.");
+    public static string FanLockPowerReducedBalloonText(int limit, float temp, int power, int minimum) => T(
+        $"检测到CPU温度高于{limit - 2}℃ ({temp:F1}℃)。锁定风扇转速模式已优先将CPU功耗墙降低至{power} W，下限为{minimum} W；到达下限后若仍过热才会切换风扇控制。",
+        $"偵測到CPU溫度高於{limit - 2}℃ ({temp:F1}℃)。鎖定風扇轉速模式已優先將CPU功耗牆降低至{power} W，下限為{minimum} W；到達下限後若仍過熱才會切換風扇控制。",
+        $"CPU temperature exceeded {limit - 2}°C ({temp:F1}°C). Locked fan speed mode reduced CPU power to {power} W first (minimum {minimum} W); fan control will change only if overheating continues at the minimum.");
 
     // ─────────────────────────────────────────────────────────────────────────
     // 性能控制 — 提示文本
@@ -455,6 +476,7 @@
     public static string MonitorCpuOff => T("关闭CPU监控", "關閉CPU監控", "Disable CPU Monitor");
     public static string MonitorGpuOn => T("开启GPU监控", "開啟GPU監控", "Enable GPU Monitor");
     public static string MonitorGpuOff => T("关闭GPU监控", "關閉GPU監控", "Disable GPU Monitor");
+    public static string MonitorGpuStopFailed => T("无法完全停止旧的硬件监控进程，GPU监控仍保持开启。", "無法完全停止舊的硬體監控程序，GPU 監控仍保持開啟。", "The previous hardware monitor could not be stopped completely. GPU monitoring remains enabled.");
     public static string MonitorFanOn => T("开启风扇监控", "開啟風扇監控", "Enable Fan Monitor");
     public static string MonitorFanOff => T("关闭风扇监控", "關閉風扇監控", "Disable Fan Monitor");
     public static string MonitorRefresh => T("刷新频率", "更新頻率", "Refresh Rate");
@@ -609,7 +631,7 @@
     public static string MonitorGpuPowerLabel => T("GPU功率", "GPU功率", "GPU Power");
     public static string MonitorGpuFrequencyLabel => T("GPU频率", "GPU頻率", "GPU Frequency");
     public static string MonitorFanLabel => T("风扇", "風扇", "Fan");
-    public static string GpuPoweredOff => T("节能", "節能", "PoweredOff");
+    public static string GpuPoweredOff => T("遥测不可用", "遙測無法使用", "Telemetry unavailable");
     public static string MonitorPrepareLabel => T("数据获取中...", "數據獲取中...", "Retrieving data...");
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -675,5 +697,46 @@
     public static string DeviceNotFound => T("未找到描述包含 NVIDIA 的显示适配器！", "未找到描述包含 NVIDIA 的顯示卡！", "Display adapter containing 'NVIDIA' not found!");
     public static string RestartGPUSuccess => T("重启显卡成功！", "重啟顯示卡成功！", "Restart GPU successful!");
     public static string RestartGPUFailed => T("重启显卡失败！", "重啟顯示卡失敗！", "Failed to restart GPU!");
+    public static string Yes => T("是", "是", "Yes");
+    public static string No => T("否", "否", "No");
+    public static string GpuSleepMenu => T("强制尝试休眠独显", "強制嘗試休眠獨顯", "Force dGPU Sleep Attempt");
+    public static string GpuSleepTooltip => T("清理独显占用、重启设备并尝试进入D3，失败时提供占用诊断和快捷修复。", "清理獨顯佔用、重新啟動裝置並嘗試進入 D3，失敗時提供診斷與快速修復。", "Clear dGPU clients, restart the device, and attempt D3 sleep with diagnostics and repair actions.");
+    public static string GpuSleepNeedsSecondGpu => T("未检测到可用的第二块物理显卡，禁止执行独显休眠。", "未偵測到可用的第二張實體顯示卡，禁止執行獨顯休眠。", "No usable second physical GPU was detected.");
+    public static string GpuSleepTargetNotFound => T("未找到可安全操作的NVIDIA独显。", "找不到可安全操作的 NVIDIA 獨顯。", "No eligible NVIDIA dGPU was found.");
+    public static string GpuSleepNoActiveFallbackGpu => T("第二块显卡没有活动显示模式，无法确认它能接管桌面。", "第二張顯示卡沒有作用中的顯示模式，無法確認可接管桌面。", "The fallback GPU has no active display mode.");
+    public static string GpuSleepTargetHasActiveDisplay => T("独显当前仍有活动显示模式，可能正在驱动内屏或外接显示器，已阻止休眠操作。", "獨顯目前仍有作用中的顯示模式，可能正在驅動內建或外接顯示器，已阻止休眠操作。", "The dGPU still has an active display mode and may be driving a display.");
+    public static string GpuSleepDiscreteModeBlocked => T("当前为独显直连模式，不能尝试休眠独显。", "目前為獨顯直連模式，不能嘗試休眠獨顯。", "dGPU sleep is unavailable in discrete graphics mode.");
+    public static string GpuSleepConfirm => T("该操作会停止GPU监控并重启独显，应用可能崩溃。是否继续？", "此操作會停止 GPU 監控並重新啟動獨顯，應用程式可能當機。是否繼續？", "This stops GPU monitoring and restarts the dGPU. Applications may crash. Continue?");
+    public static string GpuSleepWorking => T("正在尝试让独显休眠，请稍候。", "正在嘗試讓獨顯休眠，請稍候。", "Attempting to put the dGPU to sleep.");
+    public static string GpuSleepSucceeded => T("独显已进入Windows报告的D3状态。GPU监控将保持关闭以免将其唤醒。", "獨顯已進入 Windows 回報的 D3 狀態。GPU 監控將保持關閉以避免喚醒。", "The dGPU entered the Windows-reported D3 state. GPU monitoring remains off.");
+    public static string GpuSleepMonitorStopFailed => T("无法完全停止硬件监控进程。为避免监控继续唤醒独显，本次休眠尝试已取消。", "無法完全停止硬體監控程序。為避免監控繼續喚醒獨顯，本次休眠嘗試已取消。", "The hardware monitor could not be stopped completely. The sleep attempt was cancelled to avoid waking the dGPU.");
+    public static string GpuSleepRestartFailed(string error) => T($"重启独显失败：{error}", $"重新啟動獨顯失敗：{error}", $"Failed to restart the dGPU: {error}");
+    public static string GpuSleepFailedNoProcesses => T("独显仍未进入D3，但没有检测到可处理的普通应用。可能是显示链路、驱动服务或平台电源管理阻止了休眠。", "獨顯仍未進入 D3，但未偵測到可處理的一般應用程式。可能是顯示鏈路、驅動服務或平台電源管理所致。", "The dGPU did not enter D3 and no configurable application was found. Display routing, driver services, or platform power management may be responsible.");
+    public static string GpuSleepStillFailed => T("调整应用后独显仍未进入D3。请检查仍存在的进程、外接显示器、独显直连模式和其他硬件监控程序。", "調整應用程式後獨顯仍未進入 D3。請檢查剩餘程序、外接顯示器、獨顯直連模式與其他硬體監控程式。", "The dGPU still did not enter D3. Check remaining processes, external displays, discrete mode, and monitoring tools.");
+    public static string GpuSleepRepairTitle => T("独显休眠失败修复", "獨顯休眠失敗修復", "dGPU Sleep Repair");
+    public static string GpuSleepRepairDescription => T("以下程序在休眠失败后仍被检测为使用独显。可将选中程序设为节能GPU，重启后再次尝试。所有修改均保存原始值并可回滚。", "以下程序在休眠失敗後仍被偵測為使用獨顯。可將選取程序設為節能 GPU，重新啟動後再次嘗試。所有修改皆可回復。", "These processes still use the dGPU. Set selected apps to the power-saving GPU, restart them, then retry. Changes are backed up and reversible.");
+    public static string GpuSleepProcessColumn => T("程序", "程序", "Process");
+    public static string GpuSleepUsageColumn => T("GPU调用", "GPU 使用", "GPU use");
+    public static string GpuSleepPreferenceColumn => T("当前偏好", "目前偏好", "Preference");
+    public static string GpuSleepCustomListColumn => T("已在自定列表", "已在自訂清單", "Customized");
+    public static string GpuSleepPathColumn => T("可执行文件路径", "執行檔路徑", "Executable path");
+    public static string GpuPreferenceSystemDefault => T("系统决定", "系統決定", "System default");
+    public static string GpuPreferencePowerSaving => T("节能GPU", "節能 GPU", "Power saving GPU");
+    public static string GpuPreferenceHighPerformance => T("高性能GPU", "高效能 GPU", "High performance GPU");
+    public static string GpuPreferenceUnavailable => T("不可用", "無法使用", "Unavailable");
+    public static string GpuPreferenceApplyPowerSaving => T("设为节能GPU", "設為節能 GPU", "Use power-saving GPU");
+    public static string GpuPreferenceRestore => T("恢复之前设置", "還原先前設定", "Restore previous settings");
+    public static string GpuSleepRestartSelected => T("确认并重启应用", "確認並重新啟動應用程式", "Restart selected apps");
+    public static string GpuSleepRetry => T("再次尝试休眠", "再次嘗試休眠", "Retry sleep");
+    public static string GpuSleepSelectApplication => T("请至少选择一个可以设置GPU偏好的应用。", "請至少選擇一個可設定 GPU 偏好的應用程式。", "Select at least one configurable application.");
+    public static string GpuSleepDwmWarning => T("你选择了dwm.exe。重启桌面合成器时屏幕可能黑屏或闪烁，确认继续吗？", "你選擇了 dwm.exe。重新啟動桌面合成器時畫面可能黑屏或閃爍，確定繼續嗎？", "dwm.exe is selected. Restarting Desktop Window Manager may blank or flicker the display. Continue?");
+    public static string GpuPreferenceAppliedRestartRequired => T("GPU偏好已写入。必须重启这些应用才能生效。", "GPU 偏好已寫入，必須重新啟動應用程式才會生效。", "GPU preferences were saved. Restart the applications to apply them.");
+    public static string GpuPreferenceApplyFailed(string error) => T($"设置GPU偏好失败：{error}", $"設定 GPU 偏好失敗：{error}", $"Failed to set GPU preference: {error}");
+    public static string GpuSleepRestartWarning => T("将先尝试正常关闭，必要时强制结束选中的应用。未保存的数据可能丢失，确认继续吗？", "將先嘗試正常關閉，必要時強制結束選取的應用程式。未儲存資料可能遺失，確定繼續嗎？", "Selected apps will be closed and may be forcibly terminated. Unsaved data may be lost. Continue?");
+    public static string GpuSleepApplicationsRestarted => T("应用已重启。现在可以再次尝试独显休眠。", "應用程式已重新啟動，現在可以再次嘗試獨顯休眠。", "Applications were restarted. You can retry dGPU sleep now.");
+    public static string GpuPreferenceBackupMissing => T("找不到GPU偏好设置备份。", "找不到 GPU 偏好設定備份。", "GPU preference backup was not found.");
+    public static string GpuPreferenceConflict => T("部分应用的设置在OSH修改后又发生变化。是否仍覆盖并恢复到最初状态？", "部分應用程式設定在 OSH 修改後又有變更。是否仍覆寫並還原最初狀態？", "Some preferences changed after OSH modified them. Overwrite those changes and restore the original values?");
+    public static string GpuPreferenceRestoreFailed => T("恢复GPU偏好失败。", "還原 GPU 偏好失敗。", "Failed to restore GPU preferences.");
+    public static string GpuPreferenceRestoredRestartRequired => T("原始GPU偏好已恢复。相关应用需要再次重启。", "原始 GPU 偏好已還原，相關應用程式需要再次重新啟動。", "Original GPU preferences were restored. Restart the affected applications again.");
   }
 }

@@ -253,6 +253,7 @@ namespace OmenSuperHub {
         case "PresetExtreme":
         case "PresetGpuPriority":
         case "PresetLightUse":
+        case FanLockPresetKey:
           return isCPUPowerControlSupported;
         case "PresetCustom1":
         case "PresetCustom2":
@@ -268,7 +269,8 @@ namespace OmenSuperHub {
     }
 
     static string GetDefaultOmenKeyPresetCandidates() {
-      return string.Join(";", GetAvailablePresetKeys());
+      // 锁定风扇模式会接管风扇与CPU功耗，不默认加入快捷键轮换，用户仍可手动勾选。
+      return string.Join(";", GetAvailablePresetKeys().Where(key => key != FanLockPresetKey));
     }
 
     static List<string> GetOmenKeyPresetCandidateKeys() {

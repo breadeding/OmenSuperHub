@@ -105,9 +105,13 @@ namespace OmenSuperHub {
         gpuPowerLimitsMenu = new ToolStripMenuItem($"{Strings.SysNvidiaPower}: --W / --W") { Enabled = false };
         sysInfoMenu.DropDownItems.Add(gpuPowerLimitsMenu);
         System.Threading.Tasks.Task.Run(() => {
-          string gpuModel = GetGpuModelFromNvidiaSmi();
-          var limits = GetGpuPowerLimits();
-          string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+          string gpuModel = GetNvidiaGpuInfoList().FirstOrDefault().Name ?? Strings.GpuSleepTargetNotFound;
+          string limitsText = "--W / --W";
+          if (!ShouldBlockBackgroundGpuQueries) {
+            gpuModel = GetGpuModelFromNvidiaSmi();
+            var limits = GetGpuPowerLimits();
+            limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
+          }
           Thread.Sleep(2000);
           uiContext.Post(_ => {
             gpuPowerLimitsMenu.Text = $"{Strings.SysNvidiaPower}: {limitsText}";
@@ -144,7 +148,7 @@ namespace OmenSuperHub {
 
       // 订阅 DropDownOpening 和 DropDownClosed 事件来控制是否更新信息
       sysInfoMenu.DropDownOpening += (s, e) => {
-        if (hasNVIDIAGpu) {
+        if (hasNVIDIAGpu && !ShouldBlockBackgroundGpuQueries) {
           System.Threading.Tasks.Task.Run(() => {
             var limits = GetGpuPowerLimits();
             string limitsText = limits[0] == -2f ? "--W / --W" : $"{limits[0]:F0}W / {limits[1]:F0}W";
@@ -193,6 +197,23 @@ namespace OmenSuperHub {
         var lightUseItem = CreateMenuItem(Strings.PresetLightUse, "presetsGroup", (s, e) => applyPresetLogic("PresetLightUse"), currentPreset == "PresetLightUse", Strings.PresetLightUseTooltip);
         lightUseItem.Name = "PresetLightUse";
         presetsMenu.DropDownItems.Add(lightUseItem);
+        presetsMenu.DropDownItems.Add(new ToolStripSeparator());
+
+        var fanLockItem = new ToolStripMenuItem(Strings.PresetFanLock) {
+          Name = FanLockPresetKey,
+          Tag = "presetsGroup",
+          Checked = currentPreset == FanLockPresetKey,
+          ToolTipText = Strings.PresetFanLockTooltip
+        };
+        fanLockItem.MouseUp += (s, e) => {
+          if (e.Button == MouseButtons.Left) {
+            if (ActivateFanLockPreset())
+              UpdateCheckedState("presetsGroup", null, fanLockItem);
+          } else if (e.Button == MouseButtons.Right) {
+            ShowFanLockEditor();
+          }
+        };
+        presetsMenu.DropDownItems.Add(fanLockItem);
         presetsMenu.DropDownItems.Add(new ToolStripSeparator());
       }
 
@@ -344,7 +365,7 @@ namespace OmenSuperHub {
 
       menu.Items.Add(fanConfigMenu);
 
-      ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl);
+      ToolStripMenuItem fanControlMenu = new ToolStripMenuItem(Strings.FanControl) { Name = "FanControlMenu" };
       if (isFanCleanSupported || isFanLegacyCleanSupported) {
         string menuText = Strings.CleanCreekMenuItem;
         if (!isFanCleanSupported && isFanLegacyCleanSupported)
@@ -403,6 +424,7 @@ namespace OmenSuperHub {
       fanValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM")) { Enabled = false };
 
       fanTrackBar.ValueChanged += (sender, e) => {
+        if (fanLockUpdatingControls) return;
         fanControl = fanTrackBar.Value * 100 + " RPM";
         fanValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{fanTrackBar.Value * 100} RPM");
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -514,24 +536,14 @@ namespace OmenSuperHub {
         ToolStripMenuItem gpuAppsMenu = new ToolStripMenuItem(Strings.GpuAppsMenu);
         gpuAppsMenu.DropDownOpening += (s, e) => {
           gpuAppsMenu.DropDownItems.Clear();
-          var apps = GetGpuApps();
-          if (apps.Count == 0) {
-            gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GpuAppsNone) { Enabled = false });
-          } else {
-            foreach (var app in apps) {
-              var appItem = new ToolStripMenuItem($"{app.ProcessName} (PID: {app.ProcessId})");
-              appItem.Click += (sender, args) => {
-                if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseConfirm(app.ProcessName), Strings.GpuCloseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) {
-                  try {
-                    Process.GetProcessById(app.ProcessId).Kill();
-                  } catch (Exception ex) {
-                    MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseError(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                  }
-                }
-              };
-              gpuAppsMenu.DropDownItems.Add(appItem);
-            }
+          if (ShouldBlockBackgroundGpuQueries) {
+            gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GpuAppsQueryMayWake) { Enabled = false });
+            var queryItem = new ToolStripMenuItem(Strings.GpuAppsQueryNow);
+            queryItem.Click += (sender, args) => PopulateGpuAppsMenu(gpuAppsMenu);
+            gpuAppsMenu.DropDownItems.Add(queryItem);
+            return;
           }
+          PopulateGpuAppsMenu(gpuAppsMenu);
         };
         performanceControlMenu.DropDownItems.Add(gpuAppsMenu);
 
@@ -543,6 +555,16 @@ namespace OmenSuperHub {
           }
         };
         performanceControlMenu.DropDownItems.Add(restartGpuMenu);
+
+        ToolStripMenuItem gpuSleepMenu = new ToolStripMenuItem(Strings.GpuSleepMenu);
+        gpuSleepMenu.ToolTipText = Strings.GpuSleepTooltip;
+        gpuSleepMenu.Click += (s, e) => StartGpuSleepAttempt();
+        performanceControlMenu.DropDownItems.Add(gpuSleepMenu);
+
+        ToolStripMenuItem restoreGpuPreferencesMenu = new ToolStripMenuItem(Strings.GpuPreferenceRestore);
+        restoreGpuPreferencesMenu.Enabled = !string.IsNullOrEmpty(GpuSleepManager.GetLatestTransactionId());
+        restoreGpuPreferencesMenu.Click += (s, e) => RestoreLatestGpuPreferences();
+        performanceControlMenu.DropDownItems.Add(restoreGpuPreferencesMenu);
       }
       performanceControlMenu.DropDownItems.Add(new ToolStripSeparator()); // Separator between groups
       //ToolStripMenuItem pl4Menu = new ToolStripMenuItem("PL4");
@@ -609,7 +631,7 @@ namespace OmenSuperHub {
       }
 
       if (isCPUPowerControlSupported) {
-        ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
+        ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu) { Name = "CpuPowerMenu" };
 
         cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerTip) { Enabled = false });
         cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -638,6 +660,7 @@ namespace OmenSuperHub {
 
         // 滑块值改变时更新标签并应用设置
         cpuPowerTrackBar.ValueChanged += (sender, e) => {
+          if (fanLockUpdatingControls) return;
           int val = cpuPowerTrackBar.Value;
           cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
           cpuPower = cpuPowerTrackBar.Value + " W";
@@ -1092,17 +1115,13 @@ namespace OmenSuperHub {
         ToolStripMenuItem monitorGPUMenu = new ToolStripMenuItem(Strings.MonitorGpuLabel);
         monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOn, "monitorGPUGroup", (s, e) => {
           bool wasAllOff = !monitorCPU && !monitorGPU;
+          gpuSleepGuardActive = false;
           monitorGPU = true;
           gpuTempReady = false; // 等待获取到温度后再参与风扇控制
           rawPowerGPU = 0f;     // 清除可能残留的脏功率值
           rawFrequencyGPU = 0f;
           GPUPower = 0f;
           GPUFrequency = 0f;
-          if (hasStopAuto)
-            autoStopMonitorGPU = false;
-          //重置自动开启标志
-          hasStartAuto = false;
-          autoStartMonitorGPU = true;
           if (wasAllOff) {
             // 从全关状态重启监控进程
             tempReady = false;
@@ -1117,7 +1136,7 @@ namespace OmenSuperHub {
           }
           SaveConfig("MonitorGPU");
         }, true));
-        monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOff, "monitorGPUGroup", (s, e) => {
+        monitorGPUMenu.DropDownItems.Add(CreateMenuItem(Strings.MonitorGpuOff, "monitorGPUGroup", async (s, e) => {
           // 自动转速模式下禁止彻底关闭监控
           if (!monitorCPU && fanControl == "auto") {
             MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.MonitorAutoFanWarning, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1130,17 +1149,17 @@ namespace OmenSuperHub {
           rawPowerGPU = 0f;  // 关闭时清零，避免重新开启时读到旧值
           rawFrequencyGPU = 0f;
           GPUPower = 0f;
-          GPUFrequency = 0f;
-          if (hasStartAuto)
-            autoStartMonitorGPU = false;
-          //重置自动关闭标志
-          hasStopAuto = false;
-          autoStopMonitorGPU = true;
-          SetGpuMonitorState(false);
-          // 若CPU和GPU均已关闭，停止监控进程
-          if (!monitorCPU && !monitorGPU) {
-            StopHardwareMonitor();
+GPUFrequency = 0f;
+          bool stopped = await Task.Run(() => StopHardwareMonitorAndWait(5000));
+          if (!stopped) {
+            monitorGPU = true;
+            SetGpuMonitorState(true);
+            UpdateCheckedState("monitorGPUGroup", Strings.MonitorGpuOn);
+            MessageBox.Show(Strings.MonitorGpuStopFailed, Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SaveConfig("MonitorGPU");
+            return;
           }
+          if (monitorCPU) StartHardwareMonitor();
           SaveConfig("MonitorGPU");
         }, false));
         monitorGPUMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -2166,6 +2185,85 @@ namespace OmenSuperHub {
       }
     }
 
+    static void ShowFanLockEditor() {
+      int maximumRpm = platformMaxFanSpeed.HasValue && platformMaxFanSpeed.Value > 0
+          ? (int)(platformMaxFanSpeed.Value * 1.1)
+          : 6400;
+      maximumRpm = Math.Max(100, maximumRpm / 100 * 100);
+      int maximumTemperature = Math.Max(40, (maxCPUTemp ?? 97) - 3);
+
+      using (Form form = new Form {
+        Width = 430,
+        Height = 310,
+        FormBorderStyle = FormBorderStyle.FixedDialog,
+        MaximizeBox = false,
+        MinimizeBox = false,
+        StartPosition = FormStartPosition.CenterScreen,
+        Text = Strings.FanLockEditorTitle
+      }) {
+        Label minimumPowerLabel = new Label { Left = 15, Top = 22, Width = 230, Text = Strings.FanLockMinimumPower };
+        NumericUpDown minimumPowerInput = new NumericUpDown {
+          Left = 270, Top = 18, Width = 120, Minimum = 10, Maximum = 254,
+          Value = Math.Max(10, Math.Min(254, fanLockMinimumPower))
+        };
+
+        Label maximumPowerLabel = new Label { Left = 15, Top = 66, Width = 230, Text = Strings.FanLockMaximumPower };
+        NumericUpDown maximumPowerInput = new NumericUpDown {
+          Left = 270, Top = 62, Width = 120, Minimum = 10, Maximum = 254,
+          Value = Math.Max(10, Math.Min(254, fanLockMaximumPower))
+        };
+
+        minimumPowerInput.ValueChanged += (s, e) => {
+          if (minimumPowerInput.Value > maximumPowerInput.Value)
+            maximumPowerInput.Value = minimumPowerInput.Value;
+        };
+        maximumPowerInput.ValueChanged += (s, e) => {
+          if (maximumPowerInput.Value < minimumPowerInput.Value)
+            minimumPowerInput.Value = maximumPowerInput.Value;
+        };
+
+        Label rpmLabel = new Label { Left = 15, Top = 110, Width = 230, Text = Strings.FanLockTargetRpm };
+        NumericUpDown rpmInput = new NumericUpDown {
+          Left = 270, Top = 106, Width = 120, Minimum = 0, Maximum = maximumRpm,
+          Increment = 100,
+          Value = Math.Max(0, Math.Min(maximumRpm, fanLockTargetRpm))
+        };
+
+        Label temperatureLabel = new Label { Left = 15, Top = 154, Width = 230, Text = Strings.FanLockTargetTemperature };
+        NumericUpDown temperatureInput = new NumericUpDown {
+          Left = 270, Top = 150, Width = 120, Minimum = 40, Maximum = maximumTemperature,
+          Value = Math.Max(40, Math.Min(maximumTemperature, fanLockTargetTemperature))
+        };
+
+        Button okButton = new Button {
+          Text = Strings.OK, Left = 110, Top = 205, Width = 95,
+          DialogResult = DialogResult.OK
+        };
+        Button cancelButton = new Button {
+          Text = Strings.Cancel, Left = 220, Top = 205, Width = 95,
+          DialogResult = DialogResult.Cancel
+        };
+
+        form.Controls.AddRange(new Control[] {
+          minimumPowerLabel, minimumPowerInput, maximumPowerLabel, maximumPowerInput,
+          rpmLabel, rpmInput, temperatureLabel, temperatureInput, okButton, cancelButton
+        });
+        form.AcceptButton = okButton;
+        form.CancelButton = cancelButton;
+
+        if (form.ShowDialog() != DialogResult.OK) return;
+
+        fanLockMinimumPower = (int)minimumPowerInput.Value;
+        fanLockMaximumPower = (int)maximumPowerInput.Value;
+        fanLockTargetRpm = (int)rpmInput.Value / 100 * 100;
+        fanLockTargetTemperature = (int)temperatureInput.Value;
+        SaveFanLockConfig();
+
+        if (currentPreset == FanLockPresetKey)
+          ApplyFanLockTargets();
+      }
+    }
+
 
     static bool ApplyCustomFanConfig() {
       string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -2194,6 +2292,27 @@ namespace OmenSuperHub {
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
         return false;
+      }
+    }
+
+    static void PopulateGpuAppsMenu(ToolStripMenuItem gpuAppsMenu) {
+      gpuAppsMenu.DropDownItems.Clear();
+      var apps = GpuSleepManager.GetNvidiaProcesses();
+      if (apps.Count == 0) {
+        gpuAppsMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.GpuAppsNone) { Enabled = false });
+        return;
+      }
+      foreach (var app in apps) {
+        var appItem = new ToolStripMenuItem($"{app.ProcessName} (PID: {app.ProcessId})");
+        appItem.Click += (sender, args) => {
+          if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseConfirm(app.ProcessName), Strings.GpuCloseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+          try {
+            Process.GetProcessById(app.ProcessId).Kill();
+          } catch (Exception ex) {
+            MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.GpuCloseError(ex.Message), Strings.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+          }
+        };
+        gpuAppsMenu.DropDownItems.Add(appItem);
       }
     }
 

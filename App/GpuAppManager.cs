@@ -124,6 +124,7 @@ namespace OmenSuperHub {
     }
 
     public static int GetGraphicsBoostClock() {
+      NVIDIA.Initialize();
       try {
         PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
 
@@ -143,12 +144,13 @@ namespace OmenSuperHub {
           }
         }
       } catch {
-      }
+      } finally { NVIDIA.Unload(); }
 
       return 0;
     }
 
     public static int GetMemoryBoostClock() {
+      NVIDIA.Initialize();
       try {
         PhysicalGPU[] gpus = PhysicalGPU.GetPhysicalGPUs();
 
@@ -168,7 +170,7 @@ namespace OmenSuperHub {
           }
         }
       } catch {
-      }
+      } finally { NVIDIA.Unload(); }
 
       return 0;
     }
@@ -219,7 +221,7 @@ namespace OmenSuperHub {
 
         // 2. 通过 ExecuteCommand 执行 pnputil 重启设备
         string command = $"pnputil /restart-device \"{instanceId}\"";
-        ProcessResult result = ExecuteCommand(command);
+        ProcessResult result = RestartGpu(instanceId);
 
         // 可选：根据结果给出提示
         if (result.ExitCode != 0) {
@@ -228,6 +230,14 @@ namespace OmenSuperHub {
       } catch {
         MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.RestartGPUFailed, Strings.Hint, MessageBoxButtons.OK, MessageBoxIcon.Warning);
       }
+    }
+
+    public static ProcessResult RestartGpu(string instanceId) {
+      if (string.IsNullOrWhiteSpace(instanceId))
+        return new ProcessResult { ExitCode = -1, Error = Strings.DeviceNotFound };
+      string safeId = instanceId.Replace(((char)34).ToString(), "");
+      string command = string.Format("pnputil /restart-device {0}{1}{0}", (char)34, safeId);
+      return ExecuteCommand(command);
     }
 
     /// <summary>
@@ -313,14 +323,7 @@ namespace OmenSuperHub {
 
     /// <summary>是否存在 NVIDIA 独显。</summary>
     public static bool HasNvidiaGpu() {
-      try {
-        var gpus = PhysicalGPU.GetPhysicalGPUs();
-
-        return gpus != null &&
-               gpus.Length > 0;
-      } catch {
-        return false;
-      }
+      return GetNvidiaGpuInfoList().Count > 0;
     }
 
     /// <summary>
