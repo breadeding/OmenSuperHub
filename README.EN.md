@@ -49,6 +49,6 @@ This program is **not** affiliated with or endorsed by HP or OMEN. The brand nam
 
 <div align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=breadeding/OmenSuperHub&type=Date)](https://www.star-history.com/#breadeding/OmenSuperHub&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=breadeding/OmenSuperHub&type=Date)](https://star-history.dera.page/#breadeding/OmenSuperHub&type=Date)
 
 </div>

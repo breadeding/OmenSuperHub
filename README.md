@@ -58,6 +58,6 @@ OmenSuperHub 实现了惠普暗夜精灵（HP OMEN）系列的控制软件 OGH �
 
 <div align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=breadeding/OmenSuperHub&type=Date)](https://www.star-history.com/#breadeding/OmenSuperHub&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=breadeding/OmenSuperHub&type=Date)](https://star-history.dera.page/#breadeding/OmenSuperHub&type=Date)
 
 </div>
