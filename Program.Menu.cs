@@ -821,9 +821,13 @@ namespace OmenSuperHub {
         }, true));
         gpuClockMenu.DropDownItems.Add(CreateMenuItem(Strings.SetGpuClockSlider, "gpuClockGroup", (s, e) => { }, false));
         gpuClockTrackBar = new ToolStripTrackBar();
-        gpuClockTrackBar.Minimum = 21;
-        gpuClockTrackBar.Maximum = (graphicsBoostClock + 300) / 10;
-        gpuClockTrackBar.Value = Math.Min(150, gpuClockTrackBar.Maximum);
+        // 1 tick = 10 MHz；21..63 = 210..630 MHz；默认档 150 = 1500 MHz
+        const int minTick = 21, safeMaxTick = 63, defaultTick = 150;
+        gpuClockTrackBar.Minimum = minTick;
+        int maxValue = graphicsBoostClock > 0 ? (graphicsBoostClock + 300) / 10 : safeMaxTick; // 探测失败回退安全上限 630 MHz
+        if (maxValue < minTick) maxValue = minTick;
+        gpuClockTrackBar.Maximum = maxValue;
+        gpuClockTrackBar.Value = Math.Min(defaultTick, maxValue);
         gpuClockTrackBar.TickFrequency = gpuClockTrackBar.Maximum - gpuClockTrackBar.Minimum;
         gpuClockTrackBar.Width = 800;
 
@@ -1635,7 +1639,14 @@ namespace OmenSuperHub {
 
       public int Value {
         get => TrackBarControl.Value;
-        set => TrackBarControl.Value = value;
+
+        set {
+          int v = value;
+          if (v < TrackBarControl.Minimum) v = TrackBarControl.Minimum;
+          if (v > TrackBarControl.Maximum) v = TrackBarControl.Maximum;
+          if (v != value) Debug.WriteLine($"[TrackBar] clamp {value}->{v} ({TrackBarControl.Minimum}..{TrackBarControl.Maximum})");
+          TrackBarControl.Value = v;
+        }
       }
 
       public int TickFrequency {
