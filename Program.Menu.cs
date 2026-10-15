@@ -351,6 +351,12 @@ namespace OmenSuperHub {
           menuText = Strings.CleanCreekLegacyMenuItem;
         fanControlMenu.DropDownItems.Add(CreateMenuItem(menuText, null, (s, e) => {
           if (MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CleanCreekConfirmMessage, Strings.CleanCreekTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK) {
+            // 自动模式依赖温度数据调速：无温度时自动 timer 不会发命令，
+            // 除尘停止后无法恢复正转导致风扇永久反转，直接拒绝启动。
+            if (fanControl == "auto" && GetFanSpeedForTemperature() / 100 < 0) {
+              MessageBox.Show(Application.OpenForms.OfType<HelpForm>().FirstOrDefault(), Strings.CleanCreekNoTempMessage, Strings.CleanCreekTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+              return;
+            }
             fanControlMenu.Enabled = false;
             if (isFanCleanSupported) {
               SetMaxFanSpeedOff();
@@ -359,21 +365,14 @@ namespace OmenSuperHub {
               Action start = () => {
                 SetFanLevel(platformSettings.CleanCreekCpuFanSpeed, platformSettings.CleanCreekGpuFanSpeed, Is3FanNb, true);
               };
-              Action stop = () => {
-                fanControlMenu.Enabled = true;
-                RestoreFanControl();  // 恢复原始转速或自动控制
-              };
+              Action stop = () => StopCleanCreekAndRestore(fanControlMenu, false);
               // 显示进度窗体，持续时间从配置读取（单位毫秒）
               StartCleanCreekWithProgress(platformSettings.CleanCreekDuration, Strings.CleanCreekTitle, start, stop);
             } else if (isFanLegacyCleanSupported) {
               SetMaxFanSpeedOff();
               fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
               Action start = () => SetLegacyCleanCreek(true);
-              Action stop = () => {
-                fanControlMenu.Enabled = true;
-                SetLegacyCleanCreek(false);
-                RestoreFanControl();
-              };
+              Action stop = () => StopCleanCreekAndRestore(fanControlMenu, true);
               StartCleanCreekWithProgress(platformSettings.CleanCreekDuration, Strings.CleanCreekTitle, start, stop);
             }
           }
@@ -1521,6 +1520,57 @@ namespace OmenSuperHub {
         }
       }
       return null;
+    }
+
+    // 反转除尘停止：无条件先发一条正转命令，再恢复原有控制。
+    // 背景：反转方向由 EC 保持到下一条 0x2E 命令为止；若恢复路径（自动 timer / 全速 0x27）
+    // 未能发出正转命令，风扇会永久反转导致过热，因此停止动作必须自包含，不能依赖 timer。
+    static void StopCleanCreekAndRestore(ToolStripMenuItem fanControlMenu, bool legacy) {
+      try {
+        // 1. 先无条件恢复正转：不依赖自动 timer（无温度数据时 timer 不会发命令）
+        int forwardSpeed = GetCleanCreekRestoreSpeed();
+        SetMaxFanSpeedOff();
+        SetFanLevel(forwardSpeed, forwardSpeed, Is3FanNb);
+        // 2. 旧版：关闭反转标志位，带重试与回读校验
+        if (legacy && !ClearLegacyCleanCreekWithRetry()) {
+          Logger.Error("StopCleanCreek: SetLegacyCleanCreek(false) failed after retries, fans may stay reversed");
+        }
+      } finally {
+        fanControlMenu.Enabled = true;
+        RestoreFanControl();
+      }
+    }
+
+    // 除尘停止时使用的正转恢复转速：沿用当前模式，取不到有效值时兜底 50% 以保证散热
+    static int GetCleanCreekRestoreSpeed() {
+      // 手动档：沿用滑杆值
+      if (fanControl != null && fanControl.Contains(" RPM")) {
+        int rpm;
+        if (int.TryParse(fanControl.Replace(" RPM", "").Trim(), out rpm) && rpm > 0)
+          return Math.Max(1, rpm / 100);
+      }
+      // 自动：沿用温控计算值（有效时）
+      if (fanControl == "auto") {
+        int autoSpeed = GetFanSpeedForTemperature() / 100;
+        if (autoSpeed > 0) return autoSpeed;
+      }
+      // 全速：沿用平台最大转速
+      if (fanControl != null && fanControl.Contains("max") && platformMaxFanSpeed.HasValue && platformMaxFanSpeed.Value > 0)
+        return platformMaxFanSpeed.Value / 100;
+      // 兜底：50% 正转，保证散热
+      return 50;
+    }
+
+    // 旧版反转关闭：写回带重试，并回读确认反转位（bit7）已清除
+    static bool ClearLegacyCleanCreekWithRetry() {
+      for (int i = 0; i < 3; i++) {
+        if (i > 0) Thread.Sleep(200);
+        if (!SetLegacyCleanCreek(false)) continue;
+        byte[] state = SendOmenBiosWmi(44, null, 4, 1);
+        if (state != null && state.Length >= 4 && (state[3] & 0x80) == 0)
+          return true;
+      }
+      return false;
     }
 
     public static void StartCleanCreekWithProgress(int durationMs, string title, Action startCleanAction, Action stopCleanAction) {
