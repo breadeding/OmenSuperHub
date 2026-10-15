@@ -758,7 +758,7 @@ namespace OmenSuperHub {
       if (flagStart < 5) {
         flagStart++;
         if (fanControl.Contains("max")) {
-          SetMaxFanSpeedOn();
+          SetMaxFanSpeedOnForward();
         } else if (fanControl.Contains(" RPM")) {
           SetMaxFanSpeedOff();
           int rpmValue = int.Parse(fanControl.Replace(" RPM", "").Trim());

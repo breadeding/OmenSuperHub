@@ -186,6 +186,10 @@
         "清潔進行中，剩餘 {0} 秒...",
         "Cleaning in progress, {0} seconds remaining...");
     public static string CleanCreekStopButton => T("停止", "停止", "Stop");
+    public static string CleanCreekNoTempMessage => T(
+        "当前无法获取温度数据（请检查 PawnIO 驱动），自动模式下除尘结束后无法恢复正转，已取消启动反转除尘。",
+        "目前無法取得溫度資料（請檢查 PawnIO 驅動），自動模式下除塵結束後無法恢復正轉，已取消啟動反轉除塵。",
+        "Temperature data is unavailable (check the PawnIO driver). Fan direction cannot be restored after cleaning in Auto mode, so Clean Creek was not started.");
 
     // ─────────────────────────────────────────────────────────────────────────
     // 性能控制 — 图形模式
