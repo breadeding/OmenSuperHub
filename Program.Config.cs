@@ -363,13 +363,21 @@ namespace OmenSuperHub {
       });
     }
 
+    // 0x27 全速命令不携带风扇方向位，方向沿用最近一条 0x2E；
+    // 开全速前先发一条正转 0x2E 钉住方向，防止上次会话/除尘残留反转在全速下继续。
+    static void SetMaxFanSpeedOnForward() {
+      int lvl = platformMaxFanSpeed.HasValue && platformMaxFanSpeed.Value > 0 ? platformMaxFanSpeed.Value / 100 : 50;
+      SetFanLevel(lvl, lvl, Is3FanNb);
+      SetMaxFanSpeedOn();
+    }
+
     static void RestoreFanControl() {
       if (fanControl == "auto") {
         SetMaxFanSpeedOff();
         fanControlTimer.Change(0, 1000);
         UpdateCheckedState("fanControlGroup", Strings.FanAuto);
       } else if (fanControl.Contains("max")) {
-        SetMaxFanSpeedOn();
+        SetMaxFanSpeedOnForward();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         UpdateCheckedState("fanControlGroup", Strings.FanMax);
       } else if (fanControl.Contains(" RPM")) {
@@ -1083,7 +1091,7 @@ namespace OmenSuperHub {
         fanControlTimer.Change(0, 1000);
         UpdateCheckedState("fanControlGroup", Strings.FanAuto);
       } else if (fanControl.Contains("max")) {
-        SetMaxFanSpeedOn();
+        SetMaxFanSpeedOnForward();
         fanControlTimer.Change(Timeout.Infinite, Timeout.Infinite);
         UpdateCheckedState("fanControlGroup", Strings.FanMax);
       } else if (fanControl.Contains(" RPM")) {
