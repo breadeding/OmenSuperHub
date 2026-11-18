@@ -189,18 +189,22 @@ namespace OmenSuperHub {
     /// 设置平台持续功耗上限。
     /// APU：同时写 STAPM / FAST / SLOW / APU_SLOW（APU_SLOW 决定拔电残留的那道墙）。
     /// HX ：写 STAPM / FAST / SLOW（不支持 APU_SLOW）。
+    ///
+    /// 注意：SMU 对超出平台天花板的请求会「返回 OK 但静默钳制」，
+    /// 例如 8BCA 上请求 125W 时 PPT LIMIT APU 仍停在 100W。
+    /// 因此返回值以回读结果为准，不能只看响应码。
     /// </summary>
-    /// <returns>true 表示所有必要消息都被 SMU 接受。</returns>
+    /// <returns>true 表示 SMU 接受且回读校验通过。</returns>
     public static bool SetPlatformPowerLimit(int watts) {
       if (watts < 5 || watts > 250) return false;
       if (!EnsureOpen()) return false;
 
       try {
+        bool allOk;
         lock (_gate) {
           uint mw = (uint)(watts * 1000);
-          bool allOk = true;
 
-          allOk &= SendSmu(MsgStapmLimit, mw, 2000) == REP_MSG_OK;
+          allOk = SendSmu(MsgStapmLimit, mw, 2000) == REP_MSG_OK;
           allOk &= SendSmu(MsgFastLimit, mw, 2000) == REP_MSG_OK;
           allOk &= SendSmu(MsgSlowLimit, mw, 2000) == REP_MSG_OK;
 
@@ -210,9 +214,18 @@ namespace OmenSuperHub {
             // 若 SMU 拒绝（个别固件不支持），不视为整体失败。
             SendSmu(apuMsg, mw, 2000);
           }
-
-          return allOk;
         }
+
+        if (!allOk) return false;
+
+        // 回读校验：SMU 可能把超限请求静默钳制到平台天花板，
+        // 只有实际写进去了才算成功（允许 2W 的量化误差）。
+        int actual = GetPlatformPowerLimitInternal();
+        if (actual > 0 && Math.Abs(actual - watts) > 2) {
+          Logger.Info($"SMU 平台上限已被钳制：请求 {watts}W，实际 {actual}W（平台天花板）。");
+          return false;
+        }
+        return true;
       } catch (Exception ex) {
         Logger.Error($"SMU 写入异常: {ex.Message}");
         return false;
@@ -227,24 +240,38 @@ namespace OmenSuperHub {
       if (!EnsureOpen()) return -1;
       try {
         lock (_gate) {
-          _executeMethod.Invoke(_pawnInstance,
-            new object[] { "ioctl_resolve_pm_table", new long[0], 2 });
-          _executeMethod.Invoke(_pawnInstance,
-            new object[] { "ioctl_update_pm_table", new long[0], 0 });
-          Thread.Sleep(120);
-
-          long[] pm = (long[])_executeMethod.Invoke(_pawnInstance,
-            new object[] { "ioctl_read_pm_table", new long[0], 1024 });
-          if (pm == null || pm.Length < 4) return -1;
-
-          uint raw = unchecked((uint)(pm[3] & 0xFFFFFFFFL));
-          float f = BitConverter.ToSingle(BitConverter.GetBytes(raw), 0);
-          if (float.IsNaN(f) || f < 0 || f > 500) return -1;
-          return (int)Math.Round(f);
+          return ReadPmTableIdx3();
         }
       } catch {
         return -1;
       }
+    }
+
+    /// <summary>不加锁版本，供已持有 _gate 的调用方使用。</summary>
+    private static int GetPlatformPowerLimitInternal() {
+      try {
+        return ReadPmTableIdx3();
+      } catch {
+        return -1;
+      }
+    }
+
+    /// <summary>实际读取 PM 表 idx3。调用方必须已持有 _gate。</summary>
+    private static int ReadPmTableIdx3() {
+      _executeMethod.Invoke(_pawnInstance,
+        new object[] { "ioctl_resolve_pm_table", new long[0], 2 });
+      _executeMethod.Invoke(_pawnInstance,
+        new object[] { "ioctl_update_pm_table", new long[0], 0 });
+      Thread.Sleep(120);
+
+      long[] pm = (long[])_executeMethod.Invoke(_pawnInstance,
+        new object[] { "ioctl_read_pm_table", new long[0], 1024 });
+      if (pm == null || pm.Length < 4) return -1;
+
+      uint raw = unchecked((uint)(pm[3] & 0xFFFFFFFFL));
+      float f = BitConverter.ToSingle(BitConverter.GetBytes(raw), 0);
+      if (float.IsNaN(f) || f < 0 || f > 500) return -1;
+      return (int)Math.Round(f);
     }
 
     /// <summary>SMU 自检（消息 0x01），仅用于诊断。</summary>

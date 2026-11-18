@@ -1346,7 +1346,13 @@ namespace OmenSuperHub {
           // ── 功率模式（全局配置，独立于预设）────────────────────────────────
           powerLimitMode = PowerLimitModeFromString((string)key.GetValue("PowerLimitMode", "null"));
           powerLimitCustomW = (int)key.GetValue("PowerLimitCustomW", 100);
+          // 历史配置可能存了超过平台天花板的旧值（如 125W），这里夹到有效区间，
+          // 否则滑块会显示一个永远无法生效的数字。夹过后回写一次，
+          // 保证注册表与内存一致，避免下次启动重复纠正。
+          int rawCustomW = powerLimitCustomW;
           if (powerLimitCustomW < 10 || powerLimitCustomW > 254) powerLimitCustomW = 100;
+          if (powerLimitCustomW > PlatformCeilingWatts) powerLimitCustomW = PlatformCeilingWatts;
+          if (powerLimitCustomW != rawCustomW) SaveConfig("PowerLimitMode");
           // 菜单先于配置创建，这里读取后再刷新一次勾选与滑块状态
           UpdatePowerLimitMenuState();
 

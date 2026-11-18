@@ -99,6 +99,18 @@ namespace OmenSuperHub {
     }
 
     /// <summary>
+    /// 平台允许的最高 CPU 功耗（BIOS/EC 硬上限，实测 SMU 会静默钳制到该值）。
+    /// </summary>
+    static int PlatformCeilingWatts {
+      get {
+        return ClampPl1(GetPlatformInt("UnleashedModeMaxPL1",
+               GetPlatformInt("NbPL1UpperBoundPerformanceWithOC",
+               GetPlatformInt("NbPL1UpperBoundGaming",
+               GetPlatformInt("NbPL1UpperBoundPerformance", 254)))));
+      }
+    }
+
+    /// <summary>
     /// 各模式对应的典型平台功耗值（用于菜单标注与硬件写入）。
     /// 返回 -1 表示该模式不写入硬件。
     /// </summary>
@@ -110,10 +122,7 @@ namespace OmenSuperHub {
           // 依次尝试：大师模式上限 → 超频后上限 → 游戏上限 → 性能上限
           // 8BCA 上 UnleashedModeMaxPL1 为 0（不支持大师模式），
           // 此时 NbPL1UpperBoundPerformanceWithOC(100W) 才是真实天花板
-          return ClampPl1(GetPlatformInt("UnleashedModeMaxPL1",
-                  GetPlatformInt("NbPL1UpperBoundPerformanceWithOC",
-                  GetPlatformInt("NbPL1UpperBoundGaming",
-                  GetPlatformInt("NbPL1UpperBoundPerformance", 254)))));
+          return PlatformCeilingWatts;
 
         case PowerLimitMode.Balanced:
           return ClampPl1(upperDefault);
@@ -123,7 +132,8 @@ namespace OmenSuperHub {
           return ClampPl1(GetPlatformInt("NbPL1LowerBound", (int)Math.Round(upperDefault * 0.6)));
 
         case PowerLimitMode.Custom:
-          return ClampPl1(powerLimitCustomW);
+          // 自定义值同样受平台天花板约束，超出部分 SMU 不会接受
+          return ClampPl1(Math.Min(powerLimitCustomW, PlatformCeilingWatts));
 
         default:
           return -1;
@@ -156,7 +166,10 @@ namespace OmenSuperHub {
         case PowerLimitMode.High: return $"{Strings.PowerLimitHigh}（{ResolvePl1ForMode(PowerLimitMode.High)}W）";
         case PowerLimitMode.Balanced: return $"{Strings.PowerLimitBalanced}（{ResolvePl1ForMode(PowerLimitMode.Balanced)}W）";
         case PowerLimitMode.Quiet: return $"{Strings.PowerLimitQuiet}（{ResolvePl1ForMode(PowerLimitMode.Quiet)}W）";
-        case PowerLimitMode.Custom: return string.Format(Strings.PowerLimitCustomFmt, powerLimitCustomW);
+        case PowerLimitMode.Custom:
+          // 超过平台天花板时标注实际生效值，避免显示一个做不到的数字
+          int effective = Math.Min(powerLimitCustomW, PlatformCeilingWatts);
+          return string.Format(Strings.PowerLimitCustomFmt, effective);
         default: return Strings.NotSet;
       }
     }
@@ -354,11 +367,19 @@ namespace OmenSuperHub {
         bool smuOk;
         lock (_smuWriteLock) {
           smuOk = RyzenSmuAccess.SetPlatformPowerLimit(target);
-          if (smuOk) _lastAppliedSmuW = target;
+          if (smuOk) {
+            _lastAppliedSmuW = target;
+          } else {
+            // 请求被平台钳制：回读真实值，避免下次复原重复判断为「未达标」
+            int actual = RyzenSmuAccess.GetPlatformPowerLimit();
+            if (actual > 0) _lastAppliedSmuW = actual;
+          }
         }
         if (smuOk) {
           Logger.Info($"上电复原：平台功耗上限已恢复为 {target}W"
             + (current > 0 ? $"（离电期间为 {current}W）。" : "。"));
+        } else if (_lastAppliedSmuW > 0) {
+          Logger.Info($"上电复原：平台上限实际为 {_lastAppliedSmuW}W（请求 {target}W 超出平台天花板）。");
         } else {
           Logger.Info($"上电复原：平台功耗上限写回 {target}W 失败。");
         }
@@ -375,7 +396,12 @@ namespace OmenSuperHub {
       bool ok;
       lock (_smuWriteLock) {
         ok = !RyzenSmuAccess.IsAvailable || RyzenSmuAccess.SetPlatformPowerLimit(target);
-        if (ok) _lastAppliedSmuW = target;
+        if (ok) {
+          _lastAppliedSmuW = target;
+        } else {
+          int actual = RyzenSmuAccess.GetPlatformPowerLimit();
+          if (actual > 0) _lastAppliedSmuW = actual;
+        }
       }
       if (ok) {
         Logger.Info($"上电复原：保底重申平台功耗上限 {target}W。");
@@ -518,8 +544,6 @@ namespace OmenSuperHub {
           // 出队时记录代次：若期间发生插拔/复原（代次 +1），这次写入已过期
           int genAtDequeue = Volatile.Read(ref _smuWriteGeneration);
 
-          if (!forced && Math.Abs(target - _lastAppliedSmuW) < 1) continue;
-
           // 后台线程落地前再确认一次仍插着电，避免排队期间拔电后仍写硬件
           if (!powerOnline) continue;
           if (!isCPUPowerControlSupported) continue;
@@ -533,6 +557,15 @@ namespace OmenSuperHub {
               _lastAppliedSmuW = target;
               if (log && (target != before || forced))
                 Logger.Info($"功率模式：SMU 平台功耗上限已设为 {target}W。");
+            } else {
+              // 请求被 SMU 钳制（超出平台天花板）：回读真实值作为记录，
+              // 避免把未生效的请求当成已生效，进而每轮都重复写入。
+              int actual = RyzenSmuAccess.GetPlatformPowerLimit();
+              if (actual > 0) {
+                _lastAppliedSmuW = actual;
+                if (log && actual != before)
+                  Logger.Info($"功率模式：平台上限实际为 {actual}W（请求 {target}W 超出上限）。");
+              }
             }
           }
         }
@@ -686,8 +719,10 @@ namespace OmenSuperHub {
 
       powerLimitTrackBar = new ToolStripTrackBar();
       powerLimitTrackBar.Minimum = 10;
-      powerLimitTrackBar.Maximum = 254;
-      powerLimitTrackBar.Value = Math.Max(10, Math.Min(254, powerLimitCustomW));
+      // 上限取平台真实天花板：超出部分 SMU 会静默钳制，滑块拉到也没意义
+      int ceiling = PlatformCeilingWatts;
+      powerLimitTrackBar.Maximum = ceiling;
+      powerLimitTrackBar.Value = Math.Max(10, Math.Min(ceiling, powerLimitCustomW));
       powerLimitTrackBar.TickFrequency = powerLimitTrackBar.Maximum - powerLimitTrackBar.Minimum;
       powerLimitTrackBar.Width = 800;
 
