@@ -340,13 +340,16 @@ namespace OmenSuperHub {
     }
 
     static void RestoreCPUPower() {
-      // 恢复CPU功耗设定
-      if (cpuPower.Contains(" W")) {
-        int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-        if (isCPUPowerControlSupported && value >= 10 && value <= 254) {
-          SetCpuPowerLimit((byte)value);
-        }
+      // 恢复 CPU 功耗设定。
+      // 非「不设置」模式：由 CPU功率模式接管。
+      // 「不设置」模式：走旧 cpuPower 手动值（会同步登记上电复原基线）。
+      if (!isCPUPowerControlSupported || !powerOnline) return;
+
+      if (powerLimitMode != PowerLimitMode.NotSet) {
+        ApplyPowerLimitMode(true);
+        return;
       }
+      ApplyManualCpuPowerValue();
     }
 
     static void RestorePowerConfig() {
@@ -360,6 +363,8 @@ namespace OmenSuperHub {
             SetConcurrentTdp((byte)value);
           }
         }
+        // 插电恢复完成后刷新功率模式菜单勾选状态
+        UpdatePowerLimitMenuState();
       });
     }
 
@@ -734,6 +739,8 @@ namespace OmenSuperHub {
               //key.SetValue("PL4Power", powerLimit4);
               key.SetValue("IccMax", iccMax);
               key.SetValue("AcLoadLine", acLoadline);
+              key.SetValue("PowerLimitMode", PowerLimitModeToString(powerLimitMode));
+              key.SetValue("PowerLimitCustomW", powerLimitCustomW);
               SavePresetToRegistry(currentPreset);
             } else {
               switch (configName) {
@@ -868,6 +875,10 @@ namespace OmenSuperHub {
                   break;
                 case "AcLoadLine":
                   key.SetValue("AcLoadLine", acLoadline);
+                  break;
+                case "PowerLimitMode":
+                  key.SetValue("PowerLimitMode", PowerLimitModeToString(powerLimitMode));
+                  key.SetValue("PowerLimitCustomW", powerLimitCustomW);
                   break;
                 case "AppLanguage":
                   key.SetValue("AppLanguage", appLanguage);
@@ -1103,22 +1114,11 @@ namespace OmenSuperHub {
         case "low": respondSpeed = 0.04f; UpdateCheckedState("tempSensitivityGroup", Strings.FanRespLow); break;
       }
 
-      // CPU 功耗
-      if (isCPUPowerControlSupported) {
-        if (cpuPower == "null") {
-          UpdateCheckedState("cpuPowerGroup", Strings.NotSet);
-        } else if (cpuPower == "max") {
-          SetCpuPowerLimit(254);
-          if (cpuPowerTrackBar != null) cpuPowerTrackBar.Value = 254;
-          UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-        } else if (cpuPower.Contains(" W")) {
-          int value = int.Parse(cpuPower.Replace(" W", "").Trim());
-          if (value >= 5 && value <= 254) {
-            SetCpuPowerLimit((byte)value);
-            if (cpuPowerTrackBar != null) cpuPowerTrackBar.Value = value;
-            UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-          }
-        }
+      // CPU 功耗：旧版遗留的 cpuPower 字段仍作为「不设置」模式下的手动值来源。
+      // 菜单已合并到「CPU功率模式」，这里只做硬件写入，不再操作旧滑块。
+      // 手动值写入时会同步登记为上电复原基线，两者不会互相覆盖。
+      if (isCPUPowerControlSupported && powerLimitMode == PowerLimitMode.NotSet) {
+        ApplyManualCpuPowerValue();
       }
 
       // GPU 电源状态
@@ -1213,6 +1213,10 @@ namespace OmenSuperHub {
             UpdateCheckedState("tppPowerGroup", Strings.SetTppSlider);
           }
         }
+        // 预设里也可能写入 PL1/PL2，等它落定后重新套用功率模式，
+        // 保证「功率模式」始终优先于预设的 CPU功耗值
+        if (powerLimitMode != PowerLimitMode.NotSet) ApplyPowerLimitMode(true);
+        UpdatePowerLimitMenuState();
       });
     }
 
@@ -1338,6 +1342,13 @@ namespace OmenSuperHub {
             LoadPresetFields(currentPreset);
           }
           LoadMonitorMetricSettings(currentPreset);
+
+          // ── 功率模式（全局配置，独立于预设）────────────────────────────────
+          powerLimitMode = PowerLimitModeFromString((string)key.GetValue("PowerLimitMode", "null"));
+          powerLimitCustomW = (int)key.GetValue("PowerLimitCustomW", 100);
+          if (powerLimitCustomW < 10 || powerLimitCustomW > 254) powerLimitCustomW = 100;
+          // 菜单先于配置创建，这里读取后再刷新一次勾选与滑块状态
+          UpdatePowerLimitMenuState();
 
           var item = FindMenuItemByName(trayIcon.ContextMenuStrip.Items, currentPreset);
           if (item != null)

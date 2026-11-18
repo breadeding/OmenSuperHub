@@ -288,6 +288,10 @@
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="WindowsFormsIntegration" />
+    <Reference Include="System.Resources.Extensions">
+      <HintPath>packages\System.Resources.Extensions.10.0.9\lib\net462\System.Resources.Extensions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App\Logger.cs" />
@@ -306,6 +310,8 @@
     <Compile Include="Program.Config.cs" />
     <Compile Include="Program.Menu.cs" />
     <Compile Include="Program.OmenKey.cs" />
+    <Compile Include="Program.PowerMode.cs" />
+    <Compile Include="App\RyzenSmuAccess.cs" />
     <Compile Include="Properties\AssemblyVersion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />

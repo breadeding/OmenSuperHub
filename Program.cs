@@ -140,8 +140,8 @@ namespace OmenSuperHub {
     static ToolStripMenuItem ambientSensorMenu;
     static ToolStripMenuItem pchSensorMenu;
     static ToolStripMenuItem vrSensorMenu;
-    static ToolStripTrackBar fanTrackBar, cpuPowerTrackBar, tppTrackBar, gpuCoreOverclockTrackBar, gpuMemoryOverclockTrackBar, gpuClockTrackBar, maxFrameRateTrackBar, textSizeTrackBar;
-    static ToolStripMenuItem fanValueLabel, cpuPowerValueLabel, tppValueLabel, gpuCoreOverclockValueLabel, gpuMemoryOverclockValueLabel, gpuClockValueLabel, maxFrameRateValueLabel, textSizeLabel;
+    static ToolStripTrackBar fanTrackBar, tppTrackBar, gpuCoreOverclockTrackBar, gpuMemoryOverclockTrackBar, gpuClockTrackBar, maxFrameRateTrackBar, textSizeTrackBar;
+    static ToolStripMenuItem fanValueLabel, tppValueLabel, gpuCoreOverclockValueLabel, gpuMemoryOverclockValueLabel, gpuClockValueLabel, maxFrameRateValueLabel, textSizeLabel;
 
     static bool Is3FanNb = false, isFanCleanSupported = false, isFanLegacyCleanSupported = false;
     static bool isSysInfoMenuOpen = false;
@@ -775,6 +775,12 @@ namespace OmenSuperHub {
         Logger.Error("无法读取 BIOS 保护状态");
       }
 
+      // 保底重发：插电时定期重申限制，防止 BIOS 在后台把功耗限制改回电池档位。
+      // 各路径内部都做了「值未变则跳过」，健康状态下不会产生冗余硬件写入。
+      if (powerOnline) {
+        ApplyPowerLimitMode(false);
+      }
+
       //更新显示器连接到显卡状态
       monitorQuery();
     }
@@ -797,9 +803,11 @@ namespace OmenSuperHub {
           powerOnline = powerLineStatus == PowerLineStatus.Online;
           if (powerOnline) {
             Logger.Info("笔记本已连接到电源。");
+            OnAcConnected();
             RestorePowerConfig();
           } else {
             Logger.Info("笔记本已断开电源。");
+            OnAcDisconnected();
           }
         }
       }

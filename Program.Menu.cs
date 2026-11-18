@@ -427,6 +427,12 @@ namespace OmenSuperHub {
       menu.Items.Add(fanControlMenu);
 
       performanceControlMenu = new ToolStripMenuItem(Strings.PerfControl);
+      // 菜单重建时清空旧的控件引用，避免 UpdatePowerLimitMenuState 操作已销毁的实例
+      powerLimitModeMenu = null;
+      powerLimitTrackBar = null;
+      powerLimitValueLabel = null;
+      powerLimitTipItem = null;
+      powerLimitCustomItem = null;
       // 图形模式
       if (supportHotSwitch) {
         if (NvGraphicsMode == GraphicsSwitcherMode.Optimus || NvGraphicsMode == GraphicsSwitcherMode.Hybrid) {
@@ -609,56 +615,8 @@ namespace OmenSuperHub {
       }
 
       if (isCPUPowerControlSupported) {
-        ToolStripMenuItem cpuPowerMenu = new ToolStripMenuItem(Strings.CpuPowerMenu);
-
-        cpuPowerMenu.DropDownItems.Add(new ToolStripMenuItem(Strings.PerfCpuPowerTip) { Enabled = false });
-        cpuPowerMenu.DropDownItems.Add(new ToolStripSeparator());
-        cpuPowerMenu.DropDownItems.Add(CreateMenuItem(Strings.NotSet, "cpuPowerGroup", (s, e) => {
-          cpuPower = "null";
-          SaveConfig("CpuPower");
-        }, true));
-        // 添加提示（只读）
-        ToolStripMenuItem cpuPowerSliderItem = CreateMenuItem(Strings.SetCpuPowerSlider, "cpuPowerGroup", (s, e) => { }, false);
-        cpuPowerMenu.DropDownItems.Add(cpuPowerSliderItem);
-
-        // 创建滑块项
-        cpuPowerTrackBar = new ToolStripTrackBar();
-        cpuPowerTrackBar.Minimum = 10;
-        cpuPowerTrackBar.Maximum = 254;
-        if (platformSettings != null) {
-          cpuPowerTrackBar.Value = platformSettings.NbPL1UpperBoundPerformance > 0 ? platformSettings.NbPL1UpperBoundPerformance : 100;
-        } else {
-          cpuPowerTrackBar.Value = 100;
-        }
-        cpuPowerTrackBar.TickFrequency = cpuPowerTrackBar.Maximum - cpuPowerTrackBar.Minimum;     // 设置刻度间隔
-        cpuPowerTrackBar.Width = 800;           // 设置宿主宽度，内部控件会自动填充
-
-        // 显示当前值的只读标签
-        cpuPowerValueLabel = new ToolStripMenuItem(string.Format(Strings.CurrentSliderValueTemp, $"{cpuPowerTrackBar.Value} W")) { Enabled = false };
-
-        // 滑块值改变时更新标签并应用设置
-        cpuPowerTrackBar.ValueChanged += (sender, e) => {
-          int val = cpuPowerTrackBar.Value;
-          cpuPowerValueLabel.Text = string.Format(Strings.CurrentSliderValueTemp, $"{val} W");
-          cpuPower = cpuPowerTrackBar.Value + " W";
-          if (isCPUPowerControlSupported)
-            SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
-          SaveConfig("CpuPower");
-          UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-        };
-
-        // 鼠标松开
-        cpuPowerTrackBar.MouseUp += (sender, e) => {
-          cpuPower = cpuPowerTrackBar.Value + " W";
-          if (isCPUPowerControlSupported)
-            SetCpuPowerLimit((byte)cpuPowerTrackBar.Value);
-          SaveConfig("CpuPower");
-          UpdateCheckedState("cpuPowerGroup", Strings.SetCpuPowerSlider);
-        };
-
-        cpuPowerMenu.DropDownItems.Add(cpuPowerTrackBar);
-        cpuPowerMenu.DropDownItems.Add(cpuPowerValueLabel);
-        performanceControlMenu.DropDownItems.Add(cpuPowerMenu);
+        // 合并后的「CPU功率模式」：模式选择 + 自定义滑块，取代原先独立的「CPU功率」菜单
+        BuildPowerLimitMenu(performanceControlMenu);
       }
 
       ToolStripMenuItem gpuPowerMenu = new ToolStripMenuItem(Strings.GpuPowerControlMenu);

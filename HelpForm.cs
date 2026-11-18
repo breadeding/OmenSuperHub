@@ -147,10 +147,15 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新说明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
+<li>✨ 新增「CPU功率模式」：高性能 / 均衡 / 节能 / 自定义，名称后标注该模式在本机的典型功耗，仅供参考</li>
+<li>✨ 新增「上电复原」机制：拔掉电源后 BIOS 会压低 CPU 功耗上限且插回不恢复，现在插电时自动写回插电状态下的原始设定，无需重启</li>
+<li>✨ 支持直接写入 AMD SMU 的平台功耗上限，兼容 APU（H/HS/U）与 HX（桌面下放）两种 CPU 家族</li>
 <li>✨ 新增CPU/GPU频率监控<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>优化：</strong></p>
+<li>⚡ 拖动「CPU功率」滑块即自动切换到自定义模式并实时生效</li>
 <li>⚡ 优化浮窗显示自适应宽度<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>修复：</strong></p>
+<li>🐛 拔插电源后 CPU 功耗被长期锁在低档、频率无法恢复到最高的问题</li>
 <li>🐛 UMA模式未正确识别显卡是否存在</li>
 <li>🐛 仅使用滚轮调整滑块时不生效/不勾选的问题</li>
 </div>
@@ -182,6 +187,11 @@ namespace OmenSuperHub {
 <p>(9) 如果出现提示GPU功耗异常无法解锁，请尝试重新解锁；</p>
 <p>(10) 修改CPU功率会同时修改PL1与PL2；</p>
 <p>(11) 修改GPU频率限制能实现限制不同级别的功耗，注意该功能不是超频功能。</p>
+<p>(12) “CPU功率模式”取代了原先独立的“CPU功率”菜单，提供高性能、均衡、节能、自定义四种模式，名称括号内为对应的典型功耗值，仅供参考；</p>
+<p>(13) 拖动滑块即自动切换到“自定义”模式，并实时写入生效；在AMD平台上会同时通过PawnIO直接向SMU发送命令，确保平台功耗上限在插电后能自动复原；</p>
+<p>(14) 拔掉电源后BIOS会压低CPU功耗上限且插回时不自动恢复，程序会在插电时自动写回插电状态下的原始设定（即使模式为“不设置”也生效），无需重启电脑；</p>
+<p>(15) 使用电池供电时不写入任何功耗限制，交由BIOS管理，菜单不显示勾选；</p>
+<p>(16) 若适配器功率不足（如使用低功率PD充电器），程序会通过电池放电速率检测到并自动降级为“均衡”限制，避免过载。</p>
 
 <h2>四. “硬件监控”菜单说明</h2>
 <p>(1) 可选择开启或关闭对应的监控信息，注意如果使用混合模式，在不使用GPU时应关闭GPU监控，否则可能会导致功耗增加。</p>
@@ -214,10 +224,15 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} 更新說明</h2>
 <div class='update-list'>
 <p><strong>新增：</strong></p>
+<li>✨ 新增「CPU功率模式」：高效能 / 均衡 / 節能 / 自訂，名稱後標註該模式在本機的典型功耗，僅供參考</li>
+<li>✨ 新增「上電復原」機制：拔掉電源後 BIOS 會壓低 CPU 功耗上限且插回不恢復，現在插電時自動寫回插電狀態下的原始設定，無需重啟</li>
+<li>✨ 支援直接寫入 AMD SMU 的平台功耗上限，相容 APU（H/HS/U）與 HX（桌面下放）兩種 CPU 家族</li>
 <li>✨ 新增CPU/GPU頻率監控<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>優化：</strong></p>
+<li>⚡ 拖動「CPU功率」滑桿即自動切換到自訂模式並即時生效</li>
 <li>⚡ 最佳化浮窗顯示自適應寬度<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>修復：</strong></p>
+<li>🐛 拔插電源後 CPU 功耗被長期鎖在低檔、頻率無法恢復到最高的問題</li>
 <li>🐛 UMA模式未正確辨識顯示卡是否存在</li>
 <li>🐛 僅使用滾輪調整滑桿時不生效/不勾選的問題</li>
 </div>
@@ -249,6 +264,11 @@ namespace OmenSuperHub {
 <p>(9) 若出現GPU功耗異常無法解鎖，請嘗試重新解鎖；</p>
 <p>(10) 修改CPU功率會同時修改PL1與PL2；</p>
 <p>(11) 修改GPU頻率限制能限制不同級別的功耗，注意該功能不是超頻功能。</p>
+<p>(12) 「CPU功率模式」取代了原先獨立的「CPU功率」選單，提供高效能、均衡、節能、自訂四種模式，名稱括號內為對應的典型功耗值，僅供參考；</p>
+<p>(13) 拖動滑桿即自動切換至「自訂」模式，並即時寫入生效；在AMD平台上會同時透過PawnIO直接向SMU發送命令，確保平台功耗上限在插電後能自動復原；</p>
+<p>(14) 拔掉電源後BIOS會壓低CPU功耗上限且插回時不會自動恢復，程式會在插電時自動寫回插電狀態下的原始設定（即使模式為「不設定」也生效），無需重啟電腦；</p>
+<p>(15) 使用電池供電時不寫入任何功耗限制，交由BIOS管理，選單不顯示勾選；</p>
+<p>(16) 若充電器功率不足（如使用低功率PD充電器），程式會透過電池放電速率偵測並自動降級為「均衡」限制，避免過載。</p>
 
 <h2>四. 「硬體監控」選單說明</h2>
 <p>(1) 可選擇開啟或關閉對應的監控訊息，注意如果使用混合模式，在不使用GPU時應關閉GPU監控，否則可能會導致功耗增加。</p>
@@ -281,10 +301,15 @@ namespace OmenSuperHub {
 <h2>📦 OmenSuperHub v{Assembly.GetExecutingAssembly().GetName().Version} Changelog</h2>
 <div class='update-list'>
 <p><strong>New Features:</strong></p>
+<li>✨ New ""CPU Power Mode"": High Performance / Balanced / Power Saver / Custom, with the typical power limit on this machine shown in parentheses for reference only</li>
+<li>✨ New ""restore on AC reconnect"": after unplugging, the BIOS lowers the CPU power limit and never restores it on replug; the original AC-state limits are now written back automatically, no reboot required</li>
+<li>✨ Direct AMD SMU platform power limit writes, supporting both APU (H/HS/U) and HX (desktop-derived) CPU families</li>
 <li>✨ Added CPU/GPU frequency monitoring<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>Improvements:</strong></p>
+<li>⚡ Dragging the CPU power slider now switches to Custom mode automatically and applies in real time</li>
 <li>⚡ Optimize the adaptive width of floating window display<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>Fixes:</strong></p>
+<li>🐛 CPU power staying locked at a low limit and clock speed never recovering after AC unplug/replug</li>
 <li>🐛 UMA mode failed to correctly detect the presence of a graphics card</li>
 <li>🐛 Issue where using only the mouse wheel to adjust the slider had no effect or failed to toggle the checkbox</li>
 </div>
@@ -316,6 +341,11 @@ namespace OmenSuperHub {
 <p>(9) If the GPU power limit anomaly message appears, retry the unlock;</p>
 <p>(10) CPU power changes set both PL1 and PL2;</p>
 <p>(11) GPU clock limit reduces max GPU frequency (not overclocking).</p>
+<p>(12) CPU Power Mode replaces the old standalone CPU Power menu. It offers High Performance, Balanced, Power Saver and Custom; the value in parentheses is the typical power limit for reference only;</p>
+<p>(13) Dragging the slider automatically switches to Custom mode and applies immediately. On AMD platforms it also sends SMU commands via PawnIO so the platform power limit is restored after reconnecting AC;</p>
+<p>(14) After unplugging, the BIOS lowers the CPU power limit and does not restore it on reconnect. OSH automatically writes back the original AC-state settings when power returns (this works even in ""Not Set"" mode), no reboot required;</p>
+<p>(15) On battery, no power limit is written and the BIOS manages power; the menu shows no selection;</p>
+<p>(16) If the adapter is inadequate (e.g. a low-wattage PD charger), the battery discharge rate reveals it and the limit is automatically downgraded to Balanced to avoid overload.</p>
 
 <h2>4. HW Monitor menu</h2>
 <p>(1) You can choose to enable or disable the corresponding monitoring information. Note that if you are using hybrid mode, you should disable GPU monitoring when the GPU is not in use; otherwise, power consumption may increase.</p>
