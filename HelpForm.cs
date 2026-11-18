@@ -152,7 +152,7 @@ namespace OmenSuperHub {
 <li>✨ 支持直接写入 AMD SMU 的平台功耗上限，兼容 APU（H/HS/U）与 HX（桌面下放）两种 CPU 家族</li>
 <li>✨ 新增CPU/GPU频率监控<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>优化：</strong></p>
-<li>⚡ 拖动「CPU功率」滑块即自动切换到自定义模式并实时生效</li>
+<li>⚡ 拖动「CPU功率」滑块即自动切换到自定义模式并实时生效；自定义区间 10-255W，超出系统最大长时功耗时自动回退</li>
 <li>⚡ 优化浮窗显示自适应宽度<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>修复：</strong></p>
 <li>🐛 拔插电源后 CPU 功耗被长期锁在低档、频率无法恢复到最高的问题</li>
@@ -188,7 +188,7 @@ namespace OmenSuperHub {
 <p>(10) 修改CPU功率会同时修改PL1与PL2；</p>
 <p>(11) 修改GPU频率限制能实现限制不同级别的功耗，注意该功能不是超频功能。</p>
 <p>(12) “CPU功率模式”取代了原先独立的“CPU功率”菜单，提供高性能、均衡、节能、自定义四种模式，名称括号内为对应的典型功耗值，仅供参考；</p>
-<p>(13) 拖动滑块即自动切换到“自定义”模式，并实时写入生效；在AMD平台上会同时通过PawnIO直接向SMU发送命令，确保平台功耗上限在插电后能自动复原；</p>
+<p>(13) 拖动滑块即自动切换到“自定义”模式，并实时写入生效；自定义区间为 10-255W，程序会先按设定值下发，若超出本机系统允许的最大长时功耗且被拒绝，则自动改用系统最大值；在AMD平台上会同时通过PawnIO直接向SMU发送命令，确保平台功耗上限在插电后能自动复原；</p>
 <p>(14) 拔掉电源后BIOS会压低CPU功耗上限且插回时不自动恢复，程序会在插电时自动写回插电状态下的原始设定（即使模式为“不设置”也生效），无需重启电脑；</p>
 <p>(15) 使用电池供电时不写入任何功耗限制，交由BIOS管理，菜单不显示勾选；</p>
 <p>(16) 若适配器功率不足（如使用低功率PD充电器），程序会通过电池放电速率检测到并自动降级为“均衡”限制，避免过载。</p>
@@ -229,7 +229,7 @@ namespace OmenSuperHub {
 <li>✨ 支援直接寫入 AMD SMU 的平台功耗上限，相容 APU（H/HS/U）與 HX（桌面下放）兩種 CPU 家族</li>
 <li>✨ 新增CPU/GPU頻率監控<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>優化：</strong></p>
-<li>⚡ 拖動「CPU功率」滑桿即自動切換到自訂模式並即時生效</li>
+<li>⚡ 拖動「CPU功率」滑桿即自動切換到自訂模式並即時生效；自訂區間 10-255W，超出系統最大長時功耗時自動回退</li>
 <li>⚡ 最佳化浮窗顯示自適應寬度<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>修復：</strong></p>
 <li>🐛 拔插電源後 CPU 功耗被長期鎖在低檔、頻率無法恢復到最高的問題</li>
@@ -265,7 +265,7 @@ namespace OmenSuperHub {
 <p>(10) 修改CPU功率會同時修改PL1與PL2；</p>
 <p>(11) 修改GPU頻率限制能限制不同級別的功耗，注意該功能不是超頻功能。</p>
 <p>(12) 「CPU功率模式」取代了原先獨立的「CPU功率」選單，提供高效能、均衡、節能、自訂四種模式，名稱括號內為對應的典型功耗值，僅供參考；</p>
-<p>(13) 拖動滑桿即自動切換至「自訂」模式，並即時寫入生效；在AMD平台上會同時透過PawnIO直接向SMU發送命令，確保平台功耗上限在插電後能自動復原；</p>
+<p>(13) 拖動滑桿即自動切換至「自訂」模式，並即時寫入生效；自訂區間為 10-255W，程式會先依設定值下發，若超出本機系統允許的最大長時功耗且被拒絕，則自動改用系統最大值；在AMD平台上會同時透過PawnIO直接向SMU發送命令，確保平台功耗上限在插電後能自動復原；</p>
 <p>(14) 拔掉電源後BIOS會壓低CPU功耗上限且插回時不會自動恢復，程式會在插電時自動寫回插電狀態下的原始設定（即使模式為「不設定」也生效），無需重啟電腦；</p>
 <p>(15) 使用電池供電時不寫入任何功耗限制，交由BIOS管理，選單不顯示勾選；</p>
 <p>(16) 若充電器功率不足（如使用低功率PD充電器），程式會透過電池放電速率偵測並自動降級為「均衡」限制，避免過載。</p>
@@ -306,7 +306,7 @@ namespace OmenSuperHub {
 <li>✨ Direct AMD SMU platform power limit writes, supporting both APU (H/HS/U) and HX (desktop-derived) CPU families</li>
 <li>✨ Added CPU/GPU frequency monitoring<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>Improvements:</strong></p>
-<li>⚡ Dragging the CPU power slider now switches to Custom mode automatically and applies in real time</li>
+<li>⚡ Dragging the CPU power slider now switches to Custom mode automatically and applies in real time; the range is 10-255 W, falling back to the system maximum when exceeded</li>
 <li>⚡ Optimize the adaptive width of floating window display<a href='https://github.com/breadeding/OmenSuperHub/pull/76'> (#76, Helloqiyuan)</a></li>
 <p><strong>Fixes:</strong></p>
 <li>🐛 CPU power staying locked at a low limit and clock speed never recovering after AC unplug/replug</li>
@@ -342,7 +342,7 @@ namespace OmenSuperHub {
 <p>(10) CPU power changes set both PL1 and PL2;</p>
 <p>(11) GPU clock limit reduces max GPU frequency (not overclocking).</p>
 <p>(12) CPU Power Mode replaces the old standalone CPU Power menu. It offers High Performance, Balanced, Power Saver and Custom; the value in parentheses is the typical power limit for reference only;</p>
-<p>(13) Dragging the slider automatically switches to Custom mode and applies immediately. On AMD platforms it also sends SMU commands via PawnIO so the platform power limit is restored after reconnecting AC;</p>
+<p>(13) Dragging the slider automatically switches to Custom mode and applies immediately. The custom range is 10-255 W: the requested value is sent first, and if it exceeds the system's maximum sustained power and is rejected, the system maximum is used instead. On AMD platforms it also sends SMU commands via PawnIO so the platform power limit is restored after reconnecting AC;</p>
 <p>(14) After unplugging, the BIOS lowers the CPU power limit and does not restore it on reconnect. OSH automatically writes back the original AC-state settings when power returns (this works even in ""Not Set"" mode), no reboot required;</p>
 <p>(15) On battery, no power limit is written and the BIOS manages power; the menu shows no selection;</p>
 <p>(16) If the adapter is inadequate (e.g. a low-wattage PD charger), the battery discharge rate reveals it and the limit is automatically downgraded to Balanced to avoid overload.</p>

@@ -27,6 +27,8 @@ namespace OmenSuperHub {
     static int powerLimitCustomW = 100;
     static int _lastAppliedPl1 = -1;              // 上次成功下发的 PL1
     static int _lastAppliedSmuW = -1;             // 上次成功写入 SMU 的功耗值
+    static int _lastEffectiveWatts = -1;          // 上次真正生效的功耗值（含被拒后的回退）
+    static int _rejectedCustomW = -1;             // 已确认会被系统拒绝的自定义值（避免反复试错）
     static DateTime _lastApplyTime = DateTime.MinValue;
     static bool _suppressPowerLimitEvents = false; // 程序化修改滑块时屏蔽 ValueChanged
     static int _adapterEvalGeneration = 0;         // 插拔代次，用于取消过期复核
@@ -66,7 +68,8 @@ namespace OmenSuperHub {
 
     static int ClampPl1(int watts) {
       if (watts < 10) return 10;
-      if (watts > 254) return 254;
+      // 0x29 命令的 PL1/PL2 字段是单字节，255 为硬件可表达的最大值
+      if (watts > 255) return 255;
       return watts;
     }
 
@@ -103,12 +106,21 @@ namespace OmenSuperHub {
     /// </summary>
     static int PlatformCeilingWatts {
       get {
-        return ClampPl1(GetPlatformInt("UnleashedModeMaxPL1",
-               GetPlatformInt("NbPL1UpperBoundPerformanceWithOC",
-               GetPlatformInt("NbPL1UpperBoundGaming",
-               GetPlatformInt("NbPL1UpperBoundPerformance", 254)))));
+        // 缓存：平台参数在进程生命期内不变，而这些值会被滑块逐格查询
+        if (_platformCeilingCache > 0) return _platformCeilingCache;
+        int v = ClampPl1(GetPlatformInt("UnleashedModeMaxPL1",
+                 GetPlatformInt("NbPL1UpperBoundPerformanceWithOC",
+                 GetPlatformInt("NbPL1UpperBoundGaming",
+                 GetPlatformInt("NbPL1UpperBoundPerformance", 254)))));
+        _platformCeilingCache = v;
+        return v;
       }
     }
+    static int _platformCeilingCache = -1;
+
+    /// <summary>自定义模式的滑块区间（与 BIOS 0x29 的单字节范围一致）。</summary>
+    const int CustomWattMin = 10;
+    const int CustomWattMax = 255;
 
     /// <summary>
     /// 各模式对应的典型平台功耗值（用于菜单标注与硬件写入）。
@@ -132,8 +144,9 @@ namespace OmenSuperHub {
           return ClampPl1(GetPlatformInt("NbPL1LowerBound", (int)Math.Round(upperDefault * 0.6)));
 
         case PowerLimitMode.Custom:
-          // 自定义值同样受平台天花板约束，超出部分 SMU 不会接受
-          return ClampPl1(Math.Min(powerLimitCustomW, PlatformCeilingWatts));
+          // 自定义值原样下发，先按用户设定尝试；若超出系统最大长时功耗
+          // 会被拒绝，届时再回退到系统最大值（见 WritePowerLimit）。
+          return ClampPl1(powerLimitCustomW);
 
         default:
           return -1;
@@ -167,9 +180,12 @@ namespace OmenSuperHub {
         case PowerLimitMode.Balanced: return $"{Strings.PowerLimitBalanced}（{ResolvePl1ForMode(PowerLimitMode.Balanced)}W）";
         case PowerLimitMode.Quiet: return $"{Strings.PowerLimitQuiet}（{ResolvePl1ForMode(PowerLimitMode.Quiet)}W）";
         case PowerLimitMode.Custom:
-          // 超过平台天花板时标注实际生效值，避免显示一个做不到的数字
-          int effective = Math.Min(powerLimitCustomW, PlatformCeilingWatts);
-          return string.Format(Strings.PowerLimitCustomFmt, effective);
+          // 显示用户设定值；若上次下发被系统拒绝并回退，同时标注实际生效值
+          if (powerLimitCustomW > PlatformCeilingWatts
+              && _lastEffectiveWatts > 0
+              && _lastEffectiveWatts < powerLimitCustomW)
+            return $"{string.Format(Strings.PowerLimitCustomFmt, powerLimitCustomW)} → {_lastEffectiveWatts}W";
+          return string.Format(Strings.PowerLimitCustomFmt, powerLimitCustomW);
         default: return Strings.NotSet;
       }
     }
@@ -305,11 +321,19 @@ namespace OmenSuperHub {
         }
       }
 
-      WritePowerLimit(target, force);
+      // 自定义模式走「先如实下发、被拒再回退系统最大值」的路径，
+      // 其余模式的目标值本就来自平台参数，直接写入即可。
+      if (mode == PowerLimitMode.Custom) {
+        ApplyCustomPowerLimit(target, false);
+      } else {
+        WritePowerLimit(target, force);
+      }
     }
 
     /// <summary>
     /// 把功耗值同时写入 BIOS（PL1/PL2）与 SMU（平台上限）。
+    /// 自定义模式下先按用户设定值下发；若被系统拒绝（超出最大长时功耗），
+    /// 自动回退到系统最大值，返回真正生效的瓦数。
     /// </summary>
     static void WritePowerLimit(int watts, bool force, bool quiet = false) {
       if (!force && watts == _lastAppliedPl1 && (DateTime.Now - _lastApplyTime).TotalSeconds < 10)
@@ -327,6 +351,68 @@ namespace OmenSuperHub {
       // BIOS 的 0x29 只能改 PL1/PL2/PPT FAST，碰不到 SMU 里被 BIOS
       // 压低且不恢复的平台上限（APU 的 PPT LIMIT APU）。这里补写 SMU。
       ApplySmuPlatformLimit(watts, force, quiet);
+    }
+
+    /// <summary>
+    /// 把用户的自定义值真正落到硬件。
+    ///
+    /// 实测（8BCA/7840H）两套通道相互独立：
+    ///   0x29 → PM 表 idx0/1/2（STAPM / PPT FAST / PPT SLOW），受 BIOS 侧 PL1 上限约束
+    ///   SMU 0x23 → PM 表 idx3（PPT LIMIT APU），这才是持续功耗的真实闸门
+    /// 因此自定义值原样下发给 BIOS；若 SMU 侧被系统拒绝（超出最大长时功耗），
+    /// 只把 SMU 侧回退到系统最大值，BIOS 侧仍保留用户设定。
+    /// </summary>
+    static void ApplyCustomPowerLimit(int requested, bool quiet) {
+      int ceiling = PlatformCeilingWatts;
+
+      // 不超过系统最大长时功耗：两套通道都按用户设定下发
+      if (requested <= ceiling) {
+        WritePowerLimit(requested, false, quiet);
+        _lastEffectiveWatts = requested;
+        _rejectedCustomW = -1;
+        return;
+      }
+
+      // 该值已被系统拒绝过：不再重复试错（避免每 30 秒一次 PM 表回读）
+      if (_rejectedCustomW == requested && _lastEffectiveWatts > 0) {
+        // BIOS 侧仍按用户设定值下发（低于 BIOS 自身 PL1 上限时会被接受）
+        if (_lastAppliedPl1 != requested) {
+          SetCpuPowerLimit((byte)requested);
+          _lastAppliedPl1 = requested;
+          _lastApplyTime = DateTime.Now;
+        }
+        return;
+      }
+
+      // 先如实按用户设定值下发到 BIOS 侧
+      SetCpuPowerLimit((byte)requested);
+      _lastAppliedPl1 = requested;
+      _lastApplyTime = DateTime.Now;
+
+      if (!RyzenSmuAccess.IsAvailable) {
+        // 没有 SMU 通道时只能依赖 BIOS 侧，按用户值记录
+        _lastEffectiveWatts = requested;
+        if (!quiet) Logger.Info($"自定义功耗：已按 {requested}W 下发给 BIOS。");
+        return;
+      }
+
+      // SMU 侧尝试同一目标值
+      int actual;
+      if (RyzenSmuAccess.SetPlatformPowerLimit(requested, out actual)) {
+        _lastAppliedSmuW = actual > 0 ? actual : requested;
+        _lastEffectiveWatts = _lastAppliedSmuW;
+        _rejectedCustomW = -1;
+        if (!quiet) Logger.Info($"自定义功耗：已按 {requested}W 下发（SMU 生效 {_lastEffectiveWatts}W）。");
+        return;
+      }
+
+      // SMU 侧被拒绝：仅回退 SMU（BIOS 侧保留用户设定）
+      int fallback = actual > 0 ? actual : ceiling;
+      _lastAppliedSmuW = fallback;
+      _lastEffectiveWatts = fallback;
+      _rejectedCustomW = requested;
+      if (!quiet)
+        Logger.Info($"自定义功耗 {requested}W 超出系统最大长时功耗，持续上限已回退为 {fallback}W。");
     }
 
     /// <summary>
@@ -600,6 +686,8 @@ namespace OmenSuperHub {
       ClearPendingSmuWrite();   // 丢弃拖动遗留的待写值，离电后不得再写硬件
       _lastAppliedPl1 = -1;
       _lastAppliedSmuW = -1;
+      _lastEffectiveWatts = -1;
+      _rejectedCustomW = -1;    // 电源状态变化后重新判定一次
       _lastAdapterVerdict = null;
       _lastAdapterSource = "";
       _cachedAdapterVerdict = null;
@@ -718,11 +806,11 @@ namespace OmenSuperHub {
         new ToolStripMenuItem(Strings.SetPowerLimitCustomSlider) { Enabled = false });
 
       powerLimitTrackBar = new ToolStripTrackBar();
-      powerLimitTrackBar.Minimum = 10;
-      // 上限取平台真实天花板：超出部分 SMU 会静默钳制，滑块拉到也没意义
-      int ceiling = PlatformCeilingWatts;
-      powerLimitTrackBar.Maximum = ceiling;
-      powerLimitTrackBar.Value = Math.Max(10, Math.Min(ceiling, powerLimitCustomW));
+      powerLimitTrackBar.Minimum = CustomWattMin;
+      // 区间按 BIOS 单字节上限保留到 255W：超出系统最大长时功耗的部分
+      // 会在下发时被拒绝，届时自动回退到系统最大值。
+      powerLimitTrackBar.Maximum = CustomWattMax;
+      powerLimitTrackBar.Value = Math.Max(CustomWattMin, Math.Min(CustomWattMax, powerLimitCustomW));
       powerLimitTrackBar.TickFrequency = powerLimitTrackBar.Maximum - powerLimitTrackBar.Minimum;
       powerLimitTrackBar.Width = 800;
 
@@ -754,7 +842,11 @@ namespace OmenSuperHub {
           SaveConfig("PowerLimitMode");
           UpdateCheckedState("powerLimitModeGroup", null, powerLimitCustomItem);
         }
-        WritePowerLimit(watts, false, true);
+        // 拖动时安静模式下也只写 BIOS，SMU 侧等松手再落定，
+        // 避免每次移动都触发 PM 表回读（约 120ms）。
+        SetCpuPowerLimit((byte)watts);
+        _lastAppliedPl1 = watts;
+        _lastApplyTime = DateTime.Now;
       };
 
       powerLimitTrackBar.MouseUp += (s, e) => {
@@ -762,8 +854,8 @@ namespace OmenSuperHub {
         powerLimitCustomW = powerLimitTrackBar.Value;
         SaveConfig("PowerLimitMode");
         if (!powerOnline) return;   // 电池供电：只记配置，不动硬件
-        // 松手时正式落定：强制重发一次并写日志
-        WritePowerLimit(powerLimitCustomW, true);
+        // 松手时正式落定：先如实尝试自定义值，被拒则回退到系统最大值
+        ApplyCustomPowerLimit(powerLimitCustomW, false);
       };
 
       powerLimitModeMenu.DropDownItems.Add(powerLimitTrackBar);
