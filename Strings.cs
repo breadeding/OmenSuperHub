@@ -238,6 +238,28 @@
     public static string IccMaxMenu => T("IccMax", "IccMax", "IccMax");
     public static string AcLoadLineMenu => T("AC Load Line", "AC Load Line", "AC Load Line");
     public static string CpuPowerMenu => T("CPU功率", "CPU功率", "CPU Power");
+
+    // CPU 功率模式（全局，接管 PL1/PL2 与 SMU 平台功耗上限）
+    public static string PowerLimitModeMenu => T("CPU功率模式", "CPU功率模式", "CPU Power Mode");
+    public static string PowerLimitHigh => T("高性能", "高效能", "High Performance");
+    public static string PowerLimitBalanced => T("均衡", "均衡", "Balanced");
+    public static string PowerLimitQuiet => T("节能", "節能", "Power Saver");
+    public static string PowerLimitCustom => T("自定义", "自訂", "Custom");
+    public static string PowerLimitCustomFmt => T("自定义（{0}W）", "自訂（{0}W）", "Custom ({0} W)");
+    public static string SetPowerLimitCustomSlider => T(
+        "拖动滑块设置CPU功率 (W)", "拖動滑桿設定CPU功率 (W)", "Drag slider to set CPU power (W)");
+    public static string PowerLimitTip => T(
+        "💡 插电时自动应用所选功耗限制；使用电池时交还BIOS管理，插回电源后自动复原。",
+        "💡 插電時自動套用所選功耗限制；使用電池時交還BIOS管理，插回電源後自動復原。",
+        "💡 Applies the selected power limit when on AC power. On battery the BIOS takes over, and limits are restored when AC returns.");
+    public static string PowerLimitOnBattery => T(
+        "💡 当前使用电池供电，功耗限制由BIOS管理。",
+        "💡 目前使用電池供電，功耗限制由BIOS管理。",
+        "💡 Running on battery. The BIOS manages power limits.");
+    public static string PowerLimitManualDisabledTip => T(
+        "已启用CPU功率模式，请在上方「CPU功率模式」中调整。",
+        "已啟用CPU功率模式，請在上方「CPU功率模式」中調整。",
+        "CPU Power Mode is active. Adjust it in the CPU Power Mode menu above.");
     public static string SetCpuPowerSlider => T("拖动滑块设置功率 (W)", "拖動滑桿設定功率 (W)", "Drag slider to set power (W)");
     public static string CurrentSliderValueTemp => T("滑块值：{0}", "滑桿值：{0}", "Slider Value: {0}");
     public static string SetFanSpeedSlider => T("拖动滑块设置转速 (RPM)", "拖動滑桿設定轉速 (RPM)", "Drag slider to set speed (RPM)");
